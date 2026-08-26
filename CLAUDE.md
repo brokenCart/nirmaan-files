@@ -13,9 +13,10 @@ Four modules are planned per project:
 1. **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting) — ✅ shipped, with
    per-semester counting and a project archive
 2. **Knowledge base** — past context, lore — planned (`apps/knowledge`)
-3. **Volunteer visit tracking** — ◐ attendance counts shipped; see *Attendance* below for what
-   that does and does not cover. There is no `apps/visits`: counting derives from
-   `DailyLog.attendees` and lives in `apps/logs/stats.py`.
+3. **Volunteer visit tracking** — ✅ shipped as per-member attendance counts; see *Attendance*
+   below for the scope, which stops at counts by decision rather than for want of finishing.
+   There is no `apps/visits`: counting derives from `DailyLog.attendees` and lives in
+   `apps/logs/stats.py`.
 4. **Resource links** — Drive URLs and similar — ✅ shipped (`apps/resources`). See *Resource
    links* below. The Drive folder is a resource like any other; there is no separate field for it.
 

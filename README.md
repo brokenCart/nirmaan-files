@@ -13,7 +13,7 @@ Four things are tracked per project:
 | --- | --- |
 | **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting) | ✅ shipped |
 | **Knowledge base** — past context and how-things-work | planned |
-| **Volunteer visit tracking** — who showed up, when | ◐ counts shipped, see below |
+| **Volunteer visit tracking** — who showed up, when | ✅ shipped |
 | **Resource links** — Drive folders and other pointers | ✅ shipped |
 
 Opening a new semester still has **no screen** — the API supports it, but exec does it through the
