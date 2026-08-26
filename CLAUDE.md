@@ -8,13 +8,17 @@ Project tracking for Nirmaan, a student-run NGO at BITS Pilani, Pilani campus. A
 called a **project** in Nirmaan's vocabulary, and that word means a `projects.Project` row
 throughout the codebase — never a software project.
 
-Four modules are planned per project. Only the first is built:
+Four modules are planned per project:
 
 1. **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting) — ✅ shipped, with
    per-semester counting and a project archive
 2. **Knowledge base** — past context, lore — planned (`apps/knowledge`)
-3. **Volunteer visit tracking** — planned (`apps/visits`)
-4. **Resource links** — Drive URLs and similar — planned (`apps/resources`)
+3. **Volunteer visit tracking** — ◐ attendance counts shipped; see *Attendance* below for what
+   that does and does not cover. There is no `apps/visits`: counting derives from
+   `DailyLog.attendees` and lives in `apps/logs/stats.py`.
+4. **Resource links** — Drive URLs and similar — planned (`apps/resources`).
+   `Project.drive_folder_url` already exists as the seam and is exposed by the serializer, but
+   nothing in the SPA reads it yet.
 
 Django REST Framework backend, React + TypeScript SPA, one repo, PostgreSQL.
 
@@ -182,6 +186,22 @@ past term and `?semester=all` reads across every term. That default applies to *
 detail routes must reach an archived entry by its own URL, or every 403 the frozen-archive rule is
 meant to return arrives as a 404 instead.
 
+### Attendance
+
+`apps/logs/stats.py` turns `DailyLog.attendees` into per-member counts, served by
+`GET /api/projects/<slug>/attendance/` and as an `.xlsx` by `.../attendance/export/`
+(`apps/logs/exports.py`). Any member may read both. This is module 3 — there is no `apps/visits`,
+because a visit *is* a MOV and a second table would mean two places to look for one event.
+
+Roster and counts both come from **one semester**; mixing them lists a member against totals they
+had no part in. `attendance_for` returns `Membership` rows, not users, so each row carries the role
+held *in that term* and a member with no attendance still appears — a zero is the point of the
+table. Drafts and soft-deleted entries are excluded, which is a privacy rule rather than tidiness:
+a total that counted drafts would leak their existence.
+
+Counts are headcounts. There is no duration field and no per-person rollup across projects, both
+deliberate — see *Open questions*.
+
 ### Archives
 
 `GET /api/projects/<slug>/archive/` returns one row per semester the project has a record in,
@@ -256,3 +276,15 @@ The migration bucketed pre-semester history into terms generated from the BITS c
 each of those terms the *current* roster minus anyone who joined later. Nobody has checked those
 rosters against what actually happened. If the old rosters matter, exec has to correct them by
 hand.
+
+**Roster and semester editing have API support but no UI.** `MembershipViewSet` and
+`SemesterViewSet` are full `ModelViewSet`s, but the SPA only reads them — `ProjectMembersPanel` has
+no mutations and `queries.ts` only ever `GET`s `/api/semesters/`. So adding a member to a project
+and opening a term both mean Django admin or a raw API call today. This is what makes the two
+questions above sharp rather than theoretical.
+
+**Attendance stops at counts, by decision.** No hours (a short call and a full-day visit weigh the
+same), no per-person view across projects, and no visit record independent of a filed MOV — so a
+trip nobody writes up did not happen as far as the table is concerned. Each was considered and left
+out; revisit only if someone asks for volunteer-hour certificates, which is the use case that would
+need all three.

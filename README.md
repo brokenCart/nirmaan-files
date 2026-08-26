@@ -4,8 +4,8 @@ Project tracking for [Nirmaan](https://www.nirmaan.org/), the student-run NGO at
 Pilani campus.
 
 Nirmaan runs several *verticals* — called **projects** here. Each one accumulates field visits,
-meetings, context, and volunteer hours, and today none of it lives anywhere durable: institutional
-memory leaves with every graduating batch. This app is the shared record.
+meetings, and context, and today none of it lives anywhere durable: institutional memory leaves
+with every graduating batch. This app is the shared record.
 
 Four things are tracked per project:
 
@@ -15,6 +15,9 @@ Four things are tracked per project:
 | **Knowledge base** — past context and how-things-work | planned |
 | **Volunteer visit tracking** — who showed up, when | ◐ counts shipped, see below |
 | **Resource links** — Drive folders and other pointers | planned |
+
+Adding someone to a project and opening a new semester are exec/lead jobs that currently have **no
+screen** — the API supports both, but they are done through the Django admin at `/admin/` for now.
 
 ## Daily logs
 
@@ -40,6 +43,11 @@ counts as a table and a bar chart, with an **Export to Excel** button that downl
 Only published entries count. Drafts are private to their author, and counting them would leak
 their existence through a total; removed entries stop counting for the same reason they leave the
 timeline.
+
+Counts are **headcounts, not hours** — a half-hour call and a full-day site visit each count once —
+and they are per project, so someone active in two verticals has no combined total. A visit also
+only counts if a MOV was actually filed for it. All three are deliberate for now; `CLAUDE.md`
+records why under *Open questions*.
 
 Behind it, `GET /api/projects/<slug>/attendance/` returns the rows and
 `GET /api/projects/<slug>/attendance/export/` returns the workbook. Any member of the project can
