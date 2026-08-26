@@ -6,6 +6,7 @@ from apps.projects.models import Project, Role
 from apps.projects.permissions import IsProjectMember, role_in_project
 
 from .models import DailyLog, LogStatus
+from .pagination import DailyLogPagination
 from .serializers import DailyLogSerializer
 
 
@@ -22,6 +23,7 @@ class DailyLogViewSet(viewsets.ModelViewSet):
 
     serializer_class = DailyLogSerializer
     permission_classes = [IsAuthenticated, IsProjectMember]
+    pagination_class = DailyLogPagination
     # Schema introspection only; get_queryset() is what actually runs.
     queryset = DailyLog.objects.none()
 

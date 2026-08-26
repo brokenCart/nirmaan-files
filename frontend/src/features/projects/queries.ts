@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api/client'
 import type { DailyLog, Membership, Paginated, Project } from '@/api/types'
@@ -10,13 +10,24 @@ export const queryKeys = {
   members: (slug: string) => ['memberships', slug] as const,
 }
 
+/**
+ * Rows per page of `/api/logs/`.
+ *
+ * DRF's PageNumberPagination reports `count` but not the page size, and the
+ * SPA needs the size to turn a count into a page total. This must therefore
+ * track `DailyLogPagination.page_size` in `apps/logs/pagination.py` — the
+ * timeline pages smaller than the project-wide `REST_FRAMEWORK["PAGE_SIZE"]`.
+ */
+export const LOGS_PAGE_SIZE = 10
+
 /** Index signature included so filters can be passed straight as query params. */
 export type LogFilters = {
   project?: string
   kind?: string
   since?: string
   until?: string
-} & Record<string, string | undefined>
+  page?: number
+} & Record<string, string | number | undefined>
 
 export function useProjects() {
   return useQuery({
@@ -36,6 +47,9 @@ export function useLogs(filters: LogFilters) {
   return useQuery({
     queryKey: queryKeys.logs(filters),
     queryFn: () => api.get<Paginated<DailyLog>>('/api/logs/', filters),
+    // Hold the previous page on screen while the next one loads, so paging
+    // does not collapse the feed to a spinner and jump the scroll position.
+    placeholderData: keepPreviousData,
   })
 }
 

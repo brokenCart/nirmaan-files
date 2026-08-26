@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
@@ -130,6 +131,54 @@ export function EmptyState({ title, description }: { title: string; description:
       <p className="font-display text-lg font-semibold text-ink">{title}</p>
       <p className="mt-1 text-sm text-ink-soft">{description}</p>
     </div>
+  )
+}
+
+/**
+ * Prev/next control over a DRF `PageNumberPagination` response.
+ *
+ * Renders nothing for a single page, so callers can mount it unconditionally.
+ * `prevLabel`/`nextLabel` exist because a reverse-chronological feed reads
+ * better as Newer/Older than as Previous/Next.
+ */
+export function Pagination({
+  page,
+  totalPages,
+  onChange,
+  label = 'Pagination',
+  prevLabel = 'Previous',
+  nextLabel = 'Next',
+  className,
+}: {
+  page: number
+  totalPages: number
+  onChange: (page: number) => void
+  label?: string
+  prevLabel?: string
+  nextLabel?: string
+  className?: string
+}) {
+  if (totalPages <= 1) return null
+
+  return (
+    <nav
+      aria-label={label}
+      className={cn('flex items-center justify-between gap-3 pt-1', className)}
+    >
+      <Button variant="secondary" disabled={page <= 1} onClick={() => onChange(page - 1)}>
+        <ChevronLeft className="size-4" aria-hidden />
+        {prevLabel}
+      </Button>
+
+      <span aria-live="polite" className="text-xs text-ink-mute tabular-nums">
+        Page {page} of {totalPages}
+      </span>
+
+      <Button variant="secondary" disabled={page >= totalPages} onClick={() => onChange(page + 1)}>
+        {nextLabel}
+        <ChevronRight className="size-4" aria-hidden />
+      </Button>
+    </nav>
   )
 }
 

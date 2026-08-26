@@ -12,11 +12,17 @@ import {
   EmptyState,
   ErrorNote,
   KindBadge,
+  Pagination,
   RoleBadge,
   Spinner,
 } from '@/components/ui'
 import { ProjectMembersPanel } from '@/features/projects/ProjectMembersPanel'
-import { useLogs, useProject, useProjectMembers } from '@/features/projects/queries'
+import {
+  LOGS_PAGE_SIZE,
+  useLogs,
+  useProject,
+  useProjectMembers,
+} from '@/features/projects/queries'
 import { cn, formatDate } from '@/lib/utils'
 
 import { LogComposer } from './LogComposer'
@@ -27,6 +33,7 @@ export function ProjectTimelinePage() {
   const { slug = '' } = useParams()
   const { roleIn } = useAuth()
   const [kindFilter, setKindFilter] = useState<KindFilter>('ALL')
+  const [page, setPage] = useState(1)
   const [composing, setComposing] = useState(false)
 
   const project = useProject(slug)
@@ -34,7 +41,23 @@ export function ProjectTimelinePage() {
   const logs = useLogs({
     project: slug,
     kind: kindFilter === 'ALL' ? undefined : kindFilter,
+    page,
   })
+
+  const totalPages = Math.max(1, Math.ceil((logs.data?.count ?? 0) / LOGS_PAGE_SIZE))
+
+  // A narrower filter can have fewer pages than the one being left, and DRF
+  // 404s on an out-of-range page — so every filter change restarts at page 1.
+  function changeFilter(next: KindFilter) {
+    setKindFilter(next)
+    setPage(1)
+  }
+
+  function changePage(next: number) {
+    setPage(next)
+    // Paging from the bottom of a long feed would otherwise land mid-list.
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const role = roleIn(slug)
   // Undefined rather than a boolean flag so the panel's prop stays narrowed.
@@ -75,7 +98,11 @@ export function ProjectTimelinePage() {
           <LogComposer
             project={project.data}
             members={members.data?.results ?? []}
-            onDone={() => setComposing(false)}
+            onDone={() => {
+              setComposing(false)
+              // A new entry sorts to the top of the feed, which is page 1.
+              setPage(1)
+            }}
           />
         </Card>
       )}
@@ -101,7 +128,7 @@ export function ProjectTimelinePage() {
                 key={option}
                 variant={kindFilter === option ? 'primary' : 'ghost'}
                 className="flex-1 px-5 sm:flex-none"
-                onClick={() => setKindFilter(option)}
+                onClick={() => changeFilter(option)}
               >
                 {option === 'ALL' ? 'All' : option}
               </Button>
@@ -151,6 +178,15 @@ export function ProjectTimelinePage() {
               ))}
             </ol>
           )}
+
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onChange={changePage}
+            label="Timeline pages"
+            prevLabel="Newer"
+            nextLabel="Older"
+          />
         </div>
       </div>
     </div>
