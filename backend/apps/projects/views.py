@@ -92,7 +92,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         semester = current_semester(self.request)
         return (
-            visible_projects(self.request.user)
+            # Through the ids rather than off `visible_projects` directly: that
+            # queryset filters on `memberships` to the requesting user, and a
+            # `Count("memberships")` annotated onto it would reuse that same
+            # join and count only the caller's own rows — every project a
+            # roster of one, while exec (whose queryset joins nothing) saw the
+            # true number.
+            Project.objects.filter(pk__in=visible_projects(self.request.user).values("pk"))
             .annotate(
                 # The headline count is this term's roster, not everyone who has
                 # ever passed through.

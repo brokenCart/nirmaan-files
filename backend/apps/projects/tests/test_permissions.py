@@ -224,11 +224,38 @@ class TestSemesterScopedRoles:
         assert response.status_code == 403
 
     def test_member_count_is_this_semester_only(
-        self, auth_client, lead, past_lead, project, past_semester
+        self, auth_client, lead, volunteer, past_lead, project, past_semester
     ):
         response = auth_client(lead).get(reverse("project-detail", kwargs={"slug": project.slug}))
-        # `lead` is the only current member; `past_lead` sits in the closed term.
-        assert response.data["member_count"] == 1
+        # `lead` and `volunteer` are this term's roster; `past_lead` sits in the
+        # closed term and must not be counted. Two current members rather than
+        # one on purpose: a count of the caller's own rows would also come to 1.
+        assert response.data["member_count"] == 2
+
+    def test_member_count_is_the_whole_roster_not_the_caller_s_own_rows(
+        self, auth_client, lead, finance_lead, volunteer, exec_user, project
+    ):
+        """Annotating a count over the join `visible_projects` filters counts one row.
+
+        Exec's queryset joins `memberships` for nobody, so exec saw the true
+        number while every member saw their own membership back as the roster
+        size. Both must agree.
+        """
+        url = reverse("project-detail", kwargs={"slug": project.slug})
+        counts = {
+            who.email: auth_client(who).get(url).data["member_count"]
+            for who in (lead, finance_lead, volunteer, exec_user)
+        }
+        assert set(counts.values()) == {3}
+
+    def test_a_past_member_sees_the_current_roster_size(
+        self, auth_client, lead, volunteer, past_lead, project, past_semester
+    ):
+        """Archive-only access still reports this term's count, not zero."""
+        response = auth_client(past_lead).get(
+            reverse("project-detail", kwargs={"slug": project.slug})
+        )
+        assert response.data["member_count"] == 2
 
     def test_roster_defaults_to_the_current_semester(self, auth_client, lead, past_lead, project):
         response = auth_client(lead).get(reverse("membership-list"), {"project": project.slug})
