@@ -1,0 +1,24 @@
+from django.contrib import admin
+from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework.routers import DefaultRouter
+
+from apps.logs.views import DailyLogViewSet
+from apps.projects.views import MembershipViewSet, ProjectViewSet
+
+router = DefaultRouter()
+router.register("projects", ProjectViewSet, basename="project")
+router.register("memberships", MembershipViewSet, basename="membership")
+router.register("logs", DailyLogViewSet, basename="log")
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/auth/", include("apps.accounts.urls")),
+    path("api/", include(router.urls)),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+]

@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand-50: oklch(0.97 0.02 150);
+  --color-brand-100: oklch(0.94 0.04 150);
+  --color-brand-500: oklch(0.62 0.13 150);
+  --color-brand-600: oklch(0.54 0.12 150);
+  --color-brand-700: oklch(0.45 0.1 150);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
+  }
+}

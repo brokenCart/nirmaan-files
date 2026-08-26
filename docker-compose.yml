@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nirmaan_files}
+      POSTGRES_USER: ${POSTGRES_USER:-nirmaan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nirmaan}
+    ports:
+      # Host port 5433: 5432 is commonly already taken by another project's db.
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nirmaan} -d ${POSTGRES_DB:-nirmaan_files}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    command: uv run python manage.py runserver 0.0.0.0:8000
+    environment:
+      # Inside the compose network the database is always db:5432, regardless of
+      # which host port .env maps it to.
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    command: npm run dev -- --host 0.0.0.0
+    env_file:
+      - .env
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
