@@ -56,12 +56,13 @@ const ROLE_STYLES: Record<EffectiveRole, string> = {
   VOLUNTEER: 'bg-nirmaan-green/10 text-nirmaan-green ring-nirmaan-green/20',
 }
 
-export function RoleBadge({ role }: { role: EffectiveRole }) {
+export function RoleBadge({ role, className }: { role: EffectiveRole; className?: string }) {
   return (
     <span
       className={cn(
         'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset',
         ROLE_STYLES[role],
+        className,
       )}
     >
       {ROLE_LABELS[role]}
