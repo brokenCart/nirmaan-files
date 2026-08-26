@@ -107,12 +107,19 @@ and a losing racer would present an already-blacklisted token.
 
 One `DailyLog` model carries both MOVs and MOMs, distinguished by `kind`, because the primary
 screen is a single reverse-chronological feed per project and one indexed table serves it in one
-query. `location` is MOV-only, `attendees` is MOM-only, and the serializer rejects each on the
-wrong kind. Split into two models only if the kinds genuinely diverge.
+query. Every field applies to both kinds — `attendees` included, since a visit has attendees just
+as a meeting does and per-person visit and meet counts are derived from it. Split into two models
+only if the kinds genuinely diverge.
 
-Writes: leads and finance leads may edit anything in their project; a volunteer may create logs and
-edit their own only while `status == DRAFT`. Once published, a volunteer's log is the project's
-record. Deletes are soft (`is_deleted`) — the timeline is institutional memory.
+Writes: any member may file a log. **Only the author may edit one** — at any status, and no role
+overrides this, leads and exec included. An entry is one person's account of what happened, so
+staff who disagree with it delete it rather than reword it under the author's name. Deleting is the
+moderation lever: leads, finance leads and exec may remove any log in their project, and an author
+may withdraw their own. Deletes are soft (`is_deleted`) — the timeline is institutional memory,
+which is what makes "remove it rather than rewrite it" safe.
+
+`project` is rejected on update: write permission is judged against the project the entry already
+belongs to, so a reassignment would sidestep that check.
 
 Drafts are private to their author, enforced in `DailyLogQuerySet.visible_to`.
 

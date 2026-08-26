@@ -1,7 +1,14 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api/client'
-import type { DailyLog, Membership, Paginated, Project } from '@/api/types'
+import type {
+  DailyLog,
+  DailyLogInput,
+  DailyLogPatch,
+  Membership,
+  Paginated,
+  Project,
+} from '@/api/types'
 
 export const queryKeys = {
   projects: ['projects'] as const,
@@ -63,10 +70,26 @@ export function useProjectMembers(slug: string) {
 export function useCreateLog(projectSlug: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (body: Partial<DailyLog>) => api.post<DailyLog>('/api/logs/', body),
+    mutationFn: (body: DailyLogInput) => api.post<DailyLog>('/api/logs/', body),
     onSuccess: () => {
       // The timeline is filtered several ways; invalidate the whole namespace
       // rather than guessing which cached filter combinations went stale.
+      void queryClient.invalidateQueries({ queryKey: ['logs'] })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.project(projectSlug) })
+    },
+  })
+}
+
+export function useUpdateLog(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    // PATCH rather than PUT: the form carries only the editable fields, and
+    // the server owns `author` and the timestamps.
+    mutationFn: ({ id, ...body }: DailyLogPatch & { id: number }) =>
+      api.patch<DailyLog>(`/api/logs/${id}/`, body),
+    onSuccess: () => {
+      // An edit can change `occurred_on` or `status`, which reorders the feed
+      // and moves rows between drafts and the public timeline.
       void queryClient.invalidateQueries({ queryKey: ['logs'] })
       void queryClient.invalidateQueries({ queryKey: queryKeys.project(projectSlug) })
     },

@@ -117,7 +117,7 @@ class Command(BaseCommand):
         today = datetime.date.today()
 
         for offset, title in enumerate(MOV_TITLES):
-            DailyLog.objects.get_or_create(
+            log, created = DailyLog.objects.get_or_create(
                 project=project,
                 title=title,
                 defaults={
@@ -127,9 +127,10 @@ class Command(BaseCommand):
                     ),
                     "occurred_on": today - datetime.timedelta(days=offset * 7 + 1),
                     "author": random.choice(volunteers),
-                    "location": f"{project.name} field site",
                 },
             )
+            if created:
+                log.attendees.set(random.sample(volunteers, min(2, len(volunteers))))
 
         for offset, title in enumerate(MOM_TITLES):
             log, created = DailyLog.objects.get_or_create(
@@ -155,6 +156,5 @@ class Command(BaseCommand):
                 "occurred_on": today,
                 "author": volunteers[0],
                 "status": LogStatus.DRAFT,
-                "location": "TBD",
             },
         )

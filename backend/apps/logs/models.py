@@ -36,8 +36,8 @@ class DailyLog(models.Model):
 
     MOVs and MOMs share one table because the primary screen is a single
     reverse-chronological feed per project — one indexed query rather than a
-    union of two. ``kind`` carries the distinction and a few fields apply to
-    only one kind. Split the models only if the two genuinely diverge.
+    union of two. ``kind`` carries the distinction and every field applies to
+    both. Split the models only if the two genuinely diverge.
 
     Text-only in v1: photo and video attachments are deferred until the Google
     Drive storage question is settled.
@@ -60,9 +60,8 @@ class DailyLog(models.Model):
     )
     status = models.CharField(max_length=12, choices=LogStatus.choices, default=LogStatus.PUBLISHED)
 
-    # MOV-only.
-    location = models.CharField(max_length=200, blank=True)
-    # MOM-only.
+    # Both kinds: who was there. Visit and meeting counts per person are
+    # derived from this, so a MOV carries attendees just as a MOM does.
     attendees = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name="attended_logs",

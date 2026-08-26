@@ -3,7 +3,7 @@ from rest_framework import serializers
 from apps.accounts.models import User
 from apps.accounts.serializers import UserSerializer
 
-from .models import DailyLog, LogKind
+from .models import DailyLog
 
 
 class DailyLogSerializer(serializers.ModelSerializer):
@@ -28,7 +28,6 @@ class DailyLogSerializer(serializers.ModelSerializer):
             "title",
             "body",
             "occurred_on",
-            "location",
             "attendees",
             "attendee_ids",
             "author",
@@ -38,14 +37,10 @@ class DailyLogSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "author", "created_at", "updated_at"]
 
-    def validate(self, attrs):
-        kind = attrs.get("kind", getattr(self.instance, "kind", None))
-        # Keep kind-specific fields from drifting onto the wrong kind, since one
-        # table backs both.
-        if kind == LogKind.MOM and attrs.get("location"):
-            raise serializers.ValidationError({"location": "Location applies to a MOV, not a MOM."})
-        if kind == LogKind.MOV and attrs.get("attendees"):
-            raise serializers.ValidationError(
-                {"attendee_ids": "Attendees apply to a MOM, not a MOV."}
-            )
-        return attrs
+    def validate_project(self, value):
+        # Write permission is decided against the project the entry already
+        # belongs to, so letting an edit change it would sidestep that check
+        # and drop the entry onto a timeline the editor may not even belong to.
+        if self.instance is not None and value != self.instance.project:
+            raise serializers.ValidationError("An entry cannot be moved to another project.")
+        return value

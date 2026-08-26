@@ -321,7 +321,6 @@ export interface components {
              * @description The day the visit or meeting happened.
              */
             occurred_on: string;
-            location?: string;
             readonly attendees: components["schemas"]["User"][];
             readonly author: components["schemas"]["User"];
             status?: components["schemas"]["StatusEnum"];
@@ -341,7 +340,6 @@ export interface components {
              * @description The day the visit or meeting happened.
              */
             occurred_on: string;
-            location?: string;
             attendee_ids?: number[];
             status?: components["schemas"]["StatusEnum"];
         };
@@ -434,7 +432,6 @@ export interface components {
              * @description The day the visit or meeting happened.
              */
             occurred_on?: string;
-            location?: string;
             attendee_ids?: number[];
             status?: components["schemas"]["StatusEnum"];
         };

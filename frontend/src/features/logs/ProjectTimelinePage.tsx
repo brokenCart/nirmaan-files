@@ -1,9 +1,10 @@
-import { Plus } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
+import { ApiError } from '@/api/client'
 import type { EffectiveRole } from '@/api/types'
-import { isProjectStaff } from '@/api/types'
+import { canDeleteLog, canEditLog, isProjectStaff } from '@/api/types'
 import { useAuth } from '@/auth/AuthContext'
 import { Ornament } from '@/components/Logo'
 import {
@@ -19,6 +20,7 @@ import {
 import { ProjectMembersPanel } from '@/features/projects/ProjectMembersPanel'
 import {
   LOGS_PAGE_SIZE,
+  useDeleteLog,
   useLogs,
   useProject,
   useProjectMembers,
@@ -31,10 +33,13 @@ type KindFilter = 'ALL' | 'MOV' | 'MOM'
 
 export function ProjectTimelinePage() {
   const { slug = '' } = useParams()
-  const { roleIn } = useAuth()
+  const { roleIn, user } = useAuth()
   const [kindFilter, setKindFilter] = useState<KindFilter>('ALL')
   const [page, setPage] = useState(1)
   const [composing, setComposing] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<number | null>(null)
+  const deleteLog = useDeleteLog()
 
   const project = useProject(slug)
   const members = useProjectMembers(slug)
@@ -57,6 +62,17 @@ export function ProjectTimelinePage() {
     setPage(next)
     // Paging from the bottom of a long feed would otherwise land mid-list.
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function confirmDelete(id: number) {
+    deleteLog.mutate(id, {
+      onSuccess: () => {
+        setConfirmingDeleteId(null)
+        // Removing the last row of a trailing page would strand the reader on
+        // an out-of-range page, which DRF answers with a 404.
+        if (logs.data?.results.length === 1 && page > 1) setPage(page - 1)
+      },
+    })
   }
 
   const role = roleIn(slug)
@@ -84,7 +100,14 @@ export function ProjectTimelinePage() {
         </div>
 
         {!composing && (
-          <Button onClick={() => setComposing(true)}>
+          <Button
+            onClick={() => {
+              setComposing(true)
+              // One editor open at a time, so it is never ambiguous which form
+              // a Save applies to.
+              setEditingId(null)
+            }}
+          >
             <Plus className="size-4" aria-hidden />
             New entry
           </Button>
@@ -148,7 +171,7 @@ export function ProjectTimelinePage() {
             <ol className="space-y-3">
               {logs.data?.results.map((log) => (
                 <li key={log.id}>
-                  <Card>
+                  <Card className={cn(editingId === log.id && 'border-gold-500/40')}>
                     <div className="flex flex-wrap items-center gap-2">
                       <KindBadge kind={log.kind} />
                       <h3 className="font-display text-lg font-semibold text-ink">{log.title}</h3>
@@ -157,21 +180,92 @@ export function ProjectTimelinePage() {
                           Draft
                         </span>
                       )}
+
+                      {editingId !== log.id && confirmingDeleteId !== log.id && (
+                        <div className="ml-auto flex gap-1">
+                          {canEditLog(log, user?.id) && (
+                            <Button
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingId(log.id)
+                                setComposing(false)
+                              }}
+                            >
+                              <Pencil className="size-4" aria-hidden />
+                              Edit
+                            </Button>
+                          )}
+                          {canDeleteLog(log, role, user?.id) && (
+                            <Button
+                              variant="ghost"
+                              aria-label={`Remove “${log.title}” from the timeline`}
+                              onClick={() => setConfirmingDeleteId(log.id)}
+                            >
+                              <Trash2 className="size-4" aria-hidden />
+                              Delete
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {confirmingDeleteId === log.id && (
+                        <div className="ml-auto flex items-center gap-2">
+                          <span className="text-xs text-ink-soft">Remove from the timeline?</span>
+                          <Button
+                            variant="danger"
+                            disabled={deleteLog.isPending}
+                            onClick={() => confirmDelete(log.id)}
+                          >
+                            {deleteLog.isPending ? 'Removing…' : 'Remove'}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            disabled={deleteLog.isPending}
+                            onClick={() => setConfirmingDeleteId(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      )}
                     </div>
 
-                    <p className="mt-1 text-xs text-ink-mute">
-                      {formatDate(log.occurred_on)} · {log.author.full_name || log.author.email}
-                      {log.location && ` · ${log.location}`}
-                    </p>
+                    {confirmingDeleteId === log.id && deleteLog.error && (
+                      <div className="mt-3">
+                        <ErrorNote
+                          message={
+                            deleteLog.error instanceof ApiError
+                              ? deleteLog.error.detail
+                              : deleteLog.error.message
+                          }
+                        />
+                      </div>
+                    )}
 
-                    <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
-                      {log.body}
-                    </p>
+                    {editingId === log.id ? (
+                      <div className="mt-4">
+                        <LogComposer
+                          project={project.data}
+                          members={members.data?.results ?? []}
+                          log={log}
+                          onDone={() => setEditingId(null)}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <p className="mt-1 text-xs text-ink-mute">
+                          {formatDate(log.occurred_on)} · {log.author.full_name || log.author.email}
+                        </p>
 
-                    {log.attendees.length > 0 && (
-                      <p className="mt-3 border-t border-line pt-3 text-xs text-ink-mute">
-                        Attendees: {log.attendees.map((a) => a.full_name || a.email).join(', ')}
-                      </p>
+                        <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
+                          {log.body}
+                        </p>
+
+                        {log.attendees.length > 0 && (
+                          <p className="mt-3 border-t border-line pt-3 text-xs text-ink-mute">
+                            Attendees: {log.attendees.map((a) => a.full_name || a.email).join(', ')}
+                          </p>
+                        )}
+                      </>
                     )}
                   </Card>
                 </li>

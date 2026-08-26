@@ -119,13 +119,11 @@ class Command(BaseCommand):
                     "occurred_on": start - datetime.timedelta(days=(index + 1) * 2),
                     "author": next(mom_cycle) if is_mom else next(author_cycle),
                     "status": LogStatus.PUBLISHED,
-                    "location": "" if is_mom else f"{project.name} field site",
                 },
             )
             if was_created:
                 created += 1
-                if is_mom:
-                    log.attendees.set(self._attendees(log.author, authors))
+                log.attendees.set(self._attendees(log.author, authors))
 
         after = DailyLog.objects.filter(project=project).count()
         skipped = count - created

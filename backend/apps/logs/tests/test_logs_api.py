@@ -91,19 +91,49 @@ class TestLogWrites:
         assert response.status_code == 201
         assert DailyLog.objects.get(pk=response.data["id"]).author_id == volunteer.pk
 
-    def test_volunteer_may_edit_their_own_draft(self, auth_client, volunteer, project):
-        log = DailyLogFactory(project=project, author=volunteer, status=LogStatus.DRAFT)
+
+class TestEditingIsAuthorOnly:
+    """An entry is one person's account, so only they may reword it.
+
+    Staff who disagree with an entry delete it instead — see
+    :class:`TestDeleting`.
+    """
+
+    @pytest.mark.parametrize("status", [LogStatus.DRAFT, LogStatus.PUBLISHED])
+    def test_author_may_edit_their_own_log_at_any_status(
+        self, auth_client, volunteer, project, status
+    ):
+        log = DailyLogFactory(project=project, author=volunteer, status=status)
         response = auth_client(volunteer).patch(
             reverse("log-detail", kwargs={"pk": log.pk}), {"title": "Revised"}
         )
         assert response.status_code == 200
+        log.refresh_from_db()
+        assert log.title == "Revised"
 
-    def test_volunteer_may_not_edit_their_own_published_log(self, auth_client, volunteer, project):
-        log = DailyLogFactory(project=project, author=volunteer, status=LogStatus.PUBLISHED)
+    def test_author_may_publish_their_own_draft(self, auth_client, volunteer, project):
+        log = DailyLogFactory(project=project, author=volunteer, status=LogStatus.DRAFT)
         response = auth_client(volunteer).patch(
-            reverse("log-detail", kwargs={"pk": log.pk}), {"title": "Sneaky edit"}
+            reverse("log-detail", kwargs={"pk": log.pk}), {"status": LogStatus.PUBLISHED}
+        )
+        assert response.status_code == 200
+        log.refresh_from_db()
+        assert log.status == LogStatus.PUBLISHED
+
+    @pytest.mark.parametrize("actor", ["lead", "finance_lead", "exec_user"])
+    def test_no_role_grants_an_edit_on_someone_elses_log(
+        self, request, auth_client, volunteer, project, actor
+    ):
+        # Leads, finance leads and exec each have write power elsewhere in the
+        # project; none of it reaches another member's entry.
+        log = DailyLogFactory(project=project, author=volunteer, title="Original")
+        user = request.getfixturevalue(actor)
+        response = auth_client(user).patch(
+            reverse("log-detail", kwargs={"pk": log.pk}), {"title": "Corrected"}
         )
         assert response.status_code == 403
+        log.refresh_from_db()
+        assert log.title == "Original"
 
     def test_volunteer_may_not_edit_someone_elses_log(self, auth_client, volunteer, lead, project):
         log = DailyLogFactory(project=project, author=lead, status=LogStatus.PUBLISHED)
@@ -112,16 +142,41 @@ class TestLogWrites:
         )
         assert response.status_code == 403
 
+    def test_an_edit_cannot_move_an_entry_to_another_project(
+        self, auth_client, volunteer, project, other_project
+    ):
+        # Write permission is judged against the entry's own project, so a
+        # reassignment would land it on a timeline the author may not be in.
+        log = DailyLogFactory(project=project, author=volunteer)
+        response = auth_client(volunteer).patch(
+            reverse("log-detail", kwargs={"pk": log.pk}), {"project": other_project.pk}
+        )
+        assert response.status_code == 400
+        log.refresh_from_db()
+        assert log.project_id == project.pk
+
+
+class TestDeleting:
     @pytest.mark.parametrize("actor", ["lead", "finance_lead", "exec_user"])
-    def test_staff_may_edit_any_log_in_the_project(
+    def test_staff_may_delete_any_log_in_the_project(
         self, request, auth_client, volunteer, project, actor
     ):
-        log = DailyLogFactory(project=project, author=volunteer, status=LogStatus.PUBLISHED)
+        log = DailyLogFactory(project=project, author=volunteer)
         user = request.getfixturevalue(actor)
-        response = auth_client(user).patch(
-            reverse("log-detail", kwargs={"pk": log.pk}), {"title": "Corrected"}
-        )
-        assert response.status_code == 200
+        response = auth_client(user).delete(reverse("log-detail", kwargs={"pk": log.pk}))
+        assert response.status_code == 204
+
+    def test_author_may_delete_their_own_log(self, auth_client, volunteer, project):
+        log = DailyLogFactory(project=project, author=volunteer)
+        response = auth_client(volunteer).delete(reverse("log-detail", kwargs={"pk": log.pk}))
+        assert response.status_code == 204
+
+    def test_volunteer_may_not_delete_someone_elses_log(
+        self, auth_client, volunteer, lead, project
+    ):
+        log = DailyLogFactory(project=project, author=lead)
+        response = auth_client(volunteer).delete(reverse("log-detail", kwargs={"pk": log.pk}))
+        assert response.status_code == 403
 
     def test_delete_is_soft(self, auth_client, lead, project):
         log = DailyLogFactory(project=project)
@@ -130,30 +185,29 @@ class TestLogWrites:
         log.refresh_from_db()
         assert log.is_deleted is True
 
+    def test_deleted_logs_leave_the_timeline(self, auth_client, lead, project):
+        log = DailyLogFactory(project=project, title="Withdrawn")
+        auth_client(lead).delete(reverse("log-detail", kwargs={"pk": log.pk}))
+        response = auth_client(lead).get(reverse("log-list"), {"project": project.slug})
+        assert "Withdrawn" not in {row["title"] for row in response.data["results"]}
 
-class TestKindSpecificFields:
-    def test_mom_rejects_a_location(self, auth_client, lead, project):
+
+class TestAttendees:
+    # Attendees are what visit and meeting counts are derived from, so both
+    # kinds carry them.
+    @pytest.mark.parametrize("kind", [LogKind.MOV, LogKind.MOM])
+    def test_either_kind_accepts_attendees(self, auth_client, lead, volunteer, project, kind):
         response = auth_client(lead).post(
             reverse("log-list"),
-            log_payload(project, kind=LogKind.MOM, location="Village square"),
-        )
-        assert response.status_code == 400
-        assert "location" in response.data
-
-    def test_mov_rejects_attendees(self, auth_client, lead, volunteer, project):
-        response = auth_client(lead).post(
-            reverse("log-list"),
-            log_payload(project, kind=LogKind.MOV, attendee_ids=[volunteer.pk]),
-        )
-        assert response.status_code == 400
-
-    def test_mom_accepts_attendees(self, auth_client, lead, volunteer, project):
-        response = auth_client(lead).post(
-            reverse("log-list"),
-            log_payload(project, kind=LogKind.MOM, attendee_ids=[volunteer.pk]),
+            log_payload(project, kind=kind, attendee_ids=[volunteer.pk]),
         )
         assert response.status_code == 201
         assert response.data["attendees"][0]["id"] == volunteer.pk
+
+    def test_attendees_default_to_empty(self, auth_client, lead, project):
+        response = auth_client(lead).post(reverse("log-list"), log_payload(project))
+        assert response.status_code == 201
+        assert response.data["attendees"] == []
 
 
 class TestQueryEfficiency:
