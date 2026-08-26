@@ -36,7 +36,7 @@ export function LoginPage() {
           <Ornament className="mt-5 w-full" />
 
           <h1 className="mt-4 font-display text-2xl font-semibold text-brand-600">
-            Project Files
+            Nirmaan Files
           </h1>
           <p className="mt-2 text-sm text-ink-soft">
             Sign in with your <strong className="text-ink">@{CAMPUS_DOMAIN}</strong> account to see
