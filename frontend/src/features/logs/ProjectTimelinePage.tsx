@@ -1,4 +1,4 @@
-import { BarChart3, CalendarRange, Library, Pencil, Plus, Trash2 } from 'lucide-react'
+import { BarChart3, BookOpen, CalendarRange, Library, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
@@ -178,6 +178,14 @@ export function ProjectTimelinePage() {
             <Button variant="secondary">
               <Library className="size-4" aria-hidden />
               Resources
+            </Button>
+          </Link>
+
+          {/* Knowledge, like resources, carries across semesters. */}
+          <Link to={`/projects/${slug}/knowledge`}>
+            <Button variant="secondary">
+              <BookOpen className="size-4" aria-hidden />
+              Knowledge
             </Button>
           </Link>
 

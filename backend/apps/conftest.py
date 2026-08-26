@@ -8,6 +8,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
+from apps.knowledge.models import Article, ArticleCategory
 from apps.logs.models import DailyLog, LogKind, LogStatus
 from apps.projects.models import Membership, Project, Role, Semester
 from apps.resources.models import Resource, ResourceKind
@@ -98,6 +99,30 @@ class ResourceFactory(factory.django.DjangoModelFactory):
     # Sequenced rather than faked: `url` is unique per project, and a faker
     # that repeats itself would fail the constraint rather than the assertion.
     url = factory.Sequence(lambda n: f"https://drive.google.com/drive/folders/seed{n}")
+
+
+class ArticleFactory(factory.django.DjangoModelFactory):
+    """A knowledge base page.
+
+    ``created_by`` and ``updated_by`` are one person by default — a page nobody
+    has edited yet. Tests about the open edit rule set them apart deliberately.
+
+    No revision is created: `record_revision` is the viewset's job, so a factory
+    row starts with an empty history, which is also what a test asserting that
+    the first edit records one wants.
+    """
+
+    class Meta:
+        model = Article
+
+    project = factory.SubFactory(ProjectFactory)
+    created_by = factory.SubFactory(UserFactory)
+    updated_by = factory.LazyAttribute(lambda article: article.created_by)
+    category = ArticleCategory.CONTEXT
+    # Sequenced rather than faked: one live title per project is a constraint,
+    # and a faker that repeats itself would fail it rather than the assertion.
+    title = factory.Sequence(lambda n: f"Article {n}")
+    body = factory.Faker("paragraph")
 
 
 @pytest.fixture

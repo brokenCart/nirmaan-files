@@ -35,6 +35,18 @@ export type ResourceInput = components['schemas']['ResourceRequest']
 export type ResourcePatch = components['schemas']['PatchedResourceRequest']
 export type ResourceKind = components['schemas']['ResourceKindEnum']
 
+/** A page in a project's knowledge base, in full. */
+export type Article = components['schemas']['Article']
+/** A page as the index lists it: an excerpt in place of the body. */
+export type ArticleListItem = components['schemas']['ArticleList']
+/** One saved version of a page, with the text it held. */
+export type ArticleRevision = components['schemas']['ArticleRevision']
+/** Body accepted by `POST /api/articles/`. */
+export type ArticleInput = components['schemas']['ArticleRequest']
+/** Body accepted by `PATCH /api/articles/{id}/`. */
+export type ArticlePatch = components['schemas']['PatchedArticleRequest']
+export type ArticleCategory = components['schemas']['CategoryEnum']
+
 /** A project role, or the org-wide committee marker the API returns. */
 export type EffectiveRole = Role | 'EXEC'
 
@@ -79,6 +91,29 @@ export const RESOURCE_KIND_LABELS: Record<ResourceKind, string> = {
   SHEET: 'Spreadsheet',
   FORM: 'Form',
   OTHER: 'Link',
+}
+
+/**
+ * The topics a knowledge page can be filed under.
+ *
+ * Ordered as the index stacks them, which is roughly the order a newcomer needs
+ * them in: what this project is, how to do the work, who to talk to, and what
+ * went wrong last time.
+ */
+export const ARTICLE_CATEGORIES: ArticleCategory[] = [
+  'CONTEXT',
+  'PROCESS',
+  'PARTNER',
+  'LESSON',
+  'OTHER',
+]
+
+export const ARTICLE_CATEGORY_LABELS: Record<ArticleCategory, string> = {
+  CONTEXT: 'Background',
+  PROCESS: 'How we do it',
+  PARTNER: 'People and partners',
+  LESSON: 'Lessons learned',
+  OTHER: 'Other',
 }
 
 /** Roles permitted to edit any content within a project. */
@@ -252,4 +287,66 @@ export function canChangeResource(
   if (!role) return false
   if (isProjectStaff(role)) return true
   return userId !== undefined && resource.added_by.id === userId
+}
+
+/**
+ * Whether the caller may start a page, mirroring
+ * `ArticleViewSet.perform_create`.
+ *
+ * Any current member, the same bar as filing an entry or adding a link. `role`
+ * is null for someone here on a past membership — they read the knowledge base
+ * and write none of it.
+ */
+export function canAddArticle(role: EffectiveRole | null | undefined): boolean {
+  return Boolean(role)
+}
+
+/**
+ * Whether the caller may edit `article`, mirroring
+ * `ArticleViewSet._assert_can_edit`.
+ *
+ * Any current member, and deliberately nothing else — no authorship test, which
+ * makes this the widest write predicate in the app. It takes no article at all,
+ * and that absence is the rule: who wrote a page has no bearing on who may fix
+ * it. Compare {@link canEditLog}, which is the narrowest — an entry is one
+ * person's account of what happened and nobody rewords it, while an article is
+ * a shared statement of what is currently true and goes stale if only its
+ * original author may touch it.
+ *
+ * What makes the width safe is the revision trail: every save keeps the version
+ * it replaced, attributed, so an edit can be read and undone. Restoring is an
+ * ordinary edit and so needs no predicate of its own.
+ *
+ * No `isExec` argument, unlike {@link canChangeResource}: exec is a superset of
+ * "any current member" here, and `roleIn` returns `EXEC` for a committee member
+ * with no membership on the project, so `Boolean(role)` already covers both.
+ */
+export function canEditArticle(role: EffectiveRole | null | undefined): boolean {
+  return Boolean(role)
+}
+
+/**
+ * Whether the caller may remove `article`, mirroring
+ * `ArticleViewSet._assert_can_delete`.
+ *
+ * Narrow exactly where {@link canEditArticle} is wide. Editing is visible and
+ * reversible; removing takes the page off the index, so it is moderation and
+ * answers to the same set the timeline's does — staff, exec, or whoever started
+ * it. The delete is soft, as on the timeline and unlike the shelf.
+ *
+ * `isExec` is passed separately for the reason {@link canChangeResource} takes
+ * it separately: `roleIn` reports a project membership in preference to the
+ * committee marker, so an exec who also volunteers here comes back `VOLUNTEER`
+ * and would lose a control the server would have granted.
+ */
+export function canDeleteArticle(
+  article: Pick<Article, 'created_by'>,
+  role: EffectiveRole | null | undefined,
+  isExec: boolean,
+  userId: number | undefined,
+): boolean {
+  if (isExec) return true
+  if (!role) return false
+  if (isProjectStaff(role)) return true
+  return userId !== undefined && article.created_by.id === userId
 }

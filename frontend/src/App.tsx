@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { ProjectAttendancePage } from '@/features/attendance/ProjectAttendancePage'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { ArticlePage } from '@/features/knowledge/ArticlePage'
+import { ProjectKnowledgePage } from '@/features/knowledge/ProjectKnowledgePage'
 import { ProjectTimelinePage } from '@/features/logs/ProjectTimelinePage'
 import { ProjectListPage } from '@/features/projects/ProjectListPage'
 import { ProjectResourcesPage } from '@/features/resources/ProjectResourcesPage'
@@ -26,6 +28,8 @@ export function App() {
         <Route path="/projects/:slug/attendance" element={<ProjectAttendancePage />} />
         <Route path="/projects/:slug/archive" element={<ProjectArchivePage />} />
         <Route path="/projects/:slug/resources" element={<ProjectResourcesPage />} />
+        <Route path="/projects/:slug/knowledge" element={<ProjectKnowledgePage />} />
+        <Route path="/projects/:slug/knowledge/:articleId" element={<ArticlePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

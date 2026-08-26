@@ -4,6 +4,289 @@
  */
 
 export interface paths {
+    "/api/articles/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description A project's knowledge base — what the next batch needs to know.
+         *
+         *     Write rules:
+         *
+         *       * any member of the project **this semester** may start a page;
+         *       * **any member of the project this semester may edit any page** — the one
+         *         genuinely open write rule in this codebase;
+         *       * whoever started it, plus leads, finance leads and exec, may remove one;
+         *       * a past member reads the knowledge base and writes nothing, as everywhere
+         *         else.
+         *
+         *     The open edit rule is the module, not a relaxation of it. Nirmaan's roster
+         *     turns over completely every year, and a knowledge base that only its
+         *     original authors may correct is a pile of confidently-worded stale facts
+         *     within two terms. The volunteer who discovers that the partner school
+         *     changed its timings is rarely the lead, and making them file a request to
+         *     someone who will also have graduated is how the fact gets lost.
+         *
+         *     What makes that safe is :class:`~apps.knowledge.models.ArticleRevision`:
+         *     every save snapshots the version it replaced, attributed and timestamped, so
+         *     an edit can be read, judged and undone. Compare the timeline, which has the
+         *     opposite shape — an entry is one person's account of what happened, so
+         *     **nobody** may reword it and staff who disagree delete it instead. The
+         *     difference is that a log is testimony and an article is a shared statement
+         *     of what is currently true.
+         *
+         *     Removal stays narrow for exactly the reason editing is wide. Editing is
+         *     visible and reversible; removal takes the page off the index, so it is
+         *     moderation and answers to the same set the timeline's does. It is soft, like
+         *     a log's and unlike the shelf's — this is the module whose whole job is not
+         *     losing things.
+         *
+         *     There is no term boundary to enforce, because an article has no term: it
+         *     states what is true now, not what happened on a date. See
+         *     :class:`~apps.knowledge.models.Article`.
+         */
+        get: operations["articles_list"];
+        put?: never;
+        /**
+         * @description A project's knowledge base — what the next batch needs to know.
+         *
+         *     Write rules:
+         *
+         *       * any member of the project **this semester** may start a page;
+         *       * **any member of the project this semester may edit any page** — the one
+         *         genuinely open write rule in this codebase;
+         *       * whoever started it, plus leads, finance leads and exec, may remove one;
+         *       * a past member reads the knowledge base and writes nothing, as everywhere
+         *         else.
+         *
+         *     The open edit rule is the module, not a relaxation of it. Nirmaan's roster
+         *     turns over completely every year, and a knowledge base that only its
+         *     original authors may correct is a pile of confidently-worded stale facts
+         *     within two terms. The volunteer who discovers that the partner school
+         *     changed its timings is rarely the lead, and making them file a request to
+         *     someone who will also have graduated is how the fact gets lost.
+         *
+         *     What makes that safe is :class:`~apps.knowledge.models.ArticleRevision`:
+         *     every save snapshots the version it replaced, attributed and timestamped, so
+         *     an edit can be read, judged and undone. Compare the timeline, which has the
+         *     opposite shape — an entry is one person's account of what happened, so
+         *     **nobody** may reword it and staff who disagree delete it instead. The
+         *     difference is that a log is testimony and an article is a shared statement
+         *     of what is currently true.
+         *
+         *     Removal stays narrow for exactly the reason editing is wide. Editing is
+         *     visible and reversible; removal takes the page off the index, so it is
+         *     moderation and answers to the same set the timeline's does. It is soft, like
+         *     a log's and unlike the shelf's — this is the module whose whole job is not
+         *     losing things.
+         *
+         *     There is no term boundary to enforce, because an article has no term: it
+         *     states what is true now, not what happened on a date. See
+         *     :class:`~apps.knowledge.models.Article`.
+         */
+        post: operations["articles_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/articles/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description A project's knowledge base — what the next batch needs to know.
+         *
+         *     Write rules:
+         *
+         *       * any member of the project **this semester** may start a page;
+         *       * **any member of the project this semester may edit any page** — the one
+         *         genuinely open write rule in this codebase;
+         *       * whoever started it, plus leads, finance leads and exec, may remove one;
+         *       * a past member reads the knowledge base and writes nothing, as everywhere
+         *         else.
+         *
+         *     The open edit rule is the module, not a relaxation of it. Nirmaan's roster
+         *     turns over completely every year, and a knowledge base that only its
+         *     original authors may correct is a pile of confidently-worded stale facts
+         *     within two terms. The volunteer who discovers that the partner school
+         *     changed its timings is rarely the lead, and making them file a request to
+         *     someone who will also have graduated is how the fact gets lost.
+         *
+         *     What makes that safe is :class:`~apps.knowledge.models.ArticleRevision`:
+         *     every save snapshots the version it replaced, attributed and timestamped, so
+         *     an edit can be read, judged and undone. Compare the timeline, which has the
+         *     opposite shape — an entry is one person's account of what happened, so
+         *     **nobody** may reword it and staff who disagree delete it instead. The
+         *     difference is that a log is testimony and an article is a shared statement
+         *     of what is currently true.
+         *
+         *     Removal stays narrow for exactly the reason editing is wide. Editing is
+         *     visible and reversible; removal takes the page off the index, so it is
+         *     moderation and answers to the same set the timeline's does. It is soft, like
+         *     a log's and unlike the shelf's — this is the module whose whole job is not
+         *     losing things.
+         *
+         *     There is no term boundary to enforce, because an article has no term: it
+         *     states what is true now, not what happened on a date. See
+         *     :class:`~apps.knowledge.models.Article`.
+         */
+        get: operations["articles_retrieve"];
+        /**
+         * @description A project's knowledge base — what the next batch needs to know.
+         *
+         *     Write rules:
+         *
+         *       * any member of the project **this semester** may start a page;
+         *       * **any member of the project this semester may edit any page** — the one
+         *         genuinely open write rule in this codebase;
+         *       * whoever started it, plus leads, finance leads and exec, may remove one;
+         *       * a past member reads the knowledge base and writes nothing, as everywhere
+         *         else.
+         *
+         *     The open edit rule is the module, not a relaxation of it. Nirmaan's roster
+         *     turns over completely every year, and a knowledge base that only its
+         *     original authors may correct is a pile of confidently-worded stale facts
+         *     within two terms. The volunteer who discovers that the partner school
+         *     changed its timings is rarely the lead, and making them file a request to
+         *     someone who will also have graduated is how the fact gets lost.
+         *
+         *     What makes that safe is :class:`~apps.knowledge.models.ArticleRevision`:
+         *     every save snapshots the version it replaced, attributed and timestamped, so
+         *     an edit can be read, judged and undone. Compare the timeline, which has the
+         *     opposite shape — an entry is one person's account of what happened, so
+         *     **nobody** may reword it and staff who disagree delete it instead. The
+         *     difference is that a log is testimony and an article is a shared statement
+         *     of what is currently true.
+         *
+         *     Removal stays narrow for exactly the reason editing is wide. Editing is
+         *     visible and reversible; removal takes the page off the index, so it is
+         *     moderation and answers to the same set the timeline's does. It is soft, like
+         *     a log's and unlike the shelf's — this is the module whose whole job is not
+         *     losing things.
+         *
+         *     There is no term boundary to enforce, because an article has no term: it
+         *     states what is true now, not what happened on a date. See
+         *     :class:`~apps.knowledge.models.Article`.
+         */
+        put: operations["articles_update"];
+        post?: never;
+        /**
+         * @description A project's knowledge base — what the next batch needs to know.
+         *
+         *     Write rules:
+         *
+         *       * any member of the project **this semester** may start a page;
+         *       * **any member of the project this semester may edit any page** — the one
+         *         genuinely open write rule in this codebase;
+         *       * whoever started it, plus leads, finance leads and exec, may remove one;
+         *       * a past member reads the knowledge base and writes nothing, as everywhere
+         *         else.
+         *
+         *     The open edit rule is the module, not a relaxation of it. Nirmaan's roster
+         *     turns over completely every year, and a knowledge base that only its
+         *     original authors may correct is a pile of confidently-worded stale facts
+         *     within two terms. The volunteer who discovers that the partner school
+         *     changed its timings is rarely the lead, and making them file a request to
+         *     someone who will also have graduated is how the fact gets lost.
+         *
+         *     What makes that safe is :class:`~apps.knowledge.models.ArticleRevision`:
+         *     every save snapshots the version it replaced, attributed and timestamped, so
+         *     an edit can be read, judged and undone. Compare the timeline, which has the
+         *     opposite shape — an entry is one person's account of what happened, so
+         *     **nobody** may reword it and staff who disagree delete it instead. The
+         *     difference is that a log is testimony and an article is a shared statement
+         *     of what is currently true.
+         *
+         *     Removal stays narrow for exactly the reason editing is wide. Editing is
+         *     visible and reversible; removal takes the page off the index, so it is
+         *     moderation and answers to the same set the timeline's does. It is soft, like
+         *     a log's and unlike the shelf's — this is the module whose whole job is not
+         *     losing things.
+         *
+         *     There is no term boundary to enforce, because an article has no term: it
+         *     states what is true now, not what happened on a date. See
+         *     :class:`~apps.knowledge.models.Article`.
+         */
+        delete: operations["articles_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description A project's knowledge base — what the next batch needs to know.
+         *
+         *     Write rules:
+         *
+         *       * any member of the project **this semester** may start a page;
+         *       * **any member of the project this semester may edit any page** — the one
+         *         genuinely open write rule in this codebase;
+         *       * whoever started it, plus leads, finance leads and exec, may remove one;
+         *       * a past member reads the knowledge base and writes nothing, as everywhere
+         *         else.
+         *
+         *     The open edit rule is the module, not a relaxation of it. Nirmaan's roster
+         *     turns over completely every year, and a knowledge base that only its
+         *     original authors may correct is a pile of confidently-worded stale facts
+         *     within two terms. The volunteer who discovers that the partner school
+         *     changed its timings is rarely the lead, and making them file a request to
+         *     someone who will also have graduated is how the fact gets lost.
+         *
+         *     What makes that safe is :class:`~apps.knowledge.models.ArticleRevision`:
+         *     every save snapshots the version it replaced, attributed and timestamped, so
+         *     an edit can be read, judged and undone. Compare the timeline, which has the
+         *     opposite shape — an entry is one person's account of what happened, so
+         *     **nobody** may reword it and staff who disagree delete it instead. The
+         *     difference is that a log is testimony and an article is a shared statement
+         *     of what is currently true.
+         *
+         *     Removal stays narrow for exactly the reason editing is wide. Editing is
+         *     visible and reversible; removal takes the page off the index, so it is
+         *     moderation and answers to the same set the timeline's does. It is soft, like
+         *     a log's and unlike the shelf's — this is the module whose whole job is not
+         *     losing things.
+         *
+         *     There is no term boundary to enforce, because an article has no term: it
+         *     states what is true now, not what happened on a date. See
+         *     :class:`~apps.knowledge.models.Article`.
+         */
+        patch: operations["articles_partial_update"];
+        trace?: never;
+    };
+    "/api/articles/{id}/revisions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Every saved version of this page, newest first.
+         *
+         *     Open to anyone who may read the page, which is anyone who has ever been
+         *     a member — including someone long off the roster trying to work out when
+         *     a fact changed and who changed it. `get_object` runs the same queryset
+         *     as everything else, so a page in another project 404s here too.
+         *
+         *     Unpaginated for the same reason the index is: the ceiling is a project's
+         *     own edit rate, and one page revised weekly for four years is two hundred
+         *     rows. The bodies travel with them so the SPA can preview an old version,
+         *     and offer it back into the editor, without a request per revision.
+         */
+        get: operations["articles_revisions_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/google/": {
         parameters: {
             query?: never;
@@ -740,6 +1023,86 @@ export interface components {
             readonly member_count: number;
             readonly leads: components["schemas"]["User"][];
         };
+        /** @description One page in full, and the only serializer that writes. */
+        Article: {
+            readonly id: number;
+            project: number;
+            readonly project_slug: string;
+            category?: components["schemas"]["CategoryEnum"];
+            title: string;
+            /** @description Markdown. */
+            body: string;
+            /**
+             * @description How many versions this page has been through.
+             *
+             *     Reads the annotation the viewset attaches when there is one, and counts
+             *     otherwise: a create or update response serializes the instance that was
+             *     just saved, which never carries it.
+             */
+            readonly revision_count: number;
+            readonly created_by: components["schemas"]["User"];
+            readonly updated_by: components["schemas"]["User"];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /**
+         * @description A page as it appears in the index — everything but the text of it.
+         *
+         *     The body is replaced by an excerpt so that opening a project's knowledge
+         *     base does not download every word in it. The detail route carries the whole
+         *     thing.
+         */
+        ArticleList: {
+            readonly id: number;
+            readonly project: number;
+            readonly project_slug: string;
+            readonly category: components["schemas"]["CategoryEnum"];
+            readonly title: string;
+            readonly excerpt: string;
+            /**
+             * @description How many versions this page has been through.
+             *
+             *     Reads the annotation the viewset attaches when there is one, and counts
+             *     otherwise: a create or update response serializes the instance that was
+             *     just saved, which never carries it.
+             */
+            readonly revision_count: number;
+            readonly created_by: components["schemas"]["User"];
+            readonly updated_by: components["schemas"]["User"];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /** @description One page in full, and the only serializer that writes. */
+        ArticleRequest: {
+            project: number;
+            category?: components["schemas"]["CategoryEnum"];
+            title: string;
+            /** @description Markdown. */
+            body: string;
+            /** @description What changed, in a few words. Stored on the revision this write creates, not on the article. */
+            revision_note?: string;
+        };
+        /**
+         * @description One version of a page, with the text it held.
+         *
+         *     The body travels with the row so the SPA can preview an old version, and
+         *     offer it back into the editor, without a request per revision.
+         */
+        ArticleRevision: {
+            readonly id: number;
+            readonly title: string;
+            readonly body: string;
+            readonly category: components["schemas"]["CategoryEnum"];
+            readonly edited_by: components["schemas"]["User"];
+            /** @description What changed, in a few words. Optional. */
+            readonly note: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
         /**
          * @description One member's attendance on a project, in one semester.
          *
@@ -753,6 +1116,15 @@ export interface components {
             readonly meetings: number;
             readonly total: number;
         };
+        /**
+         * @description * `CONTEXT` - Background
+         *     * `PROCESS` - How we do it
+         *     * `PARTNER` - People and partners
+         *     * `LESSON` - Lessons learned
+         *     * `OTHER` - Other
+         * @enum {string}
+         */
+        CategoryEnum: "CONTEXT" | "PROCESS" | "PARTNER" | "LESSON" | "OTHER";
         DailyLog: {
             readonly id: number;
             project: number;
@@ -917,6 +1289,16 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Semester"][];
+        };
+        /** @description One page in full, and the only serializer that writes. */
+        PatchedArticleRequest: {
+            project?: number;
+            category?: components["schemas"]["CategoryEnum"];
+            title?: string;
+            /** @description Markdown. */
+            body?: string;
+            /** @description What changed, in a few words. Stored on the revision this write creates, not on the article. */
+            revision_note?: string;
         };
         PatchedDailyLogRequest: {
             project?: number;
@@ -1087,6 +1469,178 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    articles_list: {
+        parameters: {
+            query?: {
+                /** @description One ArticleCategory. */
+                category?: string;
+                /** @description Project slug. */
+                project?: string;
+                /** @description Free-text match over page titles and bodies. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArticleList"][];
+                };
+            };
+        };
+    };
+    articles_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArticleRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ArticleRequest"];
+                "multipart/form-data": components["schemas"]["ArticleRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Article"];
+                };
+            };
+        };
+    };
+    articles_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this article. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Article"];
+                };
+            };
+        };
+    };
+    articles_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this article. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArticleRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ArticleRequest"];
+                "multipart/form-data": components["schemas"]["ArticleRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Article"];
+                };
+            };
+        };
+    };
+    articles_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this article. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    articles_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this article. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedArticleRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedArticleRequest"];
+                "multipart/form-data": components["schemas"]["PatchedArticleRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Article"];
+                };
+            };
+        };
+    };
+    articles_revisions_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this article. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArticleRevision"][];
+                };
+            };
+        };
+    };
     auth_google_create: {
         parameters: {
             query?: never;

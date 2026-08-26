@@ -3,6 +3,7 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
+from apps.knowledge.views import ArticleViewSet
 from apps.logs.views import DailyLogViewSet
 from apps.projects.views import MembershipViewSet, ProjectViewSet, SemesterViewSet
 from apps.resources.views import ResourceViewSet
@@ -13,6 +14,7 @@ router.register("semesters", SemesterViewSet, basename="semester")
 router.register("memberships", MembershipViewSet, basename="membership")
 router.register("logs", DailyLogViewSet, basename="log")
 router.register("resources", ResourceViewSet, basename="resource")
+router.register("articles", ArticleViewSet, basename="article")
 
 urlpatterns = [
     path("admin/", admin.site.urls),

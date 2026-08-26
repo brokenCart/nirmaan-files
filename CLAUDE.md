@@ -395,9 +395,9 @@ serializer and run `npm run gen:api`. A renamed field then breaks the build inst
   the regression net for every endpoint's role behaviour.
 - `AUTH_FAKE_GOOGLE_TOKENS` accepts a plain JSON claims blob instead of a signed token. It exists
   in the dev and test settings only and must never reach `prod.py`.
-- Frontend `.npmrc` sets `legacy-peer-deps=true` because `openapi-typescript` still declares a
-  TypeScript `^5.x` peer range while this project runs TypeScript 6. It works; the range is stale.
-  Remove the flag once upstream widens it.
+- TypeScript is pinned to the latest 5.x release because `openapi-typescript` still declares a
+  `^5.x` peer range. Keep the two compatible so ordinary `npm install`, `npm ci`, and `npm ls`
+  work without `legacy-peer-deps`.
 
 ## Deferred: photos and video
 

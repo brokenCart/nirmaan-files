@@ -3,6 +3,12 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { api } from '@/api/client'
 import type {
   ArchiveTerm,
+  Article,
+  ArticleCategory,
+  ArticleInput,
+  ArticleListItem,
+  ArticlePatch,
+  ArticleRevision,
   AttendanceRow,
   DailyLog,
   DailyLogInput,
@@ -32,6 +38,19 @@ export const queryKeys = {
   // Resources carry no semester — the shelf is the same one every term — so
   // the project slug is the whole key.
   resources: (slug: string) => ['resources', slug] as const,
+  // Articles carry no semester either, but the index is filtered, so the
+  // filters are part of the key.
+  articles: (slug: string, filters: ArticleFilters) => ['articles', slug, filters] as const,
+  /** Prefix matching every filtered view of one project's index. */
+  articlesForProject: (slug: string) => ['articles', slug] as const,
+  /**
+   * One page and its history.
+   *
+   * The history hangs off the same prefix so that invalidating a page after an
+   * edit clears the version list too — an edit is precisely what adds to it.
+   */
+  article: (id: number) => ['article', id] as const,
+  articleRevisions: (id: number) => ['article', id, 'revisions'] as const,
   attendance: (slug: string, semester?: string) =>
     ['attendance', slug, semester ?? null] as const,
   /**
@@ -64,6 +83,12 @@ export type LogFilters = {
   semester?: string
   page?: number
 } & Record<string, string | number | undefined>
+
+/** Filters accepted by the unpaginated knowledge-base index. */
+export type ArticleFilters = {
+  q?: string
+  category?: ArticleCategory
+} & Record<string, string | undefined>
 
 export function useProjects() {
   return useQuery({
@@ -301,6 +326,91 @@ export function useDeleteResource(projectSlug: string) {
     mutationFn: (id: number) => api.delete<void>(`/api/resources/${id}/`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.resources(projectSlug) })
+    },
+  })
+}
+
+/**
+ * A project's knowledge base index.
+ *
+ * Not paginated, like the shelf: `ArticleViewSet` returns the whole set,
+ * because a knowledge base is scanned for the one page you came for. The rows
+ * carry an excerpt rather than a body, so the whole of one is a small response
+ * — which is what makes returning all of it reasonable.
+ */
+export function useArticles(slug: string, filters: ArticleFilters = {}) {
+  return useQuery({
+    queryKey: queryKeys.articles(slug, filters),
+    queryFn: () => api.get<ArticleListItem[]>('/api/articles/', { project: slug, ...filters }),
+    // Hold the current results while a new search runs, so typing does not
+    // flash the list to a spinner on every keystroke.
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** One page in full. The index deliberately does not carry the body. */
+export function useArticle(id: number) {
+  return useQuery({
+    queryKey: queryKeys.article(id),
+    queryFn: () => api.get<Article>(`/api/articles/${id}/`),
+  })
+}
+
+/**
+ * Every saved version of one page, newest first.
+ *
+ * `enabled` so the history is fetched when the reader opens it rather than on
+ * every page view: the bodies travel with the revisions, which is what lets the
+ * SPA preview and restore one without a request each, and also what makes it
+ * the largest response in the module.
+ */
+export function useArticleRevisions(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.articleRevisions(id),
+    queryFn: () => api.get<ArticleRevision[]>(`/api/articles/${id}/revisions/`),
+    enabled,
+  })
+}
+
+export function useCreateArticle(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: ArticleInput) => api.post<Article>('/api/articles/', body),
+    onSuccess: () => {
+      // Only the index goes stale. Articles belong to no term and are counted
+      // nowhere, so neither the attendance table nor the archive is touched.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.articlesForProject(projectSlug) })
+    },
+  })
+}
+
+/**
+ * Saves an edit — including a restore, which is an ordinary edit carrying an
+ * older body. There is no restore endpoint, so there is no restore mutation.
+ */
+export function useUpdateArticle(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    // PATCH rather than PUT: the form carries only the editable fields, and the
+    // server owns authorship, the timestamps and the revision it writes.
+    mutationFn: ({ id, ...body }: ArticlePatch & { id: number }) =>
+      api.patch<Article>(`/api/articles/${id}/`, body),
+    onSuccess: (article) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.articlesForProject(projectSlug) })
+      // The page itself and its history, which this edit has just added to.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.article(article.id) })
+    },
+  })
+}
+
+/** Removes a page. Soft on the server, like a log and unlike a link. */
+export function useDeleteArticle(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.delete<void>(`/api/articles/${id}/`),
+    onSuccess: (_result, id) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.articlesForProject(projectSlug) })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.article(id) })
     },
   })
 }

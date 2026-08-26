@@ -14,11 +14,13 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.conftest import (
     CAMPUS,
+    ArticleFactory,
     DailyLogFactory,
     MembershipFactory,
     ResourceFactory,
     UserFactory,
 )
+from apps.knowledge.models import Article
 from apps.projects.models import Membership, Role, Semester
 from apps.resources.models import Resource
 
@@ -764,6 +766,105 @@ class TestResourceLinks:
         placeholder = UserFactory(email=f"ghost@{CAMPUS}", full_name="")
         membership = MembershipFactory(user=placeholder, project=project, role=Role.VOLUNTEER)
         ResourceFactory(project=project, added_by=placeholder)
+
+        response = auth_client(lead).delete(
+            reverse("membership-detail", kwargs={"pk": membership.pk})
+        )
+        assert response.status_code == 204
+        assert User.objects.filter(pk=placeholder.pk).exists()
+
+
+class TestKnowledgeBase:
+    """The one module where any current member may edit anyone's work.
+
+    Like the shelf, an article carries no semester, so nothing here freezes at
+    the term boundary. What still stops there is the person — and the point of
+    these cases is that the open edit rule widens *who among current members*
+    may write, never *whether a past member* may.
+    """
+
+    def _payload(self, project, **overrides):
+        payload = {
+            "project": project.pk,
+            "title": "Partner contacts",
+            "body": "Ask for Sunita at the school office.",
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_a_past_member_still_reads_the_knowledge_base(self, auth_client, past_lead, project):
+        ArticleFactory(project=project, title="How the Saturday visit runs")
+        response = auth_client(past_lead).get(reverse("article-list"), {"project": project.slug})
+        assert [row["title"] for row in response.data] == ["How the Saturday visit runs"]
+
+    def test_a_past_lead_cannot_start_a_page(self, auth_client, past_lead, project):
+        response = auth_client(past_lead).post(reverse("article-list"), self._payload(project))
+        assert response.status_code == 403
+        assert not Article.objects.exists()
+
+    def test_the_open_edit_rule_does_not_reach_past_members(self, auth_client, past_lead, project):
+        """ "Anyone may edit" means anyone *on this term's roster*."""
+        article = ArticleFactory(project=project)
+        response = auth_client(past_lead).patch(
+            reverse("article-detail", kwargs={"pk": article.pk}), {"body": "Still in charge."}
+        )
+        assert response.status_code == 403
+
+    def test_a_past_member_cannot_edit_the_page_they_started(self, auth_client, past_lead, project):
+        """Authorship does not outlive the roster, exactly as on the timeline."""
+        article = ArticleFactory(project=project, created_by=past_lead, updated_by=past_lead)
+        response = auth_client(past_lead).patch(
+            reverse("article-detail", kwargs={"pk": article.pk}), {"body": "Revised."}
+        )
+        assert response.status_code == 403
+
+    def test_a_page_written_last_term_is_still_editable_this_term(
+        self, auth_client, volunteer, project, past_semester
+    ):
+        """The counterpart: the row has no term, so nothing about it is frozen.
+
+        This is the case the whole module turns on — last year's handover notes
+        being editable by this year's roster is not a loophole, it is the point.
+        """
+        article = ArticleFactory(project=project, title="Handover notes")
+        response = auth_client(volunteer).patch(
+            reverse("article-detail", kwargs={"pk": article.pk}),
+            {"body": "Updated for this batch."},
+        )
+        assert response.status_code == 200
+
+    def test_removing_a_placeholder_who_started_a_page_keeps_the_account(
+        self, auth_client, lead, project, semester
+    ):
+        """`Article.created_by` is PROTECT, so the cascade must be refused.
+
+        Unreachable in practice for the same reason the resource case is, and
+        guarded for the same reason: an unguarded PROTECT surfaces as a 500 on
+        an ordinary roster removal rather than as a refusal.
+        """
+        placeholder = UserFactory(email=f"ghost.author@{CAMPUS}", full_name="")
+        membership = MembershipFactory(user=placeholder, project=project, role=Role.VOLUNTEER)
+        ArticleFactory(project=project, created_by=placeholder, updated_by=placeholder)
+
+        response = auth_client(lead).delete(
+            reverse("membership-detail", kwargs={"pk": membership.pk})
+        )
+        assert response.status_code == 204
+        assert User.objects.filter(pk=placeholder.pk).exists()
+
+    def test_removing_a_placeholder_who_edited_a_page_keeps_the_account(
+        self, auth_client, lead, project, semester
+    ):
+        """`ArticleRevision.edited_by` is PROTECT — and the history is the point.
+
+        Dropping the account would take the revision with it and leave the page
+        claiming to have been written by nobody, which defeats the trail that
+        makes open editing safe in the first place.
+        """
+        placeholder = UserFactory(email=f"ghost.editor@{CAMPUS}", full_name="")
+        membership = MembershipFactory(user=placeholder, project=project, role=Role.VOLUNTEER)
+        article = ArticleFactory(project=project)
+        article.record_revision(placeholder, note="Fixed a number")
 
         response = auth_client(lead).delete(
             reverse("membership-detail", kwargs={"pk": membership.pk})

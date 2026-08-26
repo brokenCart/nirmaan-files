@@ -73,6 +73,15 @@ def discard_placeholder_user(user) -> bool:
     - **a resource they added** — ``Resource.added_by`` is PROTECT for the same
       reason ``DailyLog.author`` is, and unreachable for the same reason. Left
       unchecked it would surface as a 500 on an otherwise ordinary removal.
+    - **anything in the knowledge base** — ``ArticleRevision.edited_by``,
+      ``Article.created_by`` and ``Article.updated_by`` are all PROTECT. The
+      revision check is the broad one and in practice subsumes the other two,
+      since ``record_revision`` writes ``updated_by`` and the revision row
+      together and a page's creator always owns its first version; both are
+      still asserted rather than left resting on that invariant, because the
+      cost of it being wrong is the 500 this function exists to avoid. Note
+      that a soft-deleted page still holds its references, so a placeholder who
+      started a page that was later removed is correctly refused.
 
     Call *after* the membership row is gone, so "no remaining memberships" is a
     question about what is left. Returns whether the user was deleted.
@@ -86,6 +95,10 @@ def discard_placeholder_user(user) -> bool:
     if user.attended_logs.exists():
         return False
     if user.added_resources.exists():
+        return False
+    if user.article_revisions.exists():
+        return False
+    if user.authored_articles.exists() or user.edited_articles.exists():
         return False
 
     user.delete()

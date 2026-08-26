@@ -12,6 +12,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.accounts.models import User
+from apps.knowledge.models import Article, ArticleCategory
 from apps.logs.models import DailyLog, LogKind, LogStatus
 from apps.projects.models import Membership, Project, Role, Semester
 from apps.resources.models import Resource, ResourceKind
@@ -45,6 +46,51 @@ RESOURCES = [
 ]
 
 
+# The knowledge base every project gets. Like the shelf, not semester-scoped —
+# an article states what is true now, so one set per project is the whole of it.
+#
+# The first entry is written by the *alumnus* and then revised by the current
+# lead, which is the module demonstrated in one row: the person who knew it has
+# graduated, the knowledge has not, and the history says who changed what.
+ARTICLES = [
+    (
+        "alumnus",
+        ArticleCategory.CONTEXT,
+        "How this project started",
+        "We began in 2019 after a survey of four villages around campus found that the "
+        "nearest secondary school was eleven kilometres away. The first batch ran two "
+        "sessions a week out of a borrowed room at the panchayat office.",
+        "Corrected the founding year and added the panchayat detail.",
+    ),
+    (
+        "lead",
+        ArticleCategory.PROCESS,
+        "Running a Saturday session",
+        "The bus leaves the main gate at 08:00 sharp and will not wait. Sign the register "
+        "at the centre before starting. Sessions run 09:00-12:00 with a break at 10:30. "
+        "File the MOV the same evening while you still remember the names.",
+        "",
+    ),
+    (
+        "lead",
+        ArticleCategory.PARTNER,
+        "Who to call",
+        "Sunita ma'am runs the centre and is the first point of contact for anything on "
+        "the ground. The block education officer signs off on the annual permission "
+        "letter; start that a month early, it is never quick.",
+        "",
+    ),
+    (
+        "volunteer",
+        ArticleCategory.LESSON,
+        "What we got wrong last year",
+        "We scheduled the exam-prep drive during the harvest and attendance halved. "
+        "Check the agricultural calendar before fixing dates, not after.",
+        "",
+    ),
+]
+
+
 class Command(BaseCommand):
     help = "Create demo projects, users in every role, and sample logs."
 
@@ -63,9 +109,12 @@ class Command(BaseCommand):
         random.seed(0)
 
         if options["reset"]:
-            # Resources first: `added_by` is PROTECT, so they have to go before
-            # the demo accounts that added them.
+            # Resources and articles first: `added_by`, `created_by` and
+            # `ArticleRevision.edited_by` are all PROTECT, so they have to go
+            # before the demo accounts behind them. Deleting an article takes
+            # its revisions with it.
             Resource.objects.all().delete()
+            Article.objects.all().delete()
             DailyLog.objects.all().delete()
             Membership.objects.all().delete()
             Semester.objects.all().delete()
@@ -117,12 +166,14 @@ class Command(BaseCommand):
             self._logs(project, lead, volunteers)
             self._logs(project, alumnus, [alumnus, volunteers[0]], semester=past)
             self._resources(project, lead)
+            self._articles(project, {"lead": lead, "alumnus": alumnus, "volunteer": volunteers[0]})
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seeded {Semester.objects.count()} semesters, {Project.objects.count()} projects, "
                 f"{User.objects.count()} users, {DailyLog.objects.count()} logs, "
-                f"{Resource.objects.count()} resource links.\n"
+                f"{Resource.objects.count()} resource links, "
+                f"{Article.objects.count()} knowledge pages.\n"
                 f"Exec account: {exec_user.email}"
             )
         )
@@ -178,6 +229,36 @@ class Command(BaseCommand):
                     "added_by": lead,
                 },
             )
+
+    def _articles(self, project: Project, authors: dict[str, User]) -> None:
+        """A small knowledge base per project, with history behind it.
+
+        Goes through `record_revision` rather than writing `ArticleRevision`
+        rows directly, so the seeded data is shaped by the same code the API
+        uses — a page with no history would be a state the app cannot produce.
+        """
+        for handle, category, title, body, note in ARTICLES:
+            author = authors[handle]
+            article, created = Article.objects.get_or_create(
+                project=project,
+                title=title,
+                defaults={
+                    "category": category,
+                    "body": body,
+                    "created_by": author,
+                    "updated_by": author,
+                },
+            )
+            if not created:
+                continue
+            article.record_revision(author)
+
+            # A second version for the page whose author has since graduated:
+            # the current lead corrects it, and the trail shows both.
+            if note:
+                article.body = f"{body} The room is ours outright now."
+                article.save(update_fields=["body"])
+                article.record_revision(authors["lead"], note=note)
 
     def _logs(
         self,
