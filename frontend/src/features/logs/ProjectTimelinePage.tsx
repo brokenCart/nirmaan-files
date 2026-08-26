@@ -27,6 +27,7 @@ import {
 } from '@/features/projects/queries'
 import { cn, formatDate } from '@/lib/utils'
 
+import { CopyLogButton } from './CopyLogButton'
 import { LogComposer } from './LogComposer'
 
 type KindFilter = 'ALL' | 'MOV' | 'MOM'
@@ -192,6 +193,8 @@ export function ProjectTimelinePage() {
 
                       {editingId !== log.id && confirmingDeleteId !== log.id && (
                         <div className="ml-auto flex gap-1">
+                          <CopyLogButton log={log} />
+
                           {canEditLog(log, user?.id) && (
                             <Button
                               variant="ghost"
