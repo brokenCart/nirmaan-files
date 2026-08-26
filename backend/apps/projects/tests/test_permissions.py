@@ -11,7 +11,8 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.conftest import CAMPUS, MembershipFactory, UserFactory
+from apps.accounts.models import User
+from apps.conftest import CAMPUS, DailyLogFactory, MembershipFactory, UserFactory
 from apps.projects.models import Membership, Role, Semester
 
 pytestmark = pytest.mark.django_db
@@ -178,12 +179,187 @@ class TestMembershipManagement:
         response = auth_client(lead).delete(reverse("membership-detail", kwargs={"pk": row.pk}))
         assert response.status_code == 403
 
+    @pytest.mark.parametrize("staff", ["lead", "finance_lead"])
+    def test_lead_cannot_remove_other_staff(
+        self, request, auth_client, lead, project, semester, staff
+    ):
+        """A lead removes volunteers. Clearing the seat beside them — the other
+        lead, or the finance lead — is the same authority as appointing one."""
+        other = request.getfixturevalue(staff)
+        row = Membership.objects.get(user=other, project=project, semester=semester)
+        response = auth_client(lead).delete(reverse("membership-detail", kwargs={"pk": row.pk}))
+        assert response.status_code == 403
+        assert Membership.objects.filter(pk=row.pk).exists()
+
+    @pytest.mark.parametrize("staff", ["lead", "finance_lead"])
+    def test_lead_cannot_deactivate_other_staff(
+        self, request, auth_client, lead, project, semester, staff
+    ):
+        """`is_active=False` is a removal in disguise — it drops the row from
+        the roster, the attendance table and the project's member count alike,
+        so it has to answer to the same rule as DELETE."""
+        other = request.getfixturevalue(staff)
+        row = Membership.objects.get(user=other, project=project, semester=semester)
+        response = auth_client(lead).patch(
+            reverse("membership-detail", kwargs={"pk": row.pk}), {"is_active": False}
+        )
+        assert response.status_code == 403
+        row.refresh_from_db()
+        assert row.is_active is True
+
+    def test_lead_can_deactivate_a_volunteer(self, auth_client, lead, volunteer, project, semester):
+        row = Membership.objects.get(user=volunteer, project=project, semester=semester)
+        response = auth_client(lead).patch(
+            reverse("membership-detail", kwargs={"pk": row.pk}), {"is_active": False}
+        )
+        assert response.status_code == 200
+
+    def test_exec_cannot_remove_their_own_row(self, auth_client, exec_user, project, semester):
+        """The case the rule actually adds. Exec bypasses the role and term
+        checks, so nothing else was stopping them clearing their own row and
+        losing the project's write affordances mid-term."""
+        row = MembershipFactory(
+            user=exec_user, project=project, semester=semester, role=Role.VOLUNTEER
+        )
+        response = auth_client(exec_user).delete(
+            reverse("membership-detail", kwargs={"pk": row.pk})
+        )
+        assert response.status_code == 403
+        assert Membership.objects.filter(pk=row.pk).exists()
+
+    def test_exec_cannot_deactivate_their_own_row(self, auth_client, exec_user, project, semester):
+        """The `is_active` back door out of the same rule."""
+        row = MembershipFactory(
+            user=exec_user, project=project, semester=semester, role=Role.VOLUNTEER
+        )
+        response = auth_client(exec_user).patch(
+            reverse("membership-detail", kwargs={"pk": row.pk}), {"is_active": False}
+        )
+        assert response.status_code == 403
+        row.refresh_from_db()
+        assert row.is_active is True
+
+    def test_lead_cannot_remove_their_own_row(self, auth_client, lead, project, semester):
+        """Belt and braces: a lead's own row is a LEAD row, so the staff rule
+        already refuses this. Pinned anyway, because the day a lead is allowed
+        to hold some other role that reasoning stops holding."""
+        row = Membership.objects.get(user=lead, project=project, semester=semester)
+        response = auth_client(lead).delete(reverse("membership-detail", kwargs={"pk": row.pk}))
+        assert response.status_code == 403
+        assert Membership.objects.filter(pk=row.pk).exists()
+
+    def test_someone_else_can_still_remove_you(
+        self, auth_client, exec_user, volunteer, project, semester
+    ):
+        """The rule is about acting on your own row, not about the row itself."""
+        row = Membership.objects.get(user=volunteer, project=project, semester=semester)
+        response = auth_client(exec_user).delete(
+            reverse("membership-detail", kwargs={"pk": row.pk})
+        )
+        assert response.status_code == 204
+
+    def test_editing_your_own_row_without_deactivating_is_unaffected(
+        self, auth_client, exec_user, project, semester
+    ):
+        """Only removal is blocked — an exec correcting their own role is not
+        leaving the project."""
+        row = MembershipFactory(
+            user=exec_user, project=project, semester=semester, role=Role.VOLUNTEER
+        )
+        response = auth_client(exec_user).patch(
+            reverse("membership-detail", kwargs={"pk": row.pk}), {"role": Role.LEAD}
+        )
+        assert response.status_code == 200
+
     def test_lead_can_still_remove_a_volunteer(
         self, auth_client, lead, volunteer, project, semester
     ):
         row = Membership.objects.get(user=volunteer, project=project, semester=semester)
         response = auth_client(lead).delete(reverse("membership-detail", kwargs={"pk": row.pk}))
         assert response.status_code == 204
+
+    def test_removing_an_unclaimed_placeholder_deletes_the_user(
+        self, auth_client, lead, project, semester
+    ):
+        """A lead added a typo. Taking it off the roster takes the row with it,
+        or the account sits there forever with nobody able to claim it."""
+        placeholder = UserFactory(email=f"typo@{CAMPUS}", google_sub=None)
+        row = MembershipFactory(
+            user=placeholder, project=project, semester=semester, role=Role.VOLUNTEER
+        )
+
+        response = auth_client(lead).delete(reverse("membership-detail", kwargs={"pk": row.pk}))
+
+        assert response.status_code == 204
+        assert not User.objects.filter(pk=placeholder.pk).exists()
+
+    def test_removing_a_signed_in_member_keeps_the_user(self, auth_client, lead, project, semester):
+        """They have an account of their own — it is not this project's to delete."""
+        member = UserFactory(email=f"real@{CAMPUS}", google_sub="google-real")
+        row = MembershipFactory(
+            user=member, project=project, semester=semester, role=Role.VOLUNTEER
+        )
+
+        response = auth_client(lead).delete(reverse("membership-detail", kwargs={"pk": row.pk}))
+
+        assert response.status_code == 204
+        assert User.objects.filter(pk=member.pk).exists()
+        assert not Membership.objects.filter(pk=row.pk).exists()
+
+    def test_placeholder_on_another_project_survives_removal(
+        self, auth_client, lead, project, other_project, semester
+    ):
+        """`Membership.user` cascades, so deleting the row here would silently
+        empty a seat on a project this lead has no authority over."""
+        placeholder = UserFactory(email=f"shared@{CAMPUS}", google_sub=None)
+        here = MembershipFactory(
+            user=placeholder, project=project, semester=semester, role=Role.VOLUNTEER
+        )
+        elsewhere = MembershipFactory(
+            user=placeholder, project=other_project, semester=semester, role=Role.VOLUNTEER
+        )
+
+        response = auth_client(lead).delete(reverse("membership-detail", kwargs={"pk": here.pk}))
+
+        assert response.status_code == 204
+        assert User.objects.filter(pk=placeholder.pk).exists()
+        assert Membership.objects.filter(pk=elsewhere.pk).exists()
+
+    def test_placeholder_in_a_past_term_survives_removal(
+        self, auth_client, lead, project, semester, past_semester
+    ):
+        """The archive's roster is the record of who was there."""
+        placeholder = UserFactory(email=f"returning@{CAMPUS}", google_sub=None)
+        MembershipFactory(
+            user=placeholder, project=project, semester=past_semester, role=Role.VOLUNTEER
+        )
+        row = MembershipFactory(
+            user=placeholder, project=project, semester=semester, role=Role.VOLUNTEER
+        )
+
+        response = auth_client(lead).delete(reverse("membership-detail", kwargs={"pk": row.pk}))
+
+        assert response.status_code == 204
+        assert User.objects.filter(pk=placeholder.pk).exists()
+
+    def test_placeholder_marked_present_on_a_visit_survives_removal(
+        self, auth_client, lead, project, semester
+    ):
+        """`attendees` is a plain M2M and would drop silently, restating who was
+        at a visit and moving the counts. Marking a placeholder present before
+        they sign in is exactly why a lead adds them early."""
+        placeholder = UserFactory(email=f"attended@{CAMPUS}", google_sub=None)
+        row = MembershipFactory(
+            user=placeholder, project=project, semester=semester, role=Role.VOLUNTEER
+        )
+        log = DailyLogFactory(project=project, semester=semester, author=lead)
+        log.attendees.add(placeholder)
+
+        response = auth_client(lead).delete(reverse("membership-detail", kwargs={"pk": row.pk}))
+
+        assert response.status_code == 204
+        assert User.objects.filter(pk=placeholder.pk).exists()
+        assert log.attendees.filter(pk=placeholder.pk).exists()
 
     def test_lead_cannot_add_members_to_another_project(self, auth_client, lead, other_project):
         response = auth_client(lead).post(

@@ -144,6 +144,32 @@ export function canManageRoster(
 }
 
 /**
+ * Whether `member` may be taken off the roster of `target`.
+ *
+ * Same authority as adding: `canManageRoster` decides the term, and a lead may
+ * only touch the roles they could hand out — so a lead removes volunteers and
+ * exec removes anyone. Mirrors the role check in `_assert_can_manage`, which
+ * receives the row's current role on destroy for exactly this reason.
+ *
+ * Never your own row, whoever you are — mirrors `_assert_not_self`. Leaving is
+ * someone else's action, which keeps the only lead from stranding a roster and
+ * an exec from quietly dropping themselves mid-term.
+ */
+export function canRemoveMember(
+  member: Membership,
+  role: EffectiveRole | null | undefined,
+  isExec: boolean,
+  target: Semester | null | undefined,
+  currentSemester: Semester | null | undefined,
+  userId: number | undefined,
+): boolean {
+  if (!canManageRoster(role, isExec, target, currentSemester)) return false
+  if (member.user.id === userId) return false
+  if (isExec) return true
+  return member.role !== undefined && assignableRoles(false).includes(member.role)
+}
+
+/**
  * Whether `user` may soft-delete `log`, mirroring `_assert_can_delete`.
  *
  * Staff moderate the timeline; an author may also withdraw their own entry.

@@ -166,6 +166,43 @@ The panel renders for a caller who can manage it even when the roster is **empty
 exactly the term that needs building, and hiding the rail until someone is already on it would
 leave a lead with no way in.
 
+**Removing takes an unclaimed placeholder with it.** `perform_destroy` deletes the membership and
+then calls `discard_placeholder_user` (`apps/projects/services.py`), which deletes the `User` row
+only when it is genuinely disposable — otherwise a typo'd address leaves an account nobody can ever
+claim. "Unclaimed" (`google_sub IS NULL`) is necessary but nowhere near sufficient, because
+`Membership.user` is **CASCADE** and both log tables point at users. It refuses while the row still
+has:
+
+- **another membership** — the dangerous one. A placeholder on two projects, or carried into a past
+  term, would vanish off a roster the caller has no authority over, and the archive would lose a
+  member. One CASCADE, silently, across the project boundary the whole permission model exists to
+  hold.
+- **an authored entry** — `DailyLog.author` is PROTECT, so this raises rather than cascades.
+  Unreachable in practice (filing needs a login, and logging in claims the row) but guarded rather
+  than left to surface as a 500.
+- **an attendance mark** — `DailyLog.attendees` is a plain M2M and drops silently, restating who
+  was at a visit and moving the counts. A placeholder can absolutely be marked present: recording
+  who turned up is *why* a lead adds someone before they sign in.
+
+So the rule is "remove the roster row always, delete the account only when nothing is left pointing
+at it". Removing is a hard delete, unlike a log — a roster row is a fact about the present term,
+not a published account of something that happened.
+
+`UserSerializer.has_signed_in` exposes `google_sub IS NOT NULL` as a boolean — the useful fact
+without the identifier — so the SPA can word the confirmation honestly. It says the account is
+*unclaimed*, not that it will definitely be deleted, because the server makes the final call.
+
+**Nobody removes their own row** (`_assert_not_self`), exec included, and `is_active=False` counts
+as removal — it drops the row from the roster, the attendance table and the member count exactly as
+a DELETE does, so both hooks check it. Leaving is someone else's action: it keeps the only lead
+from stranding a roster nobody can then manage, and an exec from quietly clearing themselves
+mid-term. Only removal is blocked — editing your own row's *role* is not leaving.
+
+For a lead this is belt and braces, since their own row is a `LEAD` row and the staff rule already
+refuses it; the case the self rule actually adds is **exec**, who bypasses every other check.
+Authority is asserted before selfhood, so someone with no business touching the roster still gets
+the generic refusal rather than a hint about whose row it is.
+
 ### Permission classes gate actions; querysets hide rows
 
 A DRF permission class only ever sees objects the queryset already returned. Every list endpoint

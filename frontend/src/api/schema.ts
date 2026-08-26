@@ -82,8 +82,9 @@ export interface paths {
          *
          *     Write rules:
          *       * any member of the project **this semester** may file a log;
-         *       * only its **author** may edit one — including after publishing, and
-         *         including against leads and exec, who get no edit rights at all;
+         *       * only its **author**, and only while still a member this semester, may
+         *         edit one — including after publishing, and including against leads and
+         *         exec, who get no edit rights at all;
          *       * leads, finance leads and exec may delete any log in their project, and
          *         an author may delete their own;
          *       * a closed semester is frozen. Entries in a past term cannot be edited by
@@ -103,8 +104,9 @@ export interface paths {
          *
          *     Write rules:
          *       * any member of the project **this semester** may file a log;
-         *       * only its **author** may edit one — including after publishing, and
-         *         including against leads and exec, who get no edit rights at all;
+         *       * only its **author**, and only while still a member this semester, may
+         *         edit one — including after publishing, and including against leads and
+         *         exec, who get no edit rights at all;
          *       * leads, finance leads and exec may delete any log in their project, and
          *         an author may delete their own;
          *       * a closed semester is frozen. Entries in a past term cannot be edited by
@@ -136,8 +138,9 @@ export interface paths {
          *
          *     Write rules:
          *       * any member of the project **this semester** may file a log;
-         *       * only its **author** may edit one — including after publishing, and
-         *         including against leads and exec, who get no edit rights at all;
+         *       * only its **author**, and only while still a member this semester, may
+         *         edit one — including after publishing, and including against leads and
+         *         exec, who get no edit rights at all;
          *       * leads, finance leads and exec may delete any log in their project, and
          *         an author may delete their own;
          *       * a closed semester is frozen. Entries in a past term cannot be edited by
@@ -156,8 +159,9 @@ export interface paths {
          *
          *     Write rules:
          *       * any member of the project **this semester** may file a log;
-         *       * only its **author** may edit one — including after publishing, and
-         *         including against leads and exec, who get no edit rights at all;
+         *       * only its **author**, and only while still a member this semester, may
+         *         edit one — including after publishing, and including against leads and
+         *         exec, who get no edit rights at all;
          *       * leads, finance leads and exec may delete any log in their project, and
          *         an author may delete their own;
          *       * a closed semester is frozen. Entries in a past term cannot be edited by
@@ -177,8 +181,9 @@ export interface paths {
          *
          *     Write rules:
          *       * any member of the project **this semester** may file a log;
-         *       * only its **author** may edit one — including after publishing, and
-         *         including against leads and exec, who get no edit rights at all;
+         *       * only its **author**, and only while still a member this semester, may
+         *         edit one — including after publishing, and including against leads and
+         *         exec, who get no edit rights at all;
          *       * leads, finance leads and exec may delete any log in their project, and
          *         an author may delete their own;
          *       * a closed semester is frozen. Entries in a past term cannot be edited by
@@ -199,8 +204,9 @@ export interface paths {
          *
          *     Write rules:
          *       * any member of the project **this semester** may file a log;
-         *       * only its **author** may edit one — including after publishing, and
-         *         including against leads and exec, who get no edit rights at all;
+         *       * only its **author**, and only while still a member this semester, may
+         *         edit one — including after publishing, and including against leads and
+         *         exec, who get no edit rights at all;
          *       * leads, finance leads and exec may delete any log in their project, and
          *         an author may delete their own;
          *       * a closed semester is frozen. Entries in a past term cannot be edited by
@@ -877,6 +883,8 @@ export interface components {
             readonly avatar_url: string;
             /** @description Executive Committee: org-wide read access across every project. */
             readonly is_exec: boolean;
+            /** @description False for a placeholder a lead added by email that nobody has claimed yet. */
+            readonly has_signed_in: boolean;
         };
     };
     responses: never;

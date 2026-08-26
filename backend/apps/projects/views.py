@@ -307,6 +307,26 @@ class MembershipViewSet(viewsets.ModelViewSet):
         self._assert_can_manage(serializer.validated_data["project"], semester, role)
         serializer.save(semester=semester)
 
+    def _assert_not_self(self, instance) -> None:
+        """Nobody takes their own row off a roster.
+
+        Someone else does it, so leaving is witnessed rather than unilateral. It
+        also removes the two ways to strand a project: the only lead dropping
+        themselves leaves a roster nobody can manage, and an exec clearing their
+        own row loses the project's write affordances mid-term. Exec is bound by
+        this too — being able to fix everyone else's roster is not a reason to
+        be able to quietly delete yourself from one.
+
+        Authority is checked first, so someone with no business editing the
+        roster at all still gets the generic refusal rather than a hint that the
+        row is theirs.
+        """
+        if instance.user_id == self.request.user.pk:
+            raise PermissionDenied(
+                "You cannot take yourself off a project's roster. "
+                "Ask another lead or the Executive Committee."
+            )
+
     def perform_update(self, serializer):
         instance = serializer.instance
         self._assert_can_manage(
@@ -315,8 +335,21 @@ class MembershipViewSet(viewsets.ModelViewSet):
             instance.role,
             serializer.validated_data.get("role", instance.role),
         )
+        # Deactivating is a removal in disguise — it drops the row from the
+        # roster, the attendance table and the member count alike — so it
+        # answers to the same rule as DELETE.
+        if serializer.validated_data.get("is_active") is False:
+            self._assert_not_self(instance)
         serializer.save()
 
     def perform_destroy(self, instance):
+        from .services import discard_placeholder_user
+
         self._assert_can_manage(instance.project, instance.semester, instance.role)
+        self._assert_not_self(instance)
+        user = instance.user
         instance.delete()
+        # Taking an unclaimed placeholder off a roster takes the row with it, so
+        # a mistyped address does not leave an account nobody can ever claim.
+        # The service decides: it refuses while anything still points at the row.
+        discard_placeholder_user(user)

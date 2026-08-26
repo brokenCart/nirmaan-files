@@ -1,12 +1,14 @@
-import { Plus, Search, X } from 'lucide-react'
+import { Plus, Search, Trash2, X } from 'lucide-react'
 import { useDeferredValue, useId, useMemo, useState } from 'react'
 
+import { ApiError } from '@/api/client'
 import type { Membership, Project, Role, Semester } from '@/api/types'
 import { ROLE_LABELS } from '@/api/types'
-import { Button, Card, RoleBadge } from '@/components/ui'
+import { Button, Card, ErrorNote, RoleBadge } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 import { AddMemberForm } from './AddMemberForm'
+import { useRemoveMember } from './queries'
 
 /** Roster order: seniority first, so the people to escalate to are at the top. */
 const ROLE_RANK: Record<Role, number> = {
@@ -27,23 +29,30 @@ function rankOf(member: Membership) {
  * roster — a project's membership is small enough to arrive in one page, and a
  * per-keystroke request would be slower than the array scan it replaces.
  *
- * `project` and `manageableTerm` together are the add affordance: both present
- * means the caller may write this term's roster. That judgement is the caller's
- * (`canManageRoster`); the panel renders what it is handed.
+ * `manageableTerm` is the add affordance: present means the caller may write
+ * this term's roster, so the form appears. That judgement is the caller's
+ * (`canManageRoster`); the panel renders what it is handed. `canRemove` is the
+ * same judgement per row, since a lead may remove volunteers but not staff.
  */
 export function ProjectMembersPanel({
   members,
   project,
   manageableTerm,
+  canRemove,
   className,
 }: {
   members: Membership[]
+  /** Always supplied; the roster's project, which the remove call is scoped to. */
   project?: Project
   /** The term a new member would join, when the caller may add one. */
   manageableTerm?: Semester | null
+  /** Whether this row may be taken off the roster. Defaults to never. */
+  canRemove?: (member: Membership) => boolean
   className?: string
 }) {
   const [adding, setAdding] = useState(false)
+  const [confirmingId, setConfirmingId] = useState<number | null>(null)
+  const removeMember = useRemoveMember(project?.slug ?? '')
   const [query, setQuery] = useState('')
   const searchId = useId()
   // Keeps typing responsive if a roster ever grows past what one scan can take.
@@ -134,16 +143,73 @@ export function ProjectMembersPanel({
       ) : (
         <ul className="mt-2 divide-y divide-line">
           {matches.map((member) => (
-            <li key={member.id} className="flex items-center justify-between gap-2 py-2">
-              {/* No wrapping: the name truncates so the badge stays on the
-                  right of every row. `title` keeps the full name reachable. */}
-              <span
-                className="min-w-0 truncate text-sm text-ink-soft"
-                title={member.user.full_name || member.user.email}
-              >
-                {member.user.full_name || member.user.email}
-              </span>
-              {member.role && <RoleBadge role={member.role} className="shrink-0" />}
+            <li key={member.id} className="py-2">
+              <div className="flex items-center justify-between gap-2">
+                {/* No wrapping: the name truncates so the badge stays on the
+                    right of every row. `title` keeps the full name reachable. */}
+                <span
+                  className="min-w-0 truncate text-sm text-ink-soft"
+                  title={member.user.full_name || member.user.email}
+                >
+                  {member.user.full_name || member.user.email}
+                </span>
+                {member.role && <RoleBadge role={member.role} className="shrink-0" />}
+                {canRemove?.(member) && confirmingId !== member.id && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingId(member.id)}
+                    aria-label={`Remove ${member.user.full_name || member.user.email} from the roster`}
+                    className="shrink-0 rounded-full p-1 text-ink-mute transition-colors hover:bg-gold-50 hover:text-nirmaan-red"
+                  >
+                    <Trash2 className="size-3.5" aria-hidden />
+                  </button>
+                )}
+              </div>
+
+              {confirmingId === member.id && (
+                <div className="mt-2 space-y-2 rounded-lg bg-paper-deep/40 p-2">
+                  <p className="text-xs text-ink-soft">
+                    Remove from {manageableTerm?.name ?? 'this term'}?
+                    {/* The server makes the same call from `google_sub`, and
+                        refuses while another roster, an entry they filed or an
+                        attendance mark still points at the account — so this
+                        says "unclaimed", not "will definitely be deleted". */}
+                    {!member.user.has_signed_in &&
+                      ' They have never signed in, so the unclaimed account goes too.'}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="danger"
+                      className="flex-1 px-3"
+                      disabled={removeMember.isPending}
+                      onClick={() =>
+                        removeMember.mutate(member.id, {
+                          onSuccess: () => setConfirmingId(null),
+                        })
+                      }
+                    >
+                      {removeMember.isPending ? 'Removing…' : 'Remove'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="px-3"
+                      disabled={removeMember.isPending}
+                      onClick={() => setConfirmingId(null)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                  {removeMember.error && (
+                    <ErrorNote
+                      message={
+                        removeMember.error instanceof ApiError
+                          ? removeMember.error.detail
+                          : removeMember.error.message
+                      }
+                    />
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ul>

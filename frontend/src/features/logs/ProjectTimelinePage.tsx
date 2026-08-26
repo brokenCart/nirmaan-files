@@ -4,7 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '@/api/client'
 import type { EffectiveRole } from '@/api/types'
-import { canDeleteLog, canEditLog, canManageRoster } from '@/api/types'
+import { canDeleteLog, canEditLog, canManageRoster, canRemoveMember } from '@/api/types'
 import { useAuth } from '@/auth/AuthContext'
 import { Ornament } from '@/components/Logo'
 import {
@@ -247,8 +247,18 @@ export function ProjectTimelinePage() {
           <aside className="order-last lg:sticky lg:top-24 lg:order-first">
             <ProjectMembersPanel
               members={roster ?? []}
-              project={canAddMembers ? project.data : undefined}
+              project={project.data}
               manageableTerm={canAddMembers ? viewedSemester : undefined}
+              canRemove={(member) =>
+                canRemoveMember(
+                  member,
+                  role,
+                  user?.is_exec ?? false,
+                  viewedSemester,
+                  currentSemester.data,
+                  user?.id,
+                )
+              }
             />
           </aside>
         )}

@@ -58,6 +58,15 @@ matters because the rosters for terms predating this feature were reconstructed 
 Promotions are a new row, not an edit — someone who volunteers this term and leads the next is both
 of those things, each against the term it was true in. Exec files that row.
 
+**Removing** works the same way round: the bin on a roster row takes that person off this term. A
+lead can remove volunteers, exec anyone — but **nobody can remove themselves**, so leaving a
+project is something a colleague does for you rather than something you do quietly. That also stops
+a project's only lead from stranding a roster nobody is left to manage. If the row was a placeholder nobody has ever signed in to
+— a mistyped address, say — the account is deleted along with it, so typos do not pile up as
+unclaimable users. That only happens when nothing else needs the account: if they are on another
+project, on a past term's roster, or marked present at a visit, the account stays and only this
+term's roster row goes.
+
 ## Attendance
 
 Each project has an attendance view at `/projects/<slug>/attendance` — per-member visit and meeting

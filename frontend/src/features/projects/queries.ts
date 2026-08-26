@@ -166,6 +166,29 @@ export function useAddMember(projectSlug: string) {
   })
 }
 
+/**
+ * Takes one person off a project's roster for one term.
+ *
+ * The server also deletes the underlying user when the row was an unclaimed
+ * placeholder nothing else points at — see `discard_placeholder_user`. Nothing
+ * here needs to know which happened; both outcomes are a 204 and the same
+ * invalidations.
+ */
+export function useRemoveMember(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.delete<void>(`/api/memberships/${id}/`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.membersForProject(projectSlug) })
+      // They drop out of the attendance table, and the archive's roster size.
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.attendanceForProject(projectSlug),
+      })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.archive(projectSlug) })
+    },
+  })
+}
+
 export function useCreateLog(projectSlug: string) {
   const queryClient = useQueryClient()
   return useMutation({
