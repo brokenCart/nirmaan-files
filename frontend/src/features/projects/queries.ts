@@ -8,6 +8,7 @@ import type {
   DailyLogInput,
   DailyLogPatch,
   Membership,
+  MembershipInput,
   Paginated,
   Project,
   Semester,
@@ -23,6 +24,8 @@ export const queryKeys = {
   // Rosters and counts are per term, so the term is part of the cache key —
   // switching semesters must not read the previous one's rows from cache.
   members: (slug: string, semester?: string) => ['memberships', slug, semester ?? null] as const,
+  /** Prefix matching every term's roster for one project — see {@link attendanceForProject}. */
+  membersForProject: (slug: string) => ['memberships', slug] as const,
   attendance: (slug: string, semester?: string) =>
     ['attendance', slug, semester ?? null] as const,
   /**
@@ -133,6 +136,33 @@ export function useProjectArchive(slug: string) {
   return useQuery({
     queryKey: queryKeys.archive(slug),
     queryFn: () => api.get<ArchiveTerm[]>(`/api/projects/${slug}/archive/`),
+  })
+}
+
+/**
+ * Adds one person to a project's roster for one term.
+ *
+ * The body identifies them by email rather than id, so a lead can add someone
+ * who has never signed in — the placeholder user is adopted on their first
+ * Google login. `semester` is always sent explicitly rather than left to the
+ * serializer's current-term default, because exec correcting a past roster is
+ * a supported case and the default would silently retarget it.
+ */
+export function useAddMember(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: MembershipInput) => api.post<Membership>('/api/memberships/', body),
+    onSuccess: () => {
+      // Every term's roster, not just the viewed one: the `all` view holds the
+      // new row too, and its key is a different one.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.membersForProject(projectSlug) })
+      // A new member is a new row in the attendance table, at zero.
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.attendanceForProject(projectSlug),
+      })
+      // The archive reports roster size per term.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.archive(projectSlug) })
+    },
   })
 }
 

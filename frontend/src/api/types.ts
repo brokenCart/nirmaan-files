@@ -19,6 +19,8 @@ export type ArchiveTerm = components['schemas']['ArchiveTerm']
 export type DailyLogInput = components['schemas']['DailyLogRequest']
 /** Body accepted by `PATCH /api/logs/{id}/`. */
 export type DailyLogPatch = components['schemas']['PatchedDailyLogRequest']
+/** Body accepted by `POST /api/memberships/` — identifies the person by email. */
+export type MembershipInput = components['schemas']['MembershipRequest']
 /** One member's visit/meeting counts on a project. */
 export type AttendanceRow = components['schemas']['AttendanceRow']
 export type Role = components['schemas']['RoleEnum']
@@ -94,6 +96,51 @@ export function canEditLog(
   if (!role) return false
   if (!isInOpenTerm(log, currentSemester)) return false
   return userId !== undefined && log.author.id === userId
+}
+
+/**
+ * Roles the caller may hand out, mirroring
+ * `MembershipViewSet.LEAD_ASSIGNABLE_ROLES`.
+ *
+ * A lead adds volunteers and nothing else. Lead and finance lead carry the
+ * money and the roster itself, so a lead who could name them could appoint
+ * their own successor — or a second lead — with nobody above them in the loop.
+ * Exec appoints staff.
+ *
+ * Typed as non-empty so callers can read `[0]` as the default without a
+ * fallback — there is always at least `VOLUNTEER` to hand out.
+ */
+export function assignableRoles(isExec: boolean): [Role, ...Role[]] {
+  return isExec ? ['VOLUNTEER', 'FINANCE_LEAD', 'LEAD'] : ['VOLUNTEER']
+}
+
+/**
+ * Whether the roster of `target` may be edited, mirroring
+ * `MembershipViewSet._assert_can_manage`.
+ *
+ * A lead manages the open term only: last term's roster is the record of who
+ * filed the entries sitting in the archive, so rewriting it would restate who
+ * was there. Exec keeps the lever over closed terms, which matters because the
+ * rows for terms predating semesters were backfilled from a guess.
+ *
+ * `isExec` is passed separately rather than read off `role`, because `roleIn`
+ * reports a project membership in preference to the committee marker — an exec
+ * who also volunteers here comes back `VOLUNTEER`, and the server would still
+ * let them through on `is_exec`.
+ *
+ * A missing `target` is treated as unmanageable: no term resolved means no
+ * answer to "added to which semester", and the server would have to guess too.
+ */
+export function canManageRoster(
+  role: EffectiveRole | null | undefined,
+  isExec: boolean,
+  target: Semester | null | undefined,
+  currentSemester: Semester | null | undefined,
+): boolean {
+  if (!target) return false
+  if (isExec) return true
+  if (role !== 'LEAD') return false
+  return target.id === currentSemester?.id
 }
 
 /**

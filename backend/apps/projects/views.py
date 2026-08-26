@@ -260,7 +260,19 @@ class MembershipViewSet(viewsets.ModelViewSet):
         current = current_semester(self.request)
         return qs.filter(semester=current) if current else qs.none()
 
-    def _assert_can_manage(self, project, semester) -> None:
+    #: Roles a project lead may hand out. Appointing a lead or a finance lead is
+    #: exec's call: those two carry the money and the roster itself, so a lead
+    #: who could name them could appoint their own successor — or a second lead
+    #: — without anyone above them in the loop. Exec is not bound by this.
+    LEAD_ASSIGNABLE_ROLES = frozenset({Role.VOLUNTEER})
+
+    def _assert_can_manage(self, project, semester, *roles) -> None:
+        """Gate a roster write. ``roles`` are every role the write touches.
+
+        On create that is the role being granted; on update, both the row's
+        current role and the one it would become — a lead must not be able to
+        promote a volunteer they added, nor demote the lead sitting beside them.
+        """
         user = self.request.user
         if user.is_exec:
             return
@@ -274,6 +286,12 @@ class MembershipViewSet(viewsets.ModelViewSet):
                 "ask the Executive Committee if it needs correcting."
             )
 
+        if any(role not in self.LEAD_ASSIGNABLE_ROLES for role in roles):
+            raise PermissionDenied(
+                "A project lead can only add volunteers. Appointing or changing a "
+                "lead or finance lead is for the Executive Committee."
+            )
+
     def perform_create(self, serializer):
         semester = serializer.validated_data.get("semester")
         if semester is None:
@@ -283,13 +301,22 @@ class MembershipViewSet(viewsets.ModelViewSet):
                     "No semester has been created yet. "
                     "Ask the Executive Committee to open the term."
                 )
-        self._assert_can_manage(serializer.validated_data["project"], semester)
+        # Absent means the model default, which is VOLUNTEER — so an omitted
+        # role must be resolved here rather than skipping the check.
+        role = serializer.validated_data.get("role", Role.VOLUNTEER)
+        self._assert_can_manage(serializer.validated_data["project"], semester, role)
         serializer.save(semester=semester)
 
     def perform_update(self, serializer):
-        self._assert_can_manage(serializer.instance.project, serializer.instance.semester)
+        instance = serializer.instance
+        self._assert_can_manage(
+            instance.project,
+            instance.semester,
+            instance.role,
+            serializer.validated_data.get("role", instance.role),
+        )
         serializer.save()
 
     def perform_destroy(self, instance):
-        self._assert_can_manage(instance.project, instance.semester)
+        self._assert_can_manage(instance.project, instance.semester, instance.role)
         instance.delete()

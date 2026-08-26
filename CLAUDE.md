@@ -120,6 +120,52 @@ the oldest entry. **The backfilled rosters are a guess** — there was no histor
 project when, so each membership was copied into every term that ended after the member joined.
 That is why `MembershipViewSet` still lets exec, and only exec, edit a past term's roster.
 
+### Managing a roster
+
+`MembershipViewSet` is the write side of the roster, and `_assert_can_manage` is the rule: exec
+bypasses, otherwise the caller must be `LEAD` **this term** and the row must belong to the open
+term. A lead cannot touch a closed term at all — last term's roster is the record of who filed the
+entries now sitting in the archive, so rewriting it would restate who was there.
+
+**A lead hands out `VOLUNTEER` and nothing else** (`LEAD_ASSIGNABLE_ROLES`). Lead and finance lead
+carry the money and the roster itself, so a lead who could name them could appoint their own
+successor, or a second lead, with nobody above them in the loop. Exec appoints staff.
+
+`_assert_can_manage` therefore takes **every role the write touches**, not just the new one:
+
+- create — the role being granted, defaulting to `VOLUNTEER` when the field is omitted, since the
+  model default would otherwise slip past the check unexamined;
+- update — the row's current role *and* what it would become. Checking only the target would leave
+  the rule one PATCH from moot (add a volunteer, then promote them); checking only the current role
+  would let a lead demote the finance lead sitting beside them.
+- destroy — the row's current role, so removing staff is exec's too. A lead can still remove a
+  volunteer.
+
+Being able to *see* a role is unaffected: the roster reads the same for everyone.
+
+The SPA renders this in `ProjectMembersPanel` (the timeline's left rail), which shows an
+**Add member** form when `canManageRoster` in `src/api/types.ts` says so. That predicate mirrors
+`_assert_can_manage` and takes `isExec` **separately from `role`**, because `roleIn` reports a
+project membership in preference to the committee marker — an exec who also volunteers on the
+project comes back `VOLUNTEER`, and gating on `role === 'EXEC'` would hide a form the server would
+have accepted. `assignableRoles` alongside it mirrors `LEAD_ASSIGNABLE_ROLES`, so a lead gets a
+line of text where exec gets a picker — a `<select>` that cannot select anything reads as broken
+rather than as a rule.
+
+Two things the form does deliberately:
+
+- **It posts `semester` explicitly** rather than letting the serializer default to the current
+  term. Exec correcting a past roster is a supported case, and the default would silently retarget
+  it. The rail is per-term already, so the term on screen is the term written to; the `all` view
+  names no single term and falls back to the open one, which the submit button then labels.
+- **It identifies the person by email, not id.** A lead can add someone who has never signed in;
+  `MembershipSerializer.create` makes a placeholder user that is adopted on their first Google
+  login by the `sub`-then-email match in `apps/accounts/services.py`.
+
+The panel renders for a caller who can manage it even when the roster is **empty** — that is
+exactly the term that needs building, and hiding the rail until someone is already on it would
+leave a lead with no way in.
+
 ### Permission classes gate actions; querysets hide rows
 
 A DRF permission class only ever sees objects the queryset already returned. Every list endpoint
@@ -277,11 +323,10 @@ each of those terms the *current* roster minus anyone who joined later. Nobody h
 rosters against what actually happened. If the old rosters matter, exec has to correct them by
 hand.
 
-**Roster and semester editing have API support but no UI.** `MembershipViewSet` and
-`SemesterViewSet` are full `ModelViewSet`s, but the SPA only reads them — `ProjectMembersPanel` has
-no mutations and `queries.ts` only ever `GET`s `/api/semesters/`. So adding a member to a project
-and opening a term both mean Django admin or a raw API call today. This is what makes the two
-questions above sharp rather than theoretical.
+**Opening a semester has API support but no UI.** `SemesterViewSet` is a full `ModelViewSet`, but
+`queries.ts` only ever `GET`s `/api/semesters/`, so creating a term still means Django admin or a
+raw API call — which is what makes the question above sharp rather than theoretical. Roster editing
+*does* have a screen now (see *Managing a roster*); semester creation is the one that does not.
 
 **Attendance stops at counts, by decision.** No hours (a short call and a full-day visit weigh the
 same), no per-person view across projects, and no visit record independent of a filed MOV — so a

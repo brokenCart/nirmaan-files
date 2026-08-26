@@ -4,7 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '@/api/client'
 import type { EffectiveRole } from '@/api/types'
-import { canDeleteLog, canEditLog } from '@/api/types'
+import { canDeleteLog, canEditLog, canManageRoster } from '@/api/types'
 import { useAuth } from '@/auth/AuthContext'
 import { Ornament } from '@/components/Logo'
 import {
@@ -28,7 +28,7 @@ import {
   useSemesters,
 } from '@/features/projects/queries'
 import { SemesterSwitcher } from '@/features/semesters/SemesterSwitcher'
-import { isArchivedTerm } from '@/features/semesters/terms'
+import { ALL_TERMS, isArchivedTerm } from '@/features/semesters/terms'
 import { cn, formatDate } from '@/lib/utils'
 
 import { CopyLogButton } from './CopyLogButton'
@@ -105,6 +105,26 @@ export function ProjectTimelinePage() {
   // than a boolean flag so the panel's prop stays narrowed, and an empty term
   // collapses the rail instead of rendering an empty card.
   const roster = members.data?.results.length ? members.data.results : undefined
+
+  // Which term a new member would join. The `all` view spans every term and so
+  // names none — it falls back to the open one, which the button then labels,
+  // rather than leaving the affordance to guess.
+  const viewedSemester =
+    !viewedTerm || viewedTerm === ALL_TERMS
+      ? currentSemester.data
+      : semesters.data?.results.find((term) => term.slug === viewedTerm)
+
+  const canAddMembers = canManageRoster(
+    role,
+    user?.is_exec ?? false,
+    viewedSemester,
+    currentSemester.data,
+  )
+
+  // An empty term still shows the rail when the caller can add to it — that is
+  // precisely the term that needs a roster built, and hiding the panel until
+  // someone is already on it would leave the lead no way in.
+  const showRoster = roster !== undefined || canAddMembers
 
   if (project.isPending) return <Spinner label="Loading project…" />
   if (project.error) return <ErrorNote message={project.error.message} />
@@ -217,12 +237,19 @@ export function ProjectTimelinePage() {
       )}
 
       <div
-        className={cn('grid gap-6', roster && 'lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start')}
+        className={cn(
+          'grid gap-6',
+          showRoster && 'lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start',
+        )}
       >
-        {roster && (
+        {showRoster && (
           // Last on a stacked layout — the timeline is what the page is for.
           <aside className="order-last lg:sticky lg:top-24 lg:order-first">
-            <ProjectMembersPanel members={roster} />
+            <ProjectMembersPanel
+              members={roster ?? []}
+              project={canAddMembers ? project.data : undefined}
+              manageableTerm={canAddMembers ? viewedSemester : undefined}
+            />
           </aside>
         )}
 

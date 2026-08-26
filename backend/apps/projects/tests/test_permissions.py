@@ -114,6 +114,77 @@ class TestMembershipManagement:
         )
         assert response.status_code == expected
 
+    @pytest.mark.parametrize(
+        ("role", "expected"),
+        [(Role.VOLUNTEER, 201), (Role.FINANCE_LEAD, 403), (Role.LEAD, 403)],
+    )
+    def test_lead_can_only_hand_out_the_volunteer_role(
+        self, auth_client, lead, project, role, expected
+    ):
+        """Appointing staff is exec's call — a lead naming their own successor
+        or a second lead would put nobody above them in the loop."""
+        response = auth_client(lead).post(
+            reverse("membership-list"),
+            {"user_email": f"newbie@{CAMPUS}", "project": project.pk, "role": role},
+        )
+        assert response.status_code == expected
+
+    @pytest.mark.parametrize("role", [Role.FINANCE_LEAD, Role.LEAD])
+    def test_exec_can_hand_out_any_role(self, auth_client, exec_user, project, role):
+        response = auth_client(exec_user).post(
+            reverse("membership-list"),
+            {"user_email": f"newbie@{CAMPUS}", "project": project.pk, "role": role},
+        )
+        assert response.status_code == 201
+
+    def test_omitted_role_defaults_to_volunteer_for_a_lead(self, auth_client, lead, project):
+        """The model default is VOLUNTEER, so leaving `role` out must not skip
+        the check — it has to resolve to the default and pass on its own terms."""
+        response = auth_client(lead).post(
+            reverse("membership-list"),
+            {"user_email": f"newbie@{CAMPUS}", "project": project.pk},
+        )
+        assert response.status_code == 201
+        assert Membership.objects.get(user__email=f"newbie@{CAMPUS}").role == Role.VOLUNTEER
+
+    def test_lead_cannot_promote_a_volunteer_they_added(
+        self, auth_client, lead, volunteer, project, semester
+    ):
+        """Otherwise the rule is one PATCH away from moot: add as a volunteer,
+        then promote."""
+        row = Membership.objects.get(user=volunteer, project=project, semester=semester)
+        response = auth_client(lead).patch(
+            reverse("membership-detail", kwargs={"pk": row.pk}), {"role": Role.LEAD}
+        )
+        assert response.status_code == 403
+        row.refresh_from_db()
+        assert row.role == Role.VOLUNTEER
+
+    def test_lead_cannot_demote_a_finance_lead(
+        self, auth_client, lead, finance_lead, project, semester
+    ):
+        """The same authority in the other direction — removing staff is exec's
+        too, or a lead could clear the seat beside them."""
+        row = Membership.objects.get(user=finance_lead, project=project, semester=semester)
+        response = auth_client(lead).patch(
+            reverse("membership-detail", kwargs={"pk": row.pk}), {"role": Role.VOLUNTEER}
+        )
+        assert response.status_code == 403
+
+    def test_lead_cannot_remove_a_finance_lead_from_the_roster(
+        self, auth_client, lead, finance_lead, project, semester
+    ):
+        row = Membership.objects.get(user=finance_lead, project=project, semester=semester)
+        response = auth_client(lead).delete(reverse("membership-detail", kwargs={"pk": row.pk}))
+        assert response.status_code == 403
+
+    def test_lead_can_still_remove_a_volunteer(
+        self, auth_client, lead, volunteer, project, semester
+    ):
+        row = Membership.objects.get(user=volunteer, project=project, semester=semester)
+        response = auth_client(lead).delete(reverse("membership-detail", kwargs={"pk": row.pk}))
+        assert response.status_code == 204
+
     def test_lead_cannot_add_members_to_another_project(self, auth_client, lead, other_project):
         response = auth_client(lead).post(
             reverse("membership-list"),
@@ -289,6 +360,54 @@ class TestSemesterScopedRoles:
             reverse("membership-detail", kwargs={"pk": stale.pk}), {"role": Role.VOLUNTEER}
         )
         assert response.status_code == 200
+
+    def test_lead_cannot_add_to_a_past_semester(self, auth_client, lead, project, past_semester):
+        """`semester` is sent explicitly by the roster UI, so it is a real write path.
+
+        Without this the frozen-archive rule would be one form field away from
+        moot: a lead who cannot patch last term's roster could still post a new
+        row into it.
+        """
+        response = auth_client(lead).post(
+            reverse("membership-list"),
+            {
+                "user_email": f"newbie@{CAMPUS}",
+                "project": project.pk,
+                "semester": past_semester.pk,
+                "role": Role.VOLUNTEER,
+            },
+        )
+        assert response.status_code == 403
+        assert not Membership.objects.filter(semester=past_semester, role=Role.VOLUNTEER).exists()
+
+    def test_exec_can_add_to_a_past_semester(self, auth_client, exec_user, project, past_semester):
+        response = auth_client(exec_user).post(
+            reverse("membership-list"),
+            {
+                "user_email": f"newbie@{CAMPUS}",
+                "project": project.pk,
+                "semester": past_semester.pk,
+                "role": Role.VOLUNTEER,
+            },
+        )
+        assert response.status_code == 201
+        assert Membership.objects.get(user__email=f"newbie@{CAMPUS}").semester == past_semester
+
+    def test_explicit_current_semester_is_accepted_from_a_lead(
+        self, auth_client, lead, project, semester
+    ):
+        """The UI names the term rather than relying on the serializer default."""
+        response = auth_client(lead).post(
+            reverse("membership-list"),
+            {
+                "user_email": f"newbie@{CAMPUS}",
+                "project": project.pk,
+                "semester": semester.pk,
+                "role": Role.VOLUNTEER,
+            },
+        )
+        assert response.status_code == 201
+        assert Membership.objects.get(user__email=f"newbie@{CAMPUS}").semester == semester
 
 
 class TestSemesterManagement:

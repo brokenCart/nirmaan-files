@@ -16,8 +16,8 @@ Four things are tracked per project:
 | **Volunteer visit tracking** — who showed up, when | ◐ counts shipped, see below |
 | **Resource links** — Drive folders and other pointers | planned |
 
-Adding someone to a project and opening a new semester are exec/lead jobs that currently have **no
-screen** — the API supports both, but they are done through the Django admin at `/admin/` for now.
+Opening a new semester still has **no screen** — the API supports it, but exec does it through the
+Django admin at `/admin/` for now. Roster changes do have one: see *Adding members* below.
 
 ## Daily logs
 
@@ -34,6 +34,29 @@ Who may do what:
   withdraw their own. That is the moderation lever instead of editing — you delete an entry you
   disagree with rather than reword it under someone else's name. Deletes are soft, so nothing
   actually leaves the database.
+
+## Adding members
+
+A project **lead** builds their own roster from the members panel on the project timeline — *Add
+member* and an email address. Exec can do the same on any project.
+
+A lead can only add **volunteers**. Appointing a project lead or a finance lead is the Executive
+Committee's call, and so is changing or removing one: a lead who could name their own successor —
+or a second lead — would have nobody above them in the loop. A lead can still remove a volunteer
+from the roster.
+
+The person does not need to have signed in yet. Adding `f20230000@pilani.bits-pilani.ac.in` creates
+a placeholder that they take over the first time they sign in with Google, which is how a lead can
+set up a term's roster before anyone has logged in. Only `@pilani.bits-pilani.ac.in` addresses are
+accepted.
+
+Rosters are **per semester**, so a member is added to one term, and the term being viewed is the
+term written to. A lead can only change the open term: last semester's roster is the record of who
+filed the entries in the archive, so it stays as it was. Exec can correct a past term, which
+matters because the rosters for terms predating this feature were reconstructed from a guess.
+
+Promotions are a new row, not an edit — someone who volunteers this term and leads the next is both
+of those things, each against the term it was true in. Exec files that row.
 
 ## Attendance
 
