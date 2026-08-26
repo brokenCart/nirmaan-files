@@ -239,7 +239,9 @@ export function ProjectTimelinePage() {
       <div
         className={cn(
           'grid gap-6',
-          showRoster && 'lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start',
+          // 19rem, not 16: the roster carries full names next to a role badge,
+          // and the narrower rail truncated most of them.
+          showRoster && 'lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start',
         )}
       >
         {showRoster && (
@@ -387,8 +389,15 @@ export function ProjectTimelinePage() {
                         </p>
 
                         {log.attendees.length > 0 && (
-                          <p className="mt-3 border-t border-line pt-3 text-xs text-ink-mute">
-                            Attendees: {log.attendees.map((a) => a.full_name || a.email).join(', ')}
+                          // The names are content, not chrome — visit and meeting
+                          // counts are derived from this list, so it is the part
+                          // of an entry people check. `text-sm`/`ink-soft` rather
+                          // than the `text-xs`/`ink-mute` used for the dateline,
+                          // and relaxed leading because it wraps to several lines
+                          // on a well-attended visit. Only the label stays muted.
+                          <p className="mt-3 border-t border-line pt-3 text-sm leading-relaxed text-ink-soft">
+                            <span className="text-ink-mute">Attendees: </span>
+                            {log.attendees.map((a) => a.full_name || a.email).join(', ')}
                           </p>
                         )}
                       </>

@@ -54,7 +54,7 @@ const ROLE_STYLES: Record<EffectiveRole, string> = {
   EXEC: 'bg-nirmaan-blue/10 text-nirmaan-blue ring-nirmaan-blue/20',
   LEAD: 'bg-brand-50 text-brand-700 ring-brand-200',
   FINANCE_LEAD: 'bg-gold-50 text-gold-600 ring-gold-100',
-  VOLUNTEER: 'bg-nirmaan-green/10 text-nirmaan-green ring-nirmaan-green/20',
+  VOLUNTEER: 'bg-nirmaan-green/10 text-nirmaan-green-ink ring-nirmaan-green/20',
 }
 
 export function RoleBadge({ role, className }: { role: EffectiveRole; className?: string }) {

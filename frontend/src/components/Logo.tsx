@@ -6,8 +6,11 @@ import { cn } from '@/lib/utils'
  * verticals (education, livelihood, women's empowerment, agriculture) over the
  * arc, with the wordmark. Do not redraw it; replace the file if it is updated.
  *
- * `subtitle` sets the app name beneath the wordmark, so the header reads as
- * "nirmaan.org / FILES" without a second lockup competing with the brand.
+ * `subtitle` sets the app name **beside** the wordmark, divider between, so the
+ * header reads as "nirmaan.org | Files" — the usual brand-then-product lockup.
+ * Stacking it underneath (which this used to do) left the word floating against
+ * the wordmark's right edge with nothing to align to, and cost a line of header
+ * height on every page.
  */
 export function NirmaanLogo({
   className,
@@ -19,7 +22,7 @@ export function NirmaanLogo({
   subtitle?: string
 }) {
   return (
-    <span className={cn('inline-flex flex-col items-start', className)}>
+    <span className={cn('inline-flex items-center gap-3', className)}>
       <img
         src={logoUrl}
         alt="Nirmaan"
@@ -28,9 +31,18 @@ export function NirmaanLogo({
         className={cn('h-10 w-auto', imgClassName)}
       />
       {subtitle && (
-        <span className="mt-0.5 self-end font-display text-[0.62em] font-semibold tracking-[0.3em] text-brand-600 uppercase">
-          {subtitle}
-        </span>
+        <>
+          <span className="h-7 w-px shrink-0 bg-line-strong" aria-hidden />
+          {/*
+            A real size rather than the old `0.62em` (~10px): this is a page
+            title, and it was the smallest text in the app. Tracking is loosened
+            only enough to read as a lockup — 0.3em pushed the letters far enough
+            apart to scan as separate characters.
+          */}
+          <span className="font-display text-base font-semibold tracking-[0.14em] text-brand-700 uppercase">
+            {subtitle}
+          </span>
+        </>
       )}
     </span>
   )

@@ -113,7 +113,7 @@ export function AddMemberForm({
 
       {/* The term is a caption rather than the button's label: it is the one
           piece of text here with no length bound — "2026-27 Sem 1" already
-          wraps a button inside a 16rem rail, and a longer name would be worse. */}
+          wrapped the button inside the rail, and a longer name would be worse. */}
       <p className="text-xs text-ink-mute">
         Joining <span className="font-medium text-ink-soft">{semester.name}</span>
       </p>

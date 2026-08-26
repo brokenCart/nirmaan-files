@@ -144,11 +144,21 @@ export function ProjectMembersPanel({
         <ul className="mt-2 divide-y divide-line">
           {matches.map((member) => (
             <li key={member.id} className="py-2">
-              <div className="flex items-center justify-between gap-2">
-                {/* No wrapping: the name truncates so the badge stays on the
-                    right of every row. `title` keeps the full name reachable. */}
+              <div className="flex items-start justify-between gap-2">
+                {/*
+                  Wraps rather than truncates. A "Finance Lead" badge plus the
+                  remove control take ~115px of the rail, which left a truncated
+                  name about eleven characters long — every volunteer reading as
+                  "Volunteer 1 of Shiks…". The badge still holds the right edge
+                  because it is `shrink-0`; a long name now costs a second line
+                  instead of its own ending.
+
+                  `break-words` is for the placeholder rows, which show a raw
+                  email until first sign-in: one unbroken 34-character token
+                  would otherwise overflow the rail rather than wrap.
+                */}
                 <span
-                  className="min-w-0 truncate text-sm text-ink-soft"
+                  className="min-w-0 flex-1 text-sm break-words text-ink-soft"
                   title={member.user.full_name || member.user.email}
                 >
                   {member.user.full_name || member.user.email}

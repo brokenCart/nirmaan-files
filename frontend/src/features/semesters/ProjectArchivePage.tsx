@@ -35,7 +35,7 @@ function TermCard({
           <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-brand-600">
             {semester.name}
             {isCurrent && (
-              <span className="rounded-full bg-nirmaan-green/10 px-2 py-0.5 text-xs font-semibold text-nirmaan-green ring-1 ring-nirmaan-green/20 ring-inset">
+              <span className="rounded-full bg-nirmaan-green/10 px-2 py-0.5 text-xs font-semibold text-nirmaan-green-ink ring-1 ring-nirmaan-green/20 ring-inset">
                 Current
               </span>
             )}

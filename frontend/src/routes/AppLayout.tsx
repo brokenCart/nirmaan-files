@@ -19,7 +19,7 @@ export function AppLayout() {
       <header className="sticky top-0 z-10 border-b border-line bg-surface/85 backdrop-blur before:absolute before:inset-x-0 before:bottom-full before:h-[50vh] before:bg-surface before:content-['']">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <Link to="/" className="rounded-lg">
-            <NirmaanLogo subtitle="Files" imgClassName="h-11" />
+            <NirmaanLogo subtitle="Files" imgClassName="h-9" />
           </Link>
 
           <div className="flex items-center gap-3">

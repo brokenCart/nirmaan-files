@@ -23,7 +23,15 @@
 
   --color-ink: #2f1d16;
   --color-ink-soft: #6b5445;
-  --color-ink-mute: #97806b;
+  /*
+   * Contrast-checked against the darkest surface it lands on (`paper-deep`),
+   * not just `paper`. The old #97806b read at 3.1:1 there and 3.5:1 on paper —
+   * under WCAG AA for body text, and this token carries the small text:
+   * timestamps, hints, captions, placeholders. It stays a step lighter than
+   * `ink-soft`, so the three-tier hierarchy is intact — roughly 15:1 / 6.6:1 /
+   * 4.6:1 on paper.
+   */
+  --color-ink-mute: #796655;
 
   --color-brand-50: #fdf2f4;
   --color-brand-100: #f9dfe4;
@@ -35,13 +43,29 @@
   --color-gold-50: #fdf5e3;
   --color-gold-100: #f9e7c2;
   --color-gold-500: #d99a2b;
-  --color-gold-600: #b47a16;
+  /* Badge text on `gold-50`; #b47a16 sat at 3.4:1 there. `gold-500` is left
+     alone because it is only ever decorative — the ornament's diamond. */
+  --color-gold-600: #986713;
 
+  /*
+   * The logo's four panel colours. These are brand values and feed the
+   * `nirmaan-rule` gradient under the header, so they are reproduced exactly
+   * and must not be tuned for contrast.
+   */
   --color-nirmaan-blue: #1b4f9c;
   --color-nirmaan-sky: #29a3dc;
   --color-nirmaan-gold: #f4a71d;
   --color-nirmaan-red: #d6293e;
   --color-nirmaan-green: #4aa93a;
+
+  /*
+   * Text-safe counterpart for the one panel colour that cannot carry text: the
+   * green read at 2.7:1 on its own 10%-tint badge. Blue (6.7:1) and red
+   * (4.9:1) clear AA as they are and have no `-ink` variant. Kept separate so
+   * the badge's fill and ring stay the true brand green while the label is
+   * legible.
+   */
+  --color-nirmaan-green-ink: #357829;
 }
 
 @layer base {
