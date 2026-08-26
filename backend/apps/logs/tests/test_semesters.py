@@ -127,6 +127,42 @@ class TestPastMembersReadButCannotWrite:
         response = auth_client(past_lead).delete(reverse("log-detail", kwargs={"pk": log.pk}))
         assert response.status_code == 403
 
+    def test_a_dropped_member_cannot_edit_what_they_filed_this_term(
+        self, auth_client, past_lead, project
+    ):
+        """The open-term case, which the frozen-archive rule does not cover.
+
+        Someone taken off this term's roster mid-semester leaves entries behind
+        that are still in the open term and still theirs. Authorship alone would
+        keep the edit alive; membership is what ends it.
+        """
+        log = DailyLogFactory(project=project, author=past_lead, title="Original")
+
+        response = auth_client(past_lead).patch(
+            reverse("log-detail", kwargs={"pk": log.pk}), {"title": "Rewritten"}
+        )
+        assert response.status_code == 403
+        log.refresh_from_db()
+        assert log.title == "Original"
+
+    def test_a_dropped_member_cannot_delete_what_they_filed_this_term(
+        self, auth_client, past_lead, project
+    ):
+        log = DailyLogFactory(project=project, author=past_lead)
+        response = auth_client(past_lead).delete(reverse("log-detail", kwargs={"pk": log.pk}))
+        assert response.status_code == 403
+        log.refresh_from_db()
+        assert log.is_deleted is False
+
+    def test_a_dropped_member_still_reads_this_terms_timeline(
+        self, auth_client, past_lead, project
+    ):
+        """Losing the roster spot does not un-read the feed."""
+        DailyLogFactory(project=project, title="Filed after they left")
+
+        response = auth_client(past_lead).get(reverse("log-list"), {"project": project.slug})
+        assert [row["title"] for row in response.data["results"]] == ["Filed after they left"]
+
 
 class TestClosedTermsAreFrozen:
     def test_the_author_cannot_edit_an_archived_entry(

@@ -75,19 +75,23 @@ export function isInOpenTerm(log: DailyLog, currentSemester: Semester | null | u
 /**
  * Whether `user` may edit `log`, mirroring `DailyLogViewSet._assert_can_edit`.
  *
- * Authorship is the whole rule while the term is open: an entry is one
- * person's account of what happened, so no role — lead, finance lead or exec —
- * may reword it. Staff who disagree with an entry delete it instead (see
- * {@link canDeleteLog}). Once the term closes, nobody edits it at all.
+ * Authorship plus a current-term role: an entry is one person's account of what
+ * happened, so no role — lead, finance lead or exec — may reword it, and being
+ * its author no longer helps once you are off the roster. A former member reads
+ * the timeline with no Edit button on it. Staff who disagree with an entry
+ * delete it instead (see {@link canDeleteLog}); once the term closes, nobody
+ * edits it at all.
  *
  * These predicates only decide whether to offer the button; the server is the
  * real gate, so a stale answer surfaces as a 403 on save rather than as a leak.
  */
 export function canEditLog(
   log: DailyLog,
+  role: EffectiveRole | null | undefined,
   userId: number | undefined,
   currentSemester: Semester | null | undefined,
 ): boolean {
+  if (!role) return false
   if (!isInOpenTerm(log, currentSemester)) return false
   return userId !== undefined && log.author.id === userId
 }

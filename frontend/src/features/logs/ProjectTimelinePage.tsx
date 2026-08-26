@@ -119,7 +119,15 @@ export function ProjectTimelinePage() {
           </Link>
           <h1 className="mt-1 flex items-center gap-3 font-display text-2xl font-semibold text-ink">
             {project.data.name}
-            {role && <RoleBadge role={role as EffectiveRole} />}
+            {role ? (
+              <RoleBadge role={role as EffectiveRole} />
+            ) : (
+              // No role this term: here on a past membership, and read-only.
+              // Same marker the project list uses.
+              <span className="inline-flex shrink-0 rounded-full bg-paper-deep px-2.5 py-0.5 text-xs font-semibold text-ink-mute ring-1 ring-line-strong ring-inset">
+                Archive only
+              </span>
+            )}
           </h1>
           {project.data.description && (
             <p className="mt-1 max-w-2xl text-sm text-ink-soft">{project.data.description}</p>
@@ -170,13 +178,25 @@ export function ProjectTimelinePage() {
         />
       )}
 
-      {viewingArchive && (
+      {viewingArchive ? (
         <Card className="border-line-strong bg-paper-deep/40">
           <p className="text-sm text-ink-soft">
             You are reading a closed semester. Its entries are part of the project&rsquo;s record
             and cannot be edited or removed.
           </p>
         </Card>
+      ) : (
+        // The open term, but not on its roster — the one case where a reader
+        // sees a live feed with no way to add to it. Say why, or the missing
+        // compose box reads as a bug.
+        !role && (
+          <Card className="border-line-strong bg-paper-deep/40">
+            <p className="text-sm text-ink-soft">
+              You are not on this project&rsquo;s roster this semester. You can read the timeline
+              and the archive, but adding, editing and removing entries is for current members.
+            </p>
+          </Card>
+        )
       )}
 
       {composing && (
@@ -251,7 +271,7 @@ export function ProjectTimelinePage() {
                         <div className="ml-auto flex gap-1">
                           <CopyLogButton log={log} />
 
-                          {canEditLog(log, user?.id, currentSemester.data) && (
+                          {canEditLog(log, role, user?.id, currentSemester.data) && (
                             <Button
                               variant="ghost"
                               onClick={() => {

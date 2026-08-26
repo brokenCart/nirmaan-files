@@ -161,7 +161,9 @@ only if the kinds genuinely diverge.
 Writes: any member **of the current semester** may file a log. **Only the author may edit one** —
 at any status, and no role overrides this, leads and exec included. An entry is one person's
 account of what happened, so staff who disagree with it delete it rather than reword it under the
-author's name. Deleting is the moderation lever: leads, finance leads and exec may remove any log
+author's name. Authorship is necessary but not sufficient: every write, edit included, also needs
+membership **this semester**, so someone dropped from the roster mid-term keeps reading the feed
+but stops editing what they filed while they were on it. Deleting is the moderation lever: leads, finance leads and exec may remove any log
 in their project, and an author may withdraw their own. Deletes are soft (`is_deleted`) — the
 timeline is institutional memory, which is what makes "remove it rather than rewrite it" safe.
 
