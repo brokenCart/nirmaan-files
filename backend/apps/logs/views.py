@@ -15,8 +15,9 @@ class DailyLogViewSet(viewsets.ModelViewSet):
 
     Write rules:
       * any member of the project **this semester** may file a log;
-      * only its **author** may edit one — including after publishing, and
-        including against leads and exec, who get no edit rights at all;
+      * only its **author**, and only while still a member this semester, may
+        edit one — including after publishing, and including against leads and
+        exec, who get no edit rights at all;
       * leads, finance leads and exec may delete any log in their project, and
         an author may delete their own;
       * a closed semester is frozen. Entries in a past term cannot be edited by
@@ -106,12 +107,25 @@ class DailyLogViewSet(viewsets.ModelViewSet):
             )
 
     def _assert_can_edit(self, instance: DailyLog) -> None:
-        # Authorship is the whole rule — no role grants an edit, exec included.
-        # Membership is already established upstream: a non-member never gets
-        # the row out of `visible_to`, so they see a 404 before reaching here.
-        # The term check runs first so a past member editing an old entry is
-        # told the archive is closed rather than that they are the author.
+        # Two gates, then authorship. The term check runs first so a past member
+        # editing an old entry is told the archive is closed rather than that
+        # they are the author.
         self._assert_is_open(instance)
+
+        # Membership is *not* established upstream: `visible_to` scopes to any
+        # semester, so someone dropped from this term's roster still reads the
+        # feed — and would otherwise keep editing the entries they filed while
+        # they were on it. Write access ends with the membership, which is the
+        # same rule `_assert_can_create` and `_assert_can_delete` apply.
+        user = self.request.user
+        if not user.is_exec and role_in_project(self.request, instance.project_id) is None:
+            raise PermissionDenied(
+                "You are not a member of this project this semester. "
+                "You can read the timeline but no longer change it."
+            )
+
+        # Authorship is the rest of the rule — no role grants an edit, exec
+        # included.
         if instance.author_id != self.request.user.pk:
             raise PermissionDenied(
                 "Only the author can edit this entry. Ask a project lead to remove it instead."
