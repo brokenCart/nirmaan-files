@@ -7,9 +7,13 @@
  * the mark agree.
  */
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
-  --font-brand: 'Nunito', ui-rounded, 'Segoe UI', system-ui, sans-serif;
+  /*
+   * Geist for UI text — its lining figures line up in the timeline's date
+   * column. Bricolage Grotesque for display: an optically-sized grotesque with
+   * enough of a print voice to carry the poster feel the palette sets up.
+   */
+  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque', 'Geist', ui-sans-serif, system-ui, sans-serif;
 
   --color-paper: #fdf6e9;
   --color-paper-deep: #f6e8d2;
@@ -58,6 +62,9 @@
   h2,
   h3 {
     @apply font-display;
+    /* Bricolage carries an `opsz` axis; let it respond to the heading size. */
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
   }
 
   :focus-visible {
