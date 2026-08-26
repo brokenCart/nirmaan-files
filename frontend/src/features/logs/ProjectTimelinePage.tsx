@@ -1,6 +1,6 @@
-import { BarChart3, Pencil, Plus, Trash2 } from 'lucide-react'
+import { BarChart3, CalendarRange, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '@/api/client'
 import type { EffectiveRole } from '@/api/types'
@@ -20,11 +20,15 @@ import {
 import { ProjectMembersPanel } from '@/features/projects/ProjectMembersPanel'
 import {
   LOGS_PAGE_SIZE,
+  useCurrentSemester,
   useDeleteLog,
   useLogs,
   useProject,
   useProjectMembers,
+  useSemesters,
 } from '@/features/projects/queries'
+import { SemesterSwitcher } from '@/features/semesters/SemesterSwitcher'
+import { isArchivedTerm } from '@/features/semesters/terms'
 import { cn, formatDate } from '@/lib/utils'
 
 import { CopyLogButton } from './CopyLogButton'
@@ -35,6 +39,7 @@ type KindFilter = 'ALL' | 'MOV' | 'MOM'
 export function ProjectTimelinePage() {
   const { slug = '' } = useParams()
   const { roleIn, user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [kindFilter, setKindFilter] = useState<KindFilter>('ALL')
   const [page, setPage] = useState(1)
   const [composing, setComposing] = useState(false)
@@ -42,13 +47,31 @@ export function ProjectTimelinePage() {
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<number | null>(null)
   const deleteLog = useDeleteLog()
 
+  // The viewed term lives in the URL so a link into a past semester is
+  // shareable; absent means the open term, which is what the API defaults to.
+  const viewedTerm = searchParams.get('semester') ?? undefined
+
   const project = useProject(slug)
-  const members = useProjectMembers(slug)
+  const semesters = useSemesters()
+  const currentSemester = useCurrentSemester()
+  const members = useProjectMembers(slug, viewedTerm)
   const logs = useLogs({
     project: slug,
     kind: kindFilter === 'ALL' ? undefined : kindFilter,
+    semester: viewedTerm,
     page,
   })
+
+  const viewingArchive = isArchivedTerm(viewedTerm, currentSemester.data)
+
+  function changeTerm(next: string | undefined) {
+    setSearchParams(next ? { semester: next } : {}, { replace: true })
+    // Terms hold different numbers of entries, and DRF 404s an out-of-range
+    // page.
+    setPage(1)
+    setComposing(false)
+    setEditingId(null)
+  }
 
   const totalPages = Math.max(1, Math.ceil((logs.data?.count ?? 0) / LOGS_PAGE_SIZE))
 
@@ -101,14 +124,25 @@ export function ProjectTimelinePage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Link to={`/projects/${slug}/attendance`}>
+          <Link
+            to={`/projects/${slug}/attendance${viewedTerm ? `?semester=${viewedTerm}` : ''}`}
+          >
             <Button variant="secondary">
               <BarChart3 className="size-4" aria-hidden />
               Attendance
             </Button>
           </Link>
 
-          {!composing && (
+          <Link to={`/projects/${slug}/archive`}>
+            <Button variant="secondary">
+              <CalendarRange className="size-4" aria-hidden />
+              Archive
+            </Button>
+          </Link>
+
+          {/* Filing is only possible against the open term, so the button is
+              absent rather than disabled on an archived one. */}
+          {!composing && !viewingArchive && role && (
             <Button
               onClick={() => {
                 setComposing(true)
@@ -124,6 +158,24 @@ export function ProjectTimelinePage() {
         </div>
       </div>
 
+      {semesters.data && semesters.data.results.length > 1 && (
+        <SemesterSwitcher
+          semesters={semesters.data.results}
+          value={viewedTerm}
+          current={currentSemester.data}
+          onChange={changeTerm}
+        />
+      )}
+
+      {viewingArchive && (
+        <Card className="border-line-strong bg-paper-deep/40">
+          <p className="text-sm text-ink-soft">
+            You are reading a closed semester. Its entries are part of the project&rsquo;s record
+            and cannot be edited or removed.
+          </p>
+        </Card>
+      )}
+
       {composing && (
         <Card className="border-gold-500/40">
           <h2 className="font-display text-lg font-semibold text-brand-600">New timeline entry</h2>
@@ -131,6 +183,7 @@ export function ProjectTimelinePage() {
           <LogComposer
             project={project.data}
             members={members.data?.results ?? []}
+            semester={currentSemester.data}
             onDone={() => {
               setComposing(false)
               // A new entry sorts to the top of the feed, which is page 1.
@@ -195,7 +248,7 @@ export function ProjectTimelinePage() {
                         <div className="ml-auto flex gap-1">
                           <CopyLogButton log={log} />
 
-                          {canEditLog(log, user?.id) && (
+                          {canEditLog(log, user?.id, currentSemester.data) && (
                             <Button
                               variant="ghost"
                               onClick={() => {
@@ -207,7 +260,7 @@ export function ProjectTimelinePage() {
                               Edit
                             </Button>
                           )}
-                          {canDeleteLog(log, role, user?.id) && (
+                          {canDeleteLog(log, role, user?.id, currentSemester.data) && (
                             <Button
                               variant="ghost"
                               aria-label={`Remove “${log.title}” from the timeline`}
@@ -259,6 +312,7 @@ export function ProjectTimelinePage() {
                           project={project.data}
                           members={members.data?.results ?? []}
                           log={log}
+                          semester={currentSemester.data}
                           onDone={() => setEditingId(null)}
                         />
                       </div>

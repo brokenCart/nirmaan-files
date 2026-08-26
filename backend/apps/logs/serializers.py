@@ -17,6 +17,11 @@ class DailyLogSerializer(serializers.ModelSerializer):
     )
     attendees = UserSerializer(many=True, read_only=True)
     project_slug = serializers.SlugRelatedField(source="project", slug_field="slug", read_only=True)
+    # Derived from `occurred_on`, never sent by the client — see `DailyLog.save`.
+    semester = serializers.PrimaryKeyRelatedField(read_only=True)
+    semester_slug = serializers.SlugRelatedField(
+        source="semester", slug_field="slug", read_only=True
+    )
 
     class Meta:
         model = DailyLog
@@ -24,6 +29,8 @@ class DailyLogSerializer(serializers.ModelSerializer):
             "id",
             "project",
             "project_slug",
+            "semester",
+            "semester_slug",
             "kind",
             "title",
             "body",
@@ -35,7 +42,14 @@ class DailyLogSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "author", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "author",
+            "semester",
+            "semester_slug",
+            "created_at",
+            "updated_at",
+        ]
 
     def validate_project(self, value):
         # Write permission is decided against the project the entry already
@@ -45,11 +59,31 @@ class DailyLogSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("An entry cannot be moved to another project.")
         return value
 
+    def validate_occurred_on(self, value):
+        from apps.projects.models import Semester
+
+        if Semester.for_date(value) is None:
+            raise serializers.ValidationError(
+                "That date falls before the first semester on record. "
+                "Ask the Executive Committee to create the term first."
+            )
+        return value
+
+    def update(self, instance, validated_data):
+        # Moving the date can move the entry to another term, so the stored key
+        # is cleared and `DailyLog.save` re-derives it. The viewset has already
+        # refused edits that would cross out of the open semester.
+        moved = validated_data.get("occurred_on", instance.occurred_on) != instance.occurred_on
+        if moved:
+            instance.semester = None
+        return super().update(instance, validated_data)
+
 
 class AttendanceRowSerializer(serializers.Serializer):
-    """One member's attendance on a project — see :mod:`apps.logs.stats`.
+    """One member's attendance on a project, in one semester.
 
-    Read-only: the numbers are derived from the timeline, never written.
+    See :mod:`apps.logs.stats`. Read-only: the numbers are derived from the
+    timeline, never written.
     """
 
     user = UserSerializer(read_only=True)

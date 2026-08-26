@@ -81,15 +81,20 @@ export interface paths {
          * @description MOV and MOM entries on a project timeline.
          *
          *     Write rules:
-         *       * any member of the project may file a log;
+         *       * any member of the project **this semester** may file a log;
          *       * only its **author** may edit one — including after publishing, and
          *         including against leads and exec, who get no edit rights at all;
          *       * leads, finance leads and exec may delete any log in their project, and
-         *         an author may delete their own.
+         *         an author may delete their own;
+         *       * a closed semester is frozen. Entries in a past term cannot be edited by
+         *         anyone, and only exec can remove one.
          *
          *     An entry is one person's account of what happened, so staff who disagree
          *     with it remove it rather than reword it under the author's name. Deletes
          *     are soft, which is what makes that safe.
+         *
+         *     Reading is wider than writing: anyone who has ever been a member sees the
+         *     whole archive. Filing against it is what stops at the term boundary.
          */
         get: operations["logs_list"];
         put?: never;
@@ -97,15 +102,20 @@ export interface paths {
          * @description MOV and MOM entries on a project timeline.
          *
          *     Write rules:
-         *       * any member of the project may file a log;
+         *       * any member of the project **this semester** may file a log;
          *       * only its **author** may edit one — including after publishing, and
          *         including against leads and exec, who get no edit rights at all;
          *       * leads, finance leads and exec may delete any log in their project, and
-         *         an author may delete their own.
+         *         an author may delete their own;
+         *       * a closed semester is frozen. Entries in a past term cannot be edited by
+         *         anyone, and only exec can remove one.
          *
          *     An entry is one person's account of what happened, so staff who disagree
          *     with it remove it rather than reword it under the author's name. Deletes
          *     are soft, which is what makes that safe.
+         *
+         *     Reading is wider than writing: anyone who has ever been a member sees the
+         *     whole archive. Filing against it is what stops at the term boundary.
          */
         post: operations["logs_create"];
         delete?: never;
@@ -125,30 +135,40 @@ export interface paths {
          * @description MOV and MOM entries on a project timeline.
          *
          *     Write rules:
-         *       * any member of the project may file a log;
+         *       * any member of the project **this semester** may file a log;
          *       * only its **author** may edit one — including after publishing, and
          *         including against leads and exec, who get no edit rights at all;
          *       * leads, finance leads and exec may delete any log in their project, and
-         *         an author may delete their own.
+         *         an author may delete their own;
+         *       * a closed semester is frozen. Entries in a past term cannot be edited by
+         *         anyone, and only exec can remove one.
          *
          *     An entry is one person's account of what happened, so staff who disagree
          *     with it remove it rather than reword it under the author's name. Deletes
          *     are soft, which is what makes that safe.
+         *
+         *     Reading is wider than writing: anyone who has ever been a member sees the
+         *     whole archive. Filing against it is what stops at the term boundary.
          */
         get: operations["logs_retrieve"];
         /**
          * @description MOV and MOM entries on a project timeline.
          *
          *     Write rules:
-         *       * any member of the project may file a log;
+         *       * any member of the project **this semester** may file a log;
          *       * only its **author** may edit one — including after publishing, and
          *         including against leads and exec, who get no edit rights at all;
          *       * leads, finance leads and exec may delete any log in their project, and
-         *         an author may delete their own.
+         *         an author may delete their own;
+         *       * a closed semester is frozen. Entries in a past term cannot be edited by
+         *         anyone, and only exec can remove one.
          *
          *     An entry is one person's account of what happened, so staff who disagree
          *     with it remove it rather than reword it under the author's name. Deletes
          *     are soft, which is what makes that safe.
+         *
+         *     Reading is wider than writing: anyone who has ever been a member sees the
+         *     whole archive. Filing against it is what stops at the term boundary.
          */
         put: operations["logs_update"];
         post?: never;
@@ -156,15 +176,20 @@ export interface paths {
          * @description MOV and MOM entries on a project timeline.
          *
          *     Write rules:
-         *       * any member of the project may file a log;
+         *       * any member of the project **this semester** may file a log;
          *       * only its **author** may edit one — including after publishing, and
          *         including against leads and exec, who get no edit rights at all;
          *       * leads, finance leads and exec may delete any log in their project, and
-         *         an author may delete their own.
+         *         an author may delete their own;
+         *       * a closed semester is frozen. Entries in a past term cannot be edited by
+         *         anyone, and only exec can remove one.
          *
          *     An entry is one person's account of what happened, so staff who disagree
          *     with it remove it rather than reword it under the author's name. Deletes
          *     are soft, which is what makes that safe.
+         *
+         *     Reading is wider than writing: anyone who has ever been a member sees the
+         *     whole archive. Filing against it is what stops at the term boundary.
          */
         delete: operations["logs_destroy"];
         options?: never;
@@ -173,15 +198,20 @@ export interface paths {
          * @description MOV and MOM entries on a project timeline.
          *
          *     Write rules:
-         *       * any member of the project may file a log;
+         *       * any member of the project **this semester** may file a log;
          *       * only its **author** may edit one — including after publishing, and
          *         including against leads and exec, who get no edit rights at all;
          *       * leads, finance leads and exec may delete any log in their project, and
-         *         an author may delete their own.
+         *         an author may delete their own;
+         *       * a closed semester is frozen. Entries in a past term cannot be edited by
+         *         anyone, and only exec can remove one.
          *
          *     An entry is one person's account of what happened, so staff who disagree
          *     with it remove it rather than reword it under the author's name. Deletes
          *     are soft, which is what makes that safe.
+         *
+         *     Reading is wider than writing: anyone who has ever been a member sees the
+         *     whole archive. Filing against it is what stops at the term boundary.
          */
         patch: operations["logs_partial_update"];
         trace?: never;
@@ -194,18 +224,30 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Who belongs to which project, and in what role.
+         * @description Who belongs to which project, in what role, in which semester.
          *
          *     Managed by project leads and exec. Volunteers can read the roster of
          *     projects they belong to but cannot change it.
+         *
+         *     Rosters are per term and past terms are frozen: a lead manages the current
+         *     semester only, because last semester's roster is the record of who filed
+         *     the entries in the archive. Exec can still correct a past roster, which
+         *     matters because the rows for terms predating this feature were backfilled
+         *     from a guess.
          */
         get: operations["memberships_list"];
         put?: never;
         /**
-         * @description Who belongs to which project, and in what role.
+         * @description Who belongs to which project, in what role, in which semester.
          *
          *     Managed by project leads and exec. Volunteers can read the roster of
          *     projects they belong to but cannot change it.
+         *
+         *     Rosters are per term and past terms are frozen: a lead manages the current
+         *     semester only, because last semester's roster is the record of who filed
+         *     the entries in the archive. Exec can still correct a past roster, which
+         *     matters because the rows for terms predating this feature were backfilled
+         *     from a guess.
          */
         post: operations["memberships_create"];
         delete?: never;
@@ -222,34 +264,58 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Who belongs to which project, and in what role.
+         * @description Who belongs to which project, in what role, in which semester.
          *
          *     Managed by project leads and exec. Volunteers can read the roster of
          *     projects they belong to but cannot change it.
+         *
+         *     Rosters are per term and past terms are frozen: a lead manages the current
+         *     semester only, because last semester's roster is the record of who filed
+         *     the entries in the archive. Exec can still correct a past roster, which
+         *     matters because the rows for terms predating this feature were backfilled
+         *     from a guess.
          */
         get: operations["memberships_retrieve"];
         /**
-         * @description Who belongs to which project, and in what role.
+         * @description Who belongs to which project, in what role, in which semester.
          *
          *     Managed by project leads and exec. Volunteers can read the roster of
          *     projects they belong to but cannot change it.
+         *
+         *     Rosters are per term and past terms are frozen: a lead manages the current
+         *     semester only, because last semester's roster is the record of who filed
+         *     the entries in the archive. Exec can still correct a past roster, which
+         *     matters because the rows for terms predating this feature were backfilled
+         *     from a guess.
          */
         put: operations["memberships_update"];
         post?: never;
         /**
-         * @description Who belongs to which project, and in what role.
+         * @description Who belongs to which project, in what role, in which semester.
          *
          *     Managed by project leads and exec. Volunteers can read the roster of
          *     projects they belong to but cannot change it.
+         *
+         *     Rosters are per term and past terms are frozen: a lead manages the current
+         *     semester only, because last semester's roster is the record of who filed
+         *     the entries in the archive. Exec can still correct a past roster, which
+         *     matters because the rows for terms predating this feature were backfilled
+         *     from a guess.
          */
         delete: operations["memberships_destroy"];
         options?: never;
         head?: never;
         /**
-         * @description Who belongs to which project, and in what role.
+         * @description Who belongs to which project, in what role, in which semester.
          *
          *     Managed by project leads and exec. Volunteers can read the roster of
          *     projects they belong to but cannot change it.
+         *
+         *     Rosters are per term and past terms are frozen: a lead manages the current
+         *     semester only, because last semester's roster is the record of who filed
+         *     the entries in the archive. Exec can still correct a past roster, which
+         *     matters because the rows for terms predating this feature were backfilled
+         *     from a guess.
          */
         patch: operations["memberships_partial_update"];
         trace?: never;
@@ -267,6 +333,10 @@ export interface paths {
          *     Only exec creates or deletes projects; leads may edit their own project's
          *     details. The queryset — not the permission class — is what keeps one
          *     project's rows out of another project's members' hands.
+         *
+         *     A project stays visible to anyone who has ever been a member of it, so the
+         *     archive outlives the membership. `my_role` reports the *current* term's
+         *     role, and comes back null for someone with archive-only access.
          */
         get: operations["projects_list"];
         put?: never;
@@ -276,6 +346,10 @@ export interface paths {
          *     Only exec creates or deletes projects; leads may edit their own project's
          *     details. The queryset — not the permission class — is what keeps one
          *     project's rows out of another project's members' hands.
+         *
+         *     A project stays visible to anyone who has ever been a member of it, so the
+         *     archive outlives the membership. `my_role` reports the *current* term's
+         *     role, and comes back null for someone with archive-only access.
          */
         post: operations["projects_create"];
         delete?: never;
@@ -297,6 +371,10 @@ export interface paths {
          *     Only exec creates or deletes projects; leads may edit their own project's
          *     details. The queryset — not the permission class — is what keeps one
          *     project's rows out of another project's members' hands.
+         *
+         *     A project stays visible to anyone who has ever been a member of it, so the
+         *     archive outlives the membership. `my_role` reports the *current* term's
+         *     role, and comes back null for someone with archive-only access.
          */
         get: operations["projects_retrieve"];
         /**
@@ -305,6 +383,10 @@ export interface paths {
          *     Only exec creates or deletes projects; leads may edit their own project's
          *     details. The queryset — not the permission class — is what keeps one
          *     project's rows out of another project's members' hands.
+         *
+         *     A project stays visible to anyone who has ever been a member of it, so the
+         *     archive outlives the membership. `my_role` reports the *current* term's
+         *     role, and comes back null for someone with archive-only access.
          */
         put: operations["projects_update"];
         post?: never;
@@ -314,6 +396,10 @@ export interface paths {
          *     Only exec creates or deletes projects; leads may edit their own project's
          *     details. The queryset — not the permission class — is what keeps one
          *     project's rows out of another project's members' hands.
+         *
+         *     A project stays visible to anyone who has ever been a member of it, so the
+         *     archive outlives the membership. `my_role` reports the *current* term's
+         *     role, and comes back null for someone with archive-only access.
          */
         delete: operations["projects_destroy"];
         options?: never;
@@ -324,8 +410,35 @@ export interface paths {
          *     Only exec creates or deletes projects; leads may edit their own project's
          *     details. The queryset — not the permission class — is what keeps one
          *     project's rows out of another project's members' hands.
+         *
+         *     A project stays visible to anyone who has ever been a member of it, so the
+         *     archive outlives the membership. `my_role` reports the *current* term's
+         *     role, and comes back null for someone with archive-only access.
          */
         patch: operations["projects_partial_update"];
+        trace?: never;
+    };
+    "/api/projects/{slug}/archive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Every semester this project has a record in, newest first.
+         *
+         *     One row per term: what was filed, how many people were on the roster,
+         *     and who led it. The counts are of published, undeleted entries, matching
+         *     what the attendance table for that term will show.
+         */
+        get: operations["projects_archive_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/projects/{slug}/attendance/": {
@@ -335,7 +448,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Per-member visit and meeting counts for this project. */
+        /** @description Per-member visit and meeting counts for one semester of this project. */
         get: operations["projects_attendance_list"];
         put?: never;
         post?: never;
@@ -362,14 +475,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/semesters/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Academic terms, org-wide.
+         *
+         *     Readable by anyone signed in — the SPA needs the list to build its term
+         *     switcher. Only exec opens or edits one, and opening a term carries the
+         *     previous term's roster forward so no project starts the semester empty.
+         */
+        get: operations["semesters_list"];
+        put?: never;
+        /**
+         * @description Academic terms, org-wide.
+         *
+         *     Readable by anyone signed in — the SPA needs the list to build its term
+         *     switcher. Only exec opens or edits one, and opening a term carries the
+         *     previous term's roster forward so no project starts the semester empty.
+         */
+        post: operations["semesters_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/semesters/{slug}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Academic terms, org-wide.
+         *
+         *     Readable by anyone signed in — the SPA needs the list to build its term
+         *     switcher. Only exec opens or edits one, and opening a term carries the
+         *     previous term's roster forward so no project starts the semester empty.
+         */
+        get: operations["semesters_retrieve"];
+        /**
+         * @description Academic terms, org-wide.
+         *
+         *     Readable by anyone signed in — the SPA needs the list to build its term
+         *     switcher. Only exec opens or edits one, and opening a term carries the
+         *     previous term's roster forward so no project starts the semester empty.
+         */
+        put: operations["semesters_update"];
+        post?: never;
+        /**
+         * @description Academic terms, org-wide.
+         *
+         *     Readable by anyone signed in — the SPA needs the list to build its term
+         *     switcher. Only exec opens or edits one, and opening a term carries the
+         *     previous term's roster forward so no project starts the semester empty.
+         */
+        delete: operations["semesters_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description Academic terms, org-wide.
+         *
+         *     Readable by anyone signed in — the SPA needs the list to build its term
+         *     switcher. Only exec opens or edits one, and opening a term carries the
+         *     previous term's roster forward so no project starts the semester empty.
+         */
+        patch: operations["semesters_partial_update"];
+        trace?: never;
+    };
+    "/api/semesters/current/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The term in progress, or the last one to have ended. */
+        get: operations["semesters_current_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * @description One member's attendance on a project — see :mod:`apps.logs.stats`.
+         * @description One semester's line in a project's archive — see ``ProjectViewSet.archive``.
          *
-         *     Read-only: the numbers are derived from the timeline, never written.
+         *     Read-only: every number is derived from the timeline.
+         */
+        ArchiveTerm: {
+            readonly semester: components["schemas"]["Semester"];
+            readonly visits: number;
+            readonly meetings: number;
+            readonly member_count: number;
+            readonly leads: components["schemas"]["User"][];
+        };
+        /**
+         * @description One member's attendance on a project, in one semester.
+         *
+         *     See :mod:`apps.logs.stats`. Read-only: the numbers are derived from the
+         *     timeline, never written.
          */
         AttendanceRow: {
             readonly user: components["schemas"]["User"];
@@ -382,6 +599,8 @@ export interface components {
             readonly id: number;
             project: number;
             readonly project_slug: string;
+            readonly semester: number;
+            readonly semester_slug: string;
             kind: components["schemas"]["KindEnum"];
             title: string;
             /** @description Markdown. */
@@ -427,6 +646,9 @@ export interface components {
             readonly id: number;
             readonly user: components["schemas"]["User"];
             project: number;
+            /** @description Defaults to the current semester. */
+            semester?: number;
+            readonly semester_slug: string;
             role?: components["schemas"]["RoleEnum"];
             is_active?: boolean;
             /** Format: date-time */
@@ -436,6 +658,8 @@ export interface components {
             /** Format: email */
             user_email: string;
             project: number;
+            /** @description Defaults to the current semester. */
+            semester?: number;
             role?: components["schemas"]["RoleEnum"];
             is_active?: boolean;
         };
@@ -445,6 +669,21 @@ export interface components {
             project_slug: string;
             project_name: string;
             role: string;
+        };
+        PaginatedArchiveTermList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["ArchiveTerm"][];
         };
         PaginatedAttendanceRowList: {
             /** @example 123 */
@@ -506,6 +745,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Project"][];
         };
+        PaginatedSemesterList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Semester"][];
+        };
         PatchedDailyLogRequest: {
             project?: number;
             kind?: components["schemas"]["KindEnum"];
@@ -524,6 +778,8 @@ export interface components {
             /** Format: email */
             user_email?: string;
             project?: number;
+            /** @description Defaults to the current semester. */
+            semester?: number;
             role?: components["schemas"]["RoleEnum"];
             is_active?: boolean;
         };
@@ -533,6 +789,14 @@ export interface components {
             is_active?: boolean;
             drive_folder_url?: string;
         };
+        PatchedSemesterRequest: {
+            /** @description e.g. "2025-26 Sem 1". */
+            name?: string;
+            /** Format: date */
+            starts_on?: string;
+            /** Format: date */
+            ends_on?: string;
+        };
         Project: {
             readonly id: number;
             name: string;
@@ -541,7 +805,14 @@ export interface components {
             is_active?: boolean;
             drive_folder_url?: string;
             readonly member_count: number;
-            /** @description The requesting user's role here, or ``EXEC`` for committee members. */
+            /**
+             * @description The requesting user's role here **this semester**, or ``EXEC``.
+             *
+             *     ``null`` on a project the caller can nevertheless see means archive-only
+             *     access: they were a member in some past term and were not carried into
+             *     this one. The SPA reads it that way to decide whether to offer a
+             *     compose box.
+             */
             readonly my_role: string | null;
             /** Format: date-time */
             readonly created_at: string;
@@ -561,6 +832,27 @@ export interface components {
          * @enum {string}
          */
         RoleEnum: "LEAD" | "FINANCE_LEAD" | "VOLUNTEER";
+        Semester: {
+            readonly id: number;
+            /** @description e.g. "2025-26 Sem 1". */
+            name: string;
+            readonly slug: string;
+            /** Format: date */
+            starts_on: string;
+            /** Format: date */
+            ends_on: string;
+            readonly is_current: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        SemesterRequest: {
+            /** @description e.g. "2025-26 Sem 1". */
+            name: string;
+            /** Format: date */
+            starts_on: string;
+            /** Format: date */
+            ends_on: string;
+        };
         /** @description What the SPA needs immediately after login. */
         Session: {
             access: string;
@@ -1110,11 +1402,39 @@ export interface operations {
             };
         };
     };
+    projects_archive_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Semester slug. Defaults to the term in progress. */
+                semester?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedArchiveTermList"];
+                };
+            };
+        };
+    };
     projects_attendance_list: {
         parameters: {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Semester slug. Defaults to the term in progress. */
+                semester?: string;
             };
             header?: never;
             path: {
@@ -1136,7 +1456,10 @@ export interface operations {
     };
     projects_attendance_export_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Semester slug. Defaults to the term in progress. */
+                semester?: string;
+            };
             header?: never;
             path: {
                 slug: string;
@@ -1151,6 +1474,167 @@ export interface operations {
                 };
                 content: {
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+        };
+    };
+    semesters_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSemesterList"];
+                };
+            };
+        };
+    };
+    semesters_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SemesterRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SemesterRequest"];
+                "multipart/form-data": components["schemas"]["SemesterRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Semester"];
+                };
+            };
+        };
+    };
+    semesters_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Semester"];
+                };
+            };
+        };
+    };
+    semesters_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SemesterRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SemesterRequest"];
+                "multipart/form-data": components["schemas"]["SemesterRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Semester"];
+                };
+            };
+        };
+    };
+    semesters_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    semesters_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSemesterRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSemesterRequest"];
+                "multipart/form-data": components["schemas"]["PatchedSemesterRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Semester"];
+                };
+            };
+        };
+    };
+    semesters_current_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Semester"];
                 };
             };
         };

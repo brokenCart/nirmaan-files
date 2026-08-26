@@ -19,6 +19,11 @@ class DailyLogQuerySet(models.QuerySet):
     def visible_to(self, request):
         """Rows the requesting user may read.
 
+        Scoped to projects the user has been a member of in *any* semester, not
+        just the current one: leaving a project does not un-write the entries
+        that were filed while you were in it. Writing is a different question
+        and a narrower one — see :mod:`apps.projects.permissions`.
+
         Drafts stay private to their author until published; exec and project
         staff see everything else in their projects.
         """
@@ -46,6 +51,15 @@ class DailyLog(models.Model):
     project = models.ForeignKey(
         "projects.Project",
         on_delete=models.CASCADE,
+        related_name="logs",
+    )
+    # Derived from `occurred_on`, then stored: counting restarts each term, and
+    # a stored key means the archive is one indexed lookup rather than a date
+    # range join against a table exec can edit underneath it. PROTECT because
+    # deleting a term that has entries in it would delete the record itself.
+    semester = models.ForeignKey(
+        "projects.Semester",
+        on_delete=models.PROTECT,
         related_name="logs",
     )
     kind = models.CharField(max_length=8, choices=LogKind.choices)
@@ -79,7 +93,19 @@ class DailyLog(models.Model):
         indexes = [
             models.Index(fields=["project", "-occurred_on"]),
             models.Index(fields=["project", "kind"]),
+            # The archive reads one term of one project at a time.
+            models.Index(fields=["project", "semester", "-occurred_on"]),
         ]
 
     def __str__(self) -> str:
         return f"[{self.kind}] {self.title} ({self.occurred_on})"
+
+    def save(self, *args, **kwargs):
+        # Resolved here rather than in the serializer so the admin, the seed
+        # command and the shell all stamp entries the same way. Only when unset:
+        # callers that need to re-derive after a date change clear it first.
+        if self.semester_id is None and self.occurred_on is not None:
+            from apps.projects.models import Semester
+
+            self.semester = Semester.for_date(self.occurred_on)
+        return super().save(*args, **kwargs)

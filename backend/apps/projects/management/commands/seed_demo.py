@@ -13,7 +13,7 @@ from django.db import transaction
 
 from apps.accounts.models import User
 from apps.logs.models import DailyLog, LogKind, LogStatus
-from apps.projects.models import Membership, Project, Role
+from apps.projects.models import Membership, Project, Role, Semester
 
 CAMPUS = "pilani.bits-pilani.ac.in"
 
@@ -55,9 +55,12 @@ class Command(BaseCommand):
         if options["reset"]:
             DailyLog.objects.all().delete()
             Membership.objects.all().delete()
+            Semester.objects.all().delete()
             Project.objects.filter(name__in=[name for name, _ in PROJECTS]).delete()
             User.objects.filter(email__endswith=f"@{CAMPUS}").exclude(is_superuser=True).delete()
             self.stdout.write("Cleared previous demo data.")
+
+        past, current = self._semesters()
 
         exec_user = self._user("exec.member", "Ananya (Exec Committee)", is_exec=True)
 
@@ -75,10 +78,18 @@ class Command(BaseCommand):
                 for n in (1, 2)
             ]
 
-            self._member(lead, project, Role.LEAD)
-            self._member(finance, project, Role.FINANCE_LEAD)
+            self._member(lead, project, current, Role.LEAD)
+            self._member(finance, project, current, Role.FINANCE_LEAD)
             for volunteer in volunteers:
-                self._member(volunteer, project, Role.VOLUNTEER)
+                self._member(volunteer, project, current, Role.VOLUNTEER)
+
+            # Last term's roster differs, which is the point of the archive:
+            # this term's lead was a volunteer then, and someone who has since
+            # graduated led it and kept read-only access to what they wrote.
+            alumnus = self._user(f"alumnus.{project.slug}", f"Former Lead of {name}")
+            self._member(alumnus, project, past, Role.LEAD)
+            self._member(lead, project, past, Role.VOLUNTEER)
+            self._member(volunteers[0], project, past, Role.VOLUNTEER)
 
             # One person deliberately spans two projects with different roles —
             # the case the permission model exists for. Referenced by the loop
@@ -88,17 +99,37 @@ class Command(BaseCommand):
             if index == 0:
                 first_project_lead = lead
             elif index == 1 and first_project_lead is not None:
-                self._member(first_project_lead, project, Role.VOLUNTEER)
+                self._member(first_project_lead, project, current, Role.VOLUNTEER)
 
             self._logs(project, lead, volunteers)
+            self._logs(project, alumnus, [alumnus, volunteers[0]], semester=past)
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Seeded {Project.objects.count()} projects, "
+                f"Seeded {Semester.objects.count()} semesters, {Project.objects.count()} projects, "
                 f"{User.objects.count()} users, {DailyLog.objects.count()} logs.\n"
                 f"Exec account: {exec_user.email}"
             )
         )
+
+    def _semesters(self) -> tuple[Semester, Semester]:
+        """One closed term and one open one, so the archive has something in it."""
+        today = datetime.date.today()
+        current, _ = Semester.objects.get_or_create(
+            name="2026-27 Sem 1",
+            defaults={
+                "starts_on": today - datetime.timedelta(days=30),
+                "ends_on": today + datetime.timedelta(days=120),
+            },
+        )
+        past, _ = Semester.objects.get_or_create(
+            name="2025-26 Sem 2",
+            defaults={
+                "starts_on": current.starts_on - datetime.timedelta(days=210),
+                "ends_on": current.starts_on - datetime.timedelta(days=1),
+            },
+        )
+        return past, current
 
     def _user(self, handle: str, full_name: str, *, is_exec: bool = False) -> User:
         user, created = User.objects.get_or_create(
@@ -110,22 +141,35 @@ class Command(BaseCommand):
             user.save(update_fields=["password"])
         return user
 
-    def _member(self, user: User, project: Project, role: str) -> None:
-        Membership.objects.get_or_create(user=user, project=project, defaults={"role": role})
+    def _member(self, user: User, project: Project, semester: Semester, role: str) -> None:
+        Membership.objects.get_or_create(
+            user=user, project=project, semester=semester, defaults={"role": role}
+        )
 
-    def _logs(self, project: Project, lead: User, volunteers: list[User]) -> None:
-        today = datetime.date.today()
+    def _logs(
+        self,
+        project: Project,
+        lead: User,
+        volunteers: list[User],
+        *,
+        semester: Semester | None = None,
+    ) -> None:
+        # Entries are dated inside their term and `DailyLog.save` reads the date
+        # to file them, so an anchor near the end of the term keeps a few weeks
+        # of history from spilling out the back of it.
+        anchor = min(datetime.date.today(), semester.ends_on) if semester else datetime.date.today()
+        suffix = f" ({semester.name})" if semester else ""
 
         for offset, title in enumerate(MOV_TITLES):
             log, created = DailyLog.objects.get_or_create(
                 project=project,
-                title=title,
+                title=f"{title}{suffix}",
                 defaults={
                     "kind": LogKind.MOV,
                     "body": (
                         "Notes from the visit.\n\n- Attendance was steady.\n- Follow up next week."
                     ),
-                    "occurred_on": today - datetime.timedelta(days=offset * 7 + 1),
+                    "occurred_on": anchor - datetime.timedelta(days=offset * 7 + 1),
                     "author": random.choice(volunteers),
                 },
             )
@@ -135,11 +179,11 @@ class Command(BaseCommand):
         for offset, title in enumerate(MOM_TITLES):
             log, created = DailyLog.objects.get_or_create(
                 project=project,
-                title=title,
+                title=f"{title}{suffix}",
                 defaults={
                     "kind": LogKind.MOM,
                     "body": "Agenda and decisions.\n\n1. Reviewed last week.\n2. Assigned owners.",
-                    "occurred_on": today - datetime.timedelta(days=offset * 7 + 3),
+                    "occurred_on": anchor - datetime.timedelta(days=offset * 7 + 3),
                     "author": lead,
                 },
             )
@@ -149,11 +193,11 @@ class Command(BaseCommand):
         # One unpublished draft, to show that other members cannot see it.
         DailyLog.objects.get_or_create(
             project=project,
-            title="Draft: notes I have not finished",
+            title=f"Draft: notes I have not finished{suffix}",
             defaults={
                 "kind": LogKind.MOV,
                 "body": "Half-written.",
-                "occurred_on": today,
+                "occurred_on": anchor,
                 "author": volunteers[0],
                 "status": LogStatus.DRAFT,
             },

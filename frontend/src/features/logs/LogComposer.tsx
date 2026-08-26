@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { ApiError } from '@/api/client'
-import type { DailyLog, Membership, Project } from '@/api/types'
+import type { DailyLog, Membership, Project, Semester } from '@/api/types'
 import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui'
 import { useCreateLog, useUpdateLog } from '@/features/projects/queries'
 
@@ -31,11 +31,14 @@ export function LogComposer({
   project,
   members,
   log,
+  semester,
   onDone,
 }: {
   project: Project
   members: Membership[]
   log?: DailyLog
+  /** The open term. Bounds the date picker to the semester being written to. */
+  semester?: Semester | null
   onDone: () => void
 }) {
   const createLog = useCreateLog(project.slug)
@@ -103,8 +106,24 @@ export function LogComposer({
         <Input {...register('title')} placeholder="Weekly session at the community centre" />
       </Field>
 
-      <Field label="Date" error={errors.occurred_on?.message}>
-        <Input type="date" {...register('occurred_on')} />
+      <Field
+        label="Date"
+        error={errors.occurred_on?.message}
+        hint={
+          semester
+            ? `Within ${semester.name} — the entry is filed against the term its date falls in.`
+            : undefined
+        }
+      >
+        {/* Bounded to the open term: a date outside it lands the entry in a
+            closed semester, which the server refuses. Better to make the
+            invalid day unpickable than to explain the 403 afterwards. */}
+        <Input
+          type="date"
+          min={semester?.starts_on}
+          max={semester?.ends_on}
+          {...register('occurred_on')}
+        />
       </Field>
 
       <Field

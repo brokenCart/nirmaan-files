@@ -11,6 +11,10 @@ export type User = components['schemas']['User']
 export type Project = components['schemas']['Project']
 export type Membership = components['schemas']['Membership']
 export type DailyLog = components['schemas']['DailyLog']
+/** One academic term. Counting and rosters restart at each one. */
+export type Semester = components['schemas']['Semester']
+/** One semester's line in a project's archive. */
+export type ArchiveTerm = components['schemas']['ArchiveTerm']
 /** Body accepted by `POST /api/logs/` — includes the write-only `attendee_ids`. */
 export type DailyLogInput = components['schemas']['DailyLogRequest']
 /** Body accepted by `PATCH /api/logs/{id}/`. */
@@ -57,16 +61,34 @@ export function isProjectStaff(role: EffectiveRole | null | undefined): boolean 
 }
 
 /**
+ * Whether `log` sits in the term that is currently open.
+ *
+ * A closed semester is frozen: the entries in it are the project's record and
+ * nobody edits them, author included. `currentSemester` being undefined (still
+ * loading, or none exists) is treated as closed, so the UI never offers a
+ * button that the server is about to refuse.
+ */
+export function isInOpenTerm(log: DailyLog, currentSemester: Semester | null | undefined): boolean {
+  return currentSemester != null && log.semester === currentSemester.id
+}
+
+/**
  * Whether `user` may edit `log`, mirroring `DailyLogViewSet._assert_can_edit`.
  *
- * Authorship is the whole rule: an entry is one person's account of what
- * happened, so no role — lead, finance lead or exec — may reword it. Staff who
- * disagree with an entry delete it instead (see {@link canDeleteLog}).
+ * Authorship is the whole rule while the term is open: an entry is one
+ * person's account of what happened, so no role — lead, finance lead or exec —
+ * may reword it. Staff who disagree with an entry delete it instead (see
+ * {@link canDeleteLog}). Once the term closes, nobody edits it at all.
  *
  * These predicates only decide whether to offer the button; the server is the
  * real gate, so a stale answer surfaces as a 403 on save rather than as a leak.
  */
-export function canEditLog(log: DailyLog, userId: number | undefined): boolean {
+export function canEditLog(
+  log: DailyLog,
+  userId: number | undefined,
+  currentSemester: Semester | null | undefined,
+): boolean {
+  if (!isInOpenTerm(log, currentSemester)) return false
   return userId !== undefined && log.author.id === userId
 }
 
@@ -74,12 +96,17 @@ export function canEditLog(log: DailyLog, userId: number | undefined): boolean {
  * Whether `user` may soft-delete `log`, mirroring `_assert_can_delete`.
  *
  * Staff moderate the timeline; an author may also withdraw their own entry.
+ * Exec keeps the lever over closed terms — something that should never have
+ * been published stays removable a year on — but everyone else stops at the
+ * term boundary.
  */
 export function canDeleteLog(
   log: DailyLog,
   role: EffectiveRole | null | undefined,
   userId: number | undefined,
+  currentSemester: Semester | null | undefined,
 ): boolean {
   if (!role) return false
+  if (!isInOpenTerm(log, currentSemester)) return role === 'EXEC'
   return isProjectStaff(role) || log.author.id === userId
 }

@@ -55,7 +55,15 @@ export function ProjectListPage() {
 
               <div className="flex items-start justify-between gap-3">
                 <h2 className="font-display text-lg font-semibold text-ink">{project.name}</h2>
-                {project.my_role && <RoleBadge role={project.my_role as EffectiveRole} />}
+                {project.my_role ? (
+                  <RoleBadge role={project.my_role as EffectiveRole} />
+                ) : (
+                  // Visible but no role this term: the project is here because
+                  // of a past membership, and it is read-only.
+                  <span className="inline-flex shrink-0 rounded-full bg-paper-deep px-2.5 py-0.5 text-xs font-semibold text-ink-mute ring-1 ring-line-strong ring-inset">
+                    Archive only
+                  </span>
+                )}
               </div>
 
               {project.description && (

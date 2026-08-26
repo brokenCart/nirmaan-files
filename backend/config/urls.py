@@ -4,10 +4,11 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
 from apps.logs.views import DailyLogViewSet
-from apps.projects.views import MembershipViewSet, ProjectViewSet
+from apps.projects.views import MembershipViewSet, ProjectViewSet, SemesterViewSet
 
 router = DefaultRouter()
 router.register("projects", ProjectViewSet, basename="project")
+router.register("semesters", SemesterViewSet, basename="semester")
 router.register("memberships", MembershipViewSet, basename="membership")
 router.register("logs", DailyLogViewSet, basename="log")
 

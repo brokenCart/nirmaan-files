@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 
 import { api } from '@/api/client'
 import type {
+  ArchiveTerm,
   AttendanceRow,
   DailyLog,
   DailyLogInput,
@@ -9,14 +10,29 @@ import type {
   Membership,
   Paginated,
   Project,
+  Semester,
 } from '@/api/types'
 
 export const queryKeys = {
   projects: ['projects'] as const,
   project: (slug: string) => ['projects', slug] as const,
   logs: (filters: LogFilters) => ['logs', filters] as const,
-  members: (slug: string) => ['memberships', slug] as const,
-  attendance: (slug: string) => ['attendance', slug] as const,
+  semesters: ['semesters'] as const,
+  currentSemester: ['semesters', 'current'] as const,
+  archive: (slug: string) => ['archive', slug] as const,
+  // Rosters and counts are per term, so the term is part of the cache key —
+  // switching semesters must not read the previous one's rows from cache.
+  members: (slug: string, semester?: string) => ['memberships', slug, semester ?? null] as const,
+  attendance: (slug: string, semester?: string) =>
+    ['attendance', slug, semester ?? null] as const,
+  /**
+   * Prefix matching every term's counts for one project.
+   *
+   * Invalidation must use this rather than `attendance(slug)`: that builds a
+   * fully-specified key ending in `null`, which would clear only the
+   * default-term query and leave a viewed past term showing stale numbers.
+   */
+  attendanceForProject: (slug: string) => ['attendance', slug] as const,
 }
 
 /**
@@ -35,6 +51,8 @@ export type LogFilters = {
   kind?: string
   since?: string
   until?: string
+  /** A semester slug, or `all` to read across every term. Defaults to the open one. */
+  semester?: string
   page?: number
 } & Record<string, string | number | undefined>
 
@@ -62,23 +80,59 @@ export function useLogs(filters: LogFilters) {
   })
 }
 
-export function useProjectMembers(slug: string) {
+export function useProjectMembers(slug: string, semester?: string) {
   return useQuery({
-    queryKey: queryKeys.members(slug),
-    queryFn: () => api.get<Paginated<Membership>>('/api/memberships/', { project: slug }),
+    queryKey: queryKeys.members(slug, semester),
+    queryFn: () =>
+      api.get<Paginated<Membership>>('/api/memberships/', { project: slug, semester }),
   })
 }
 
 /**
- * Per-member visit and meeting counts.
+ * Per-member visit and meeting counts for one term.
  *
  * Not paginated — a project roster is tens of people, and both the chart and
  * the export need the whole set at once.
  */
-export function useAttendance(slug: string) {
+export function useAttendance(slug: string, semester?: string) {
   return useQuery({
-    queryKey: queryKeys.attendance(slug),
-    queryFn: () => api.get<AttendanceRow[]>(`/api/projects/${slug}/attendance/`),
+    queryKey: queryKeys.attendance(slug, semester),
+    queryFn: () =>
+      api.get<AttendanceRow[]>(`/api/projects/${slug}/attendance/`, { semester }),
+  })
+}
+
+/** Every term, newest first. Drives the term switcher. */
+export function useSemesters() {
+  return useQuery({
+    queryKey: queryKeys.semesters,
+    queryFn: () => api.get<Paginated<Semester>>('/api/semesters/'),
+    // Terms change twice a year; refetching them on every mount is waste.
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/**
+ * The term in progress.
+ *
+ * Read by the write-affordance predicates in `api/types.ts`, so it is fetched
+ * from the server rather than inferred from today's date on the client — the
+ * two can disagree across a timezone, and the server's answer is the one that
+ * decides whether a save succeeds.
+ */
+export function useCurrentSemester() {
+  return useQuery({
+    queryKey: queryKeys.currentSemester,
+    queryFn: () => api.get<Semester | null>('/api/semesters/current/'),
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/** One row per term this project has a record in, newest first. */
+export function useProjectArchive(slug: string) {
+  return useQuery({
+    queryKey: queryKeys.archive(slug),
+    queryFn: () => api.get<ArchiveTerm[]>(`/api/projects/${slug}/archive/`),
   })
 }
 
@@ -92,7 +146,11 @@ export function useCreateLog(projectSlug: string) {
       void queryClient.invalidateQueries({ queryKey: ['logs'] })
       void queryClient.invalidateQueries({ queryKey: queryKeys.project(projectSlug) })
       // Attendees on a new entry move the counts.
-      void queryClient.invalidateQueries({ queryKey: queryKeys.attendance(projectSlug) })
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.attendanceForProject(projectSlug),
+      })
+      // And the archive's per-term totals.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.archive(projectSlug) })
     },
   })
 }
@@ -110,7 +168,12 @@ export function useUpdateLog(projectSlug: string) {
       void queryClient.invalidateQueries({ queryKey: ['logs'] })
       void queryClient.invalidateQueries({ queryKey: queryKeys.project(projectSlug) })
       // Editing attendees, kind or status all change what the counts include.
-      void queryClient.invalidateQueries({ queryKey: queryKeys.attendance(projectSlug) })
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.attendanceForProject(projectSlug),
+      })
+      // Moving `occurred_on` can move the entry between terms, which changes
+      // two rows of the archive at once.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.archive(projectSlug) })
     },
   })
 }
@@ -123,6 +186,7 @@ export function useDeleteLog() {
       void queryClient.invalidateQueries({ queryKey: ['logs'] })
       // A removed entry stops counting; the hook has no slug, so clear them all.
       void queryClient.invalidateQueries({ queryKey: ['attendance'] })
+      void queryClient.invalidateQueries({ queryKey: ['archive'] })
     },
   })
 }

@@ -1,12 +1,18 @@
 import { Download } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError, downloadFile } from '@/api/client'
 import type { EffectiveRole } from '@/api/types'
 import { Ornament } from '@/components/Logo'
 import { Button, Card, EmptyState, ErrorNote, RoleBadge, Spinner } from '@/components/ui'
-import { useAttendance, useProject } from '@/features/projects/queries'
+import {
+  useAttendance,
+  useCurrentSemester,
+  useProject,
+  useSemesters,
+} from '@/features/projects/queries'
+import { SemesterSwitcher } from '@/features/semesters/SemesterSwitcher'
 
 import { AttendanceChart } from './AttendanceChart'
 import type { Measure } from './measures'
@@ -14,12 +20,21 @@ import { MEASURE_LABELS, MEASURES, valueOf } from './measures'
 
 export function ProjectAttendancePage() {
   const { slug = '' } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [measure, setMeasure] = useState<Measure>('visits')
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
 
+  const viewedTerm = searchParams.get('semester') ?? undefined
+
   const project = useProject(slug)
-  const attendance = useAttendance(slug)
+  const semesters = useSemesters()
+  const currentSemester = useCurrentSemester()
+  const attendance = useAttendance(slug, viewedTerm)
+
+  const termName =
+    semesters.data?.results.find((s) => s.slug === (viewedTerm ?? currentSemester.data?.slug))
+      ?.name ?? ''
 
   // Sorted by whatever is on screen, so the bars always read as a ranking.
   const rows = useMemo(() => {
@@ -31,7 +46,11 @@ export function ProjectAttendancePage() {
     setExporting(true)
     setExportError(null)
     try {
-      await downloadFile(`/api/projects/${slug}/attendance/export/`, `${slug}-attendance.xlsx`)
+      const query = viewedTerm ? `?semester=${viewedTerm}` : ''
+      // The term is in the local filename too: two terms of the same project
+      // would otherwise overwrite each other in the downloads folder.
+      const name = viewedTerm ? `${slug}-${viewedTerm}-attendance.xlsx` : `${slug}-attendance.xlsx`
+      await downloadFile(`/api/projects/${slug}/attendance/export/${query}`, name)
     } catch (error) {
       setExportError(error instanceof ApiError ? error.detail : 'Could not build the export.')
     } finally {
@@ -50,10 +69,13 @@ export function ProjectAttendancePage() {
           <Link to={`/projects/${slug}`} className="text-sm text-ink-mute hover:text-brand-600">
             ← {project.data.name} timeline
           </Link>
-          <h1 className="mt-1 font-display text-2xl font-semibold text-ink">Attendance</h1>
+          <h1 className="mt-1 font-display text-2xl font-semibold text-ink">
+            Attendance{termName && <span className="text-ink-mute"> · {termName}</span>}
+          </h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-            How many entries each member was present at. Counted from published entries only —
-            drafts and removed entries do not appear here.
+            How many entries each member was present at, counted within this semester — totals
+            restart each term. Published entries only; drafts and removed entries do not appear
+            here.
           </p>
         </div>
 
@@ -63,6 +85,16 @@ export function ProjectAttendancePage() {
         </Button>
       </div>
 
+      {semesters.data && semesters.data.results.length > 1 && (
+        <SemesterSwitcher
+          semesters={semesters.data.results}
+          value={viewedTerm}
+          current={currentSemester.data}
+          onChange={(next) => setSearchParams(next ? { semester: next } : {}, { replace: true })}
+          archiveHref={`/projects/${slug}/archive`}
+        />
+      )}
+
       {exportError && <ErrorNote message={exportError} />}
 
       {attendance.isPending ? (
@@ -71,8 +103,8 @@ export function ProjectAttendancePage() {
         <ErrorNote message={attendance.error.message} />
       ) : rows.length === 0 ? (
         <EmptyState
-          title="No members yet"
-          description="Add people to this project and their attendance will appear here."
+          title="No roster for this semester"
+          description="Rosters are per term. Add people to this project and their attendance will appear here."
         />
       ) : (
         <>

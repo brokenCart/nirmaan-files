@@ -1,14 +1,36 @@
 """Shared fixtures and factories."""
 
+import datetime
+
 import factory
 import pytest
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 from apps.logs.models import DailyLog, LogKind, LogStatus
-from apps.projects.models import Membership, Project, Role
+from apps.projects.models import Membership, Project, Role, Semester
 
 CAMPUS = "pilani.bits-pilani.ac.in"
+
+
+def current_term() -> Semester:
+    """The term the tests run in, created on first use.
+
+    Deliberately wide — six months either side of today — so that a test which
+    hardcodes a date does not have to know the BITS calendar to stay inside the
+    open semester. Tests that care about the boundary use the `past_semester`
+    fixture to put something the other side of it.
+    """
+    today = timezone.localdate()
+    existing = Semester.objects.filter(starts_on__lte=today, ends_on__gte=today).first()
+    if existing is not None:
+        return existing
+    return Semester.objects.create(
+        name="Current Term",
+        starts_on=today - datetime.timedelta(days=180),
+        ends_on=today + datetime.timedelta(days=180),
+    )
 
 
 class UserFactory(factory.django.DjangoModelFactory):
@@ -29,12 +51,23 @@ class ProjectFactory(factory.django.DjangoModelFactory):
     description = factory.Faker("sentence")
 
 
+class SemesterFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Semester
+        django_get_or_create = ("name",)
+
+    name = factory.Sequence(lambda n: f"Term {n}")
+
+
 class MembershipFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Membership
 
     user = factory.SubFactory(UserFactory)
     project = factory.SubFactory(ProjectFactory)
+    # A plain SubFactory would mint a fresh term per membership, and terms may
+    # not overlap — every membership defaults into the one open term instead.
+    semester = factory.LazyFunction(current_term)
     role = Role.VOLUNTEER
 
 
@@ -47,7 +80,9 @@ class DailyLogFactory(factory.django.DjangoModelFactory):
     kind = LogKind.MOV
     title = factory.Faker("sentence", nb_words=5)
     body = factory.Faker("paragraph")
-    occurred_on = factory.Faker("date_object")
+    # Today rather than a random date: `occurred_on` decides which term the
+    # entry lands in, and a date from 1974 belongs to no semester at all.
+    occurred_on = factory.LazyFunction(lambda: timezone.localdate())
     status = LogStatus.PUBLISHED
 
 
@@ -66,6 +101,22 @@ def auth_client():
         return client
 
     return _make
+
+
+@pytest.fixture
+def semester(db):
+    """The open term. Everything the other fixtures create lives here."""
+    return current_term()
+
+
+@pytest.fixture
+def past_semester(db, semester):
+    """A term that has already ended — the archive side of the boundary."""
+    return SemesterFactory(
+        name="Previous Term",
+        starts_on=semester.starts_on - datetime.timedelta(days=200),
+        ends_on=semester.starts_on - datetime.timedelta(days=1),
+    )
 
 
 @pytest.fixture
@@ -109,4 +160,19 @@ def outsider(db, other_project):
     """A member of a *different* project — the key negative case."""
     user = UserFactory(email=f"outsider@{CAMPUS}")
     MembershipFactory(user=user, project=other_project, role=Role.LEAD)
+    return user
+
+
+@pytest.fixture
+def past_lead(db, project, past_semester):
+    """Led the project last term and was not carried into this one.
+
+    The negative case the semester model exists for. Read access survives —
+    they can still open the archive they wrote — and every write power is gone,
+    including the ones a current lead has. Any endpoint that resolves a write
+    against unscoped membership will hand this user their old authority back,
+    which is exactly what these tests are watching for.
+    """
+    user = UserFactory(email=f"past.lead@{CAMPUS}")
+    MembershipFactory(user=user, project=project, semester=past_semester, role=Role.LEAD)
     return user

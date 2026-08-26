@@ -10,7 +10,8 @@ throughout the codebase — never a software project.
 
 Four modules are planned per project. Only the first is built:
 
-1. **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting) — ✅ shipped
+1. **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting) — ✅ shipped, with
+   per-semester counting and a project archive
 2. **Knowledge base** — past context, lore — planned (`apps/knowledge`)
 3. **Volunteer visit tracking** — planned (`apps/visits`)
 4. **Resource links** — Drive URLs and similar — planned (`apps/resources`)
@@ -48,26 +49,72 @@ docker compose up --build
 
 ## Architecture
 
-### Roles are per-project, not global
+### Roles are per-project and per-semester, not global
 
 This is the load-bearing design decision. A person can be Lead of *Shiksha* and a plain Volunteer
-of *Aarogya* at the same time. The only org-wide role is Executive Committee.
+of *Aarogya* at the same time, and can have been a Volunteer of *Shiksha* last semester. The only
+org-wide role is Executive Committee.
 
 - `accounts.User.is_exec` — org-wide, grants read across every project without any membership row.
-- `projects.Membership(user, project, role)` — everything else. `role` ∈ `LEAD`, `FINANCE_LEAD`,
-  `VOLUNTEER`, one row per (user, project).
+- `projects.Membership(user, project, semester, role)` — everything else. `role` ∈ `LEAD`,
+  `FINANCE_LEAD`, `VOLUNTEER`, one row per **(user, project, semester)**.
 
 **Do not model roles as Django Groups or as a field on `User`.** That flattens the per-project
-distinction and there is no way back once data exists.
+distinction and there is no way back once data exists. Likewise **do not edit a `Membership`'s role
+to reflect a promotion** — that rewrites who held what when the archived entries were filed. A new
+term is a new row.
 
 Resolution lives in `apps/projects/permissions.py`:
 
-- `membership_roles(request)` — `{project_id: role}` for the requesting user, cached on the request
-  object so a list endpoint checking N objects issues one query, not N.
-- `IsProjectMember` — object belongs to a project the user is in.
+- `current_semester(request)` — the term in progress, cached on the request.
+- `membership_roles(request)` — `{project_id: role}` for the requesting user **this semester**,
+  cached on the request object so a list endpoint checking N objects issues one query, not N.
+- `visible_projects(user)` / `visible_project_ids(request)` — projects the user has been a member
+  of in **any** semester. For queryset scoping.
+- `IsProjectMember` — object belongs to a project the user has *ever* been in. A read gate.
 - `require_roles(*roles)` → a permission class; `IsProjectLead` and `IsProjectStaff` are the
-  prebuilt ones. Reads are open to any member, writes are limited to the named roles, exec bypasses.
-- `visible_projects(user)` / `visible_project_ids(request)` — for queryset scoping.
+  prebuilt ones. Reads are open to anyone who has ever been a member, writes are limited to the
+  named roles **held this semester**, exec bypasses.
+- `IsExec` — reads for anyone signed in, writes for exec. Used by semesters, which are org-wide.
+
+### Reads and writes resolve against different sets
+
+The single easiest thing to get wrong. Before semesters, one query answered both "what can I read"
+and "what can I write". It no longer does:
+
+| Question | Answered by | Scope |
+| --- | --- | --- |
+| May I read this? | `visible_project_ids` | membership in **any** semester |
+| May I write this? | `membership_roles` / `role_in_project` | membership **this** semester |
+
+Resolving a write against the unscoped set silently hands last year's lead their old powers back.
+`apps/conftest.py`'s `past_lead` fixture — lead of `project` in `past_semester`, nothing this term
+— exists to catch exactly that, and is the fixture most new negative tests want.
+
+### Semesters
+
+`projects.Semester(name, slug, starts_on, ends_on)`, org-wide, created by exec. Counting restarts
+each term, and so does the roster.
+
+- Terms are **explicit rows, not a formula** over dates: the BITS calendar shifts year to year, and
+  exec needs a lever to open one. `Semester.for_date(d)` returns the containing term, falling back
+  to the most recently *ended* one so a date in the summer gap still lands somewhere. `None` means
+  the date precedes every term on record, which the log serializer turns into a 400.
+- Overlap is rejected in `Semester.clean()` rather than by a Postgres exclusion constraint, which
+  would need `btree_gist` — an extension a managed database may not permit the migration to create.
+- **Opening a term copies the previous term's roster into it** (`apps/projects/services.py`,
+  called from `SemesterViewSet.perform_create`). Without that, every project would start the
+  semester empty and the lead would be locked out of building the roster they were meant to build.
+  The copy is idempotent and never overwrites a role already set in the target term.
+- `DailyLog.semester` is derived from `occurred_on` in `DailyLog.save()` and then stored, so the
+  archive is an indexed lookup rather than a range join against a table exec can edit underneath
+  it. Clear the field to force a re-derive; `DailyLogSerializer.update` does that when the date
+  moves.
+
+The migration pair `projects.0002` / `logs.0003` reconstructs terms from the BITS calendar back to
+the oldest entry. **The backfilled rosters are a guess** — there was no history of who was in a
+project when, so each membership was copied into every term that ended after the member joined.
+That is why `MembershipViewSet` still lets exec, and only exec, edit a past term's roster.
 
 ### Permission classes gate actions; querysets hide rows
 
@@ -111,17 +158,41 @@ query. Every field applies to both kinds — `attendees` included, since a visit
 as a meeting does and per-person visit and meet counts are derived from it. Split into two models
 only if the kinds genuinely diverge.
 
-Writes: any member may file a log. **Only the author may edit one** — at any status, and no role
-overrides this, leads and exec included. An entry is one person's account of what happened, so
-staff who disagree with it delete it rather than reword it under the author's name. Deleting is the
-moderation lever: leads, finance leads and exec may remove any log in their project, and an author
-may withdraw their own. Deletes are soft (`is_deleted`) — the timeline is institutional memory,
-which is what makes "remove it rather than rewrite it" safe.
+Writes: any member **of the current semester** may file a log. **Only the author may edit one** —
+at any status, and no role overrides this, leads and exec included. An entry is one person's
+account of what happened, so staff who disagree with it delete it rather than reword it under the
+author's name. Deleting is the moderation lever: leads, finance leads and exec may remove any log
+in their project, and an author may withdraw their own. Deletes are soft (`is_deleted`) — the
+timeline is institutional memory, which is what makes "remove it rather than rewrite it" safe.
+
+**A closed semester is frozen.** Entries in a past term cannot be edited by anyone, author
+included, and only exec can remove one — the moderation lever has to survive, since something that
+should never have been published must still be removable a year on. Backdating a *new* entry into
+a closed term is refused for the same reason, or the rule would be one date field away from moot.
 
 `project` is rejected on update: write permission is judged against the project the entry already
 belongs to, so a reassignment would sidestep that check.
 
 Drafts are private to their author, enforced in `DailyLogQuerySet.visible_to`.
+
+The timeline shows **one term at a time**, defaulting to the open one. `?semester=<slug>` reads a
+past term and `?semester=all` reads across every term. That default applies to *listing* only —
+detail routes must reach an archived entry by its own URL, or every 403 the frozen-archive rule is
+meant to return arrives as a 404 instead.
+
+### Archives
+
+`GET /api/projects/<slug>/archive/` returns one row per semester the project has a record in,
+newest first: visits, meetings, roster size and who led it. The SPA renders it at
+`/projects/:slug/archive`, and it is open to anyone who has ever been a member — including people
+who have since left, which is the whole reason it is a screen of its own rather than just the
+timeline's term switcher.
+
+`Project.my_role` reports the *current* term's role. **Null on a project the caller can still see
+means archive-only access**, and the SPA reads it that way to decide whether to offer a compose
+box. The session payload from `/api/auth/` is current-semester only for the same reason: it drives
+every write affordance, and listing every term a user was ever in would put an Edit button in front
+of a lead who stepped down two years ago.
 
 ### API types are generated, not hand-written
 
@@ -137,8 +208,13 @@ serializer and run `npm run gen:api`. A renamed field then breaks the build inst
 - Django apps live under `backend/apps/` and declare `name = "apps.<app>"` in their `AppConfig`.
 - Tests run against Postgres, not SQLite, so unique constraints and case handling behave as they do
   in production. `apps/conftest.py` holds the factories and role fixtures — `lead`, `finance_lead`,
-  `volunteer`, `exec_user`, and `outsider` (a member of a *different* project, which is the fixture
-  most negative tests need).
+  `volunteer`, `exec_user`, `outsider` (a member of a *different* project) and `past_lead` (led
+  this project last term, nothing this term). Those last two are the fixtures most negative tests
+  need: one covers the project boundary, the other the semester boundary.
+- Fixtures live in the term the test DB's migration created, reached via `conftest.current_term()`;
+  `past_semester` sits the other side of the boundary. **Never hardcode a calendar date in a test**
+  — `occurred_on` decides which term an entry lands in, so a fixed date drifts out of the open term
+  as time passes. Use offsets from `timezone.localdate()`.
 - When adding a module, extend `apps/projects/tests/test_permissions.py` alongside it. That file is
   the regression net for every endpoint's role behaviour.
 - `AUTH_FAKE_GOOGLE_TOKENS` accepts a plain JSON claims blob instead of a signed token. It exists
@@ -163,8 +239,18 @@ URLs so Google enforces auth against the viewer's own session. No media bytes fl
 server, and the external PR team can open the same folder natively.
 `Project.drive_folder_url` already exists as the seam.
 
-## Open question
+## Open questions
 
 A first-time sign-in creates a user with **no memberships**, who therefore sees nothing until a
 lead or exec adds them to a project. That is the current behaviour and the login screen says so.
 Whether new users should instead auto-join a default project has not been decided.
+
+Nothing opens a semester on its own — exec has to create the row. If they forget, `Semester.current()`
+falls back to the last term that ended, so the app keeps working but the new term's entries pile
+into the old one until someone notices. Whether that should be a scheduled job, a nag on the
+project list, or left as a manual step each August has not been decided.
+
+The migration bucketed pre-semester history into terms generated from the BITS calendar, and gave
+each of those terms the *current* roster minus anyone who joined later. Nobody has checked those
+rosters against what actually happened. If the old rosters matter, exec has to correct them by
+hand.

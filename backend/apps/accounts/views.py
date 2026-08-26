@@ -19,7 +19,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.projects.models import Membership
+from apps.projects.models import Membership, Semester
 
 from .authentication import UnauthenticatedBearerRealm
 from .serializers import GoogleLoginSerializer, SessionSerializer, UserSerializer
@@ -27,8 +27,22 @@ from .services import get_or_create_user, identity_from_credential
 
 
 def _membership_payload(user) -> list[dict]:
+    """The user's roles **this semester**, for the SPA's session state.
+
+    Scoped to the current term because the SPA reads these to decide which
+    write affordances to render. Listing every term a user has ever been in
+    would put an Edit button in front of a lead who stepped down two years ago
+    — the server would still refuse the save, but only after they had typed it.
+
+    Archive *read* access is a separate question and is answered per project by
+    `/api/projects/`, which stays unscoped by term.
+    """
+    semester = Semester.current()
+    if semester is None:
+        return []
+
     rows = (
-        Membership.objects.filter(user=user, is_active=True)
+        Membership.objects.filter(user=user, is_active=True, semester=semester)
         .select_related("project")
         .order_by("project__name")
     )

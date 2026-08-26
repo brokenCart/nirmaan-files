@@ -120,7 +120,10 @@ class TestAttendanceExport:
         assert response["Content-Type"] == (
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        assert f"nirmaan-{project.slug}-attendance-" in response["Content-Disposition"]
+        # The term is in the filename: counting restarts each semester, so a
+        # download named only for the project would be ambiguous on disk.
+        assert f"nirmaan-{project.slug}-" in response["Content-Disposition"]
+        assert "-attendance-" in response["Content-Disposition"]
         # A real xlsx is a zip archive.
         assert response.content[:2] == b"PK"
 

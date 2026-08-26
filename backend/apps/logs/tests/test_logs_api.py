@@ -2,11 +2,22 @@ import datetime
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.conftest import DailyLogFactory, ProjectFactory
 from apps.logs.models import DailyLog, LogKind, LogStatus
 
 pytestmark = pytest.mark.django_db
+
+
+def days_ago(n: int) -> datetime.date:
+    """A date `n` days back.
+
+    Dates are relative rather than hardcoded because `occurred_on` decides
+    which semester an entry lands in, and a fixed calendar date drifts out of
+    the open term as time passes.
+    """
+    return timezone.localdate() - datetime.timedelta(days=n)
 
 
 def log_payload(project, **overrides):
@@ -15,7 +26,7 @@ def log_payload(project, **overrides):
         "kind": LogKind.MOV,
         "title": "Visited the community centre",
         "body": "Ran the weekly session.",
-        "occurred_on": "2026-08-01",
+        "occurred_on": days_ago(1).isoformat(),
     }
     payload.update(overrides)
     return payload
@@ -54,7 +65,7 @@ class TestTimelineVisibility:
 
     def test_timeline_is_reverse_chronological(self, auth_client, lead, project):
         for day in (5, 20, 12):
-            DailyLogFactory(project=project, occurred_on=datetime.date(2026, 7, day))
+            DailyLogFactory(project=project, occurred_on=days_ago(day))
         response = auth_client(lead).get(reverse("log-list"), {"project": project.slug})
         dates = [row["occurred_on"] for row in response.data["results"]]
         assert dates == sorted(dates, reverse=True)

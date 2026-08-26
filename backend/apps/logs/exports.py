@@ -11,7 +11,7 @@ from apps.projects.models import Role
 HEADERS = ["Member", "Email", "Role", "Visits", "Meetings", "Total"]
 
 
-def attendance_workbook(project, rows) -> bytes:
+def attendance_workbook(project, semester, rows) -> bytes:
     """Render `rows` from :func:`apps.logs.stats.attendance_for` as .xlsx bytes.
 
     Returns bytes rather than a workbook so callers need no openpyxl import and
@@ -25,6 +25,11 @@ def attendance_workbook(project, rows) -> bytes:
 
     sheet.append([f"{project.name} — attendance"])
     sheet["A1"].font = Font(bold=True, size=14)
+    # The term is named on the sheet because counting restarts each semester:
+    # a file that just says "attendance" invites someone to read one term's
+    # totals as the whole of a member's contribution.
+    sheet.append([f"{semester.name}" if semester else "No semester on record"])
+    sheet["A2"].font = Font(bold=True)
     sheet.append(["Published entries only; drafts and removed entries are not counted."])
     sheet.append([])
 
