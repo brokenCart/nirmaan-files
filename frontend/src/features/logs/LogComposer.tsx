@@ -1,10 +1,19 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { useController, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { ApiError } from '@/api/client'
 import type { DailyLog, Membership, Project, Semester } from '@/api/types'
-import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui'
+import {
+  Button,
+  Checkbox,
+  ErrorNote,
+  Field,
+  Fieldset,
+  Input,
+  Select,
+  Textarea,
+} from '@/components/ui'
 import { useCreateLog, useUpdateLog } from '@/features/projects/queries'
 
 const schema = z.object({
@@ -12,8 +21,8 @@ const schema = z.object({
   title: z.string().min(3, 'Give the entry a title.').max(200),
   body: z.string().min(1, 'Write what happened.'),
   occurred_on: z.string().min(1, 'Pick the date it happened.'),
-  // Strings, because that is what a multi-select yields and compares against
-  // its options; converted to ids on submit.
+  // Strings, because that is what a checkbox `value` yields; converted to ids
+  // on submit.
   attendee_ids: z.array(z.string()).optional(),
   status: z.enum(['DRAFT', 'PUBLISHED']),
 })
@@ -46,6 +55,7 @@ export function LogComposer({
   const editing = log !== undefined
 
   const {
+    control,
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
@@ -69,6 +79,15 @@ export function LogComposer({
           attendee_ids: [],
         },
   })
+
+  // Controlled rather than `register`ed: react-hook-form reads a lone
+  // registered checkbox as a boolean, so a one-member roster would submit
+  // `true` instead of an array.
+  const { field: attendees } = useController({ control, name: 'attendee_ids' })
+  const selected = attendees.value ?? []
+
+  const toggleAttendee = (id: string, checked: boolean) =>
+    attendees.onChange(checked ? [...selected, id] : selected.filter((value) => value !== id))
 
   const onSubmit = handleSubmit(async (values) => {
     const fields = {
@@ -126,18 +145,36 @@ export function LogComposer({
         />
       </Field>
 
-      <Field
+      <Fieldset
         label="Who was there"
-        hint="Hold Ctrl/Cmd to select more than one. Visit and meeting counts come from this."
+        hint={`Visit and meeting counts come from this. ${selected.length} selected.`}
       >
-        <Select multiple {...register('attendee_ids')} size={Math.min(members.length || 1, 6)}>
-          {members.map((member) => (
-            <option key={member.id} value={member.user.id}>
-              {member.user.full_name || member.user.email}
-            </option>
-          ))}
-        </Select>
-      </Field>
+        <div className="max-h-56 space-y-0.5 overflow-y-auto rounded-lg bg-paper/60 p-1.5 ring-1 ring-line-strong">
+          {members.length === 0 ? (
+            <p className="px-2 py-1.5 text-sm text-ink-mute">
+              Nobody is on the roster for this term yet.
+            </p>
+          ) : (
+            members.map((member) => {
+              const id = String(member.user.id)
+              return (
+                <label
+                  key={member.id}
+                  className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-ink hover:bg-gold-50"
+                >
+                  <Checkbox
+                    value={id}
+                    checked={selected.includes(id)}
+                    onChange={(event) => toggleAttendee(id, event.target.checked)}
+                    onBlur={attendees.onBlur}
+                  />
+                  {member.user.full_name || member.user.email}
+                </label>
+              )
+            })
+          )}
+        </div>
+      </Fieldset>
 
       <Field label="What happened" error={errors.body?.message}>
         <Textarea {...register('body')} placeholder="Markdown is supported." />

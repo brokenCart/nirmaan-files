@@ -110,6 +110,44 @@ export function Field({
   )
 }
 
+/**
+ * `Field` for a group of controls that carry labels of their own — a set of
+ * checkboxes or radios. A `<label>` may not wrap other labels, so the group
+ * gets a `<fieldset>` and its caption a `<legend>`.
+ */
+export function Fieldset({
+  label,
+  error,
+  children,
+  hint,
+}: {
+  label: string
+  error?: string
+  hint?: string
+  children: ReactNode
+}) {
+  return (
+    <fieldset className="block">
+      <legend className="mb-1.5 block text-xs font-semibold tracking-wide text-ink-soft uppercase">
+        {label}
+      </legend>
+      {children}
+      {hint && !error && <span className="mt-1 block text-xs text-ink-mute">{hint}</span>}
+      {error && <span className="mt-1 block text-xs text-nirmaan-red">{error}</span>}
+    </fieldset>
+  )
+}
+
+export function Checkbox({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      type="checkbox"
+      className={cn('size-4 shrink-0 rounded accent-brand-600', className)}
+      {...props}
+    />
+  )
+}
+
 const CONTROL =
   'w-full rounded-lg border-0 bg-paper/60 px-3 py-2 text-sm text-ink ring-1 ring-line-strong placeholder:text-ink-mute focus:bg-surface focus:ring-2 focus:ring-brand-600'
 
