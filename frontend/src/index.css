@@ -1,11 +1,43 @@
 @import 'tailwindcss';
 
+/*
+ * Palette follows Nirmaan's festive print collateral: warm cream paper, deep
+ * maroon ink, marigold gold accents. The four `--color-nirmaan-*` hues are the
+ * logo's own panel colours and are used for categorical badges so the app and
+ * the mark agree.
+ */
 @theme {
-  --color-brand-50: oklch(0.97 0.02 150);
-  --color-brand-100: oklch(0.94 0.04 150);
-  --color-brand-500: oklch(0.62 0.13 150);
-  --color-brand-600: oklch(0.54 0.12 150);
-  --color-brand-700: oklch(0.45 0.1 150);
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-brand: 'Nunito', ui-rounded, 'Segoe UI', system-ui, sans-serif;
+
+  --color-paper: #fdf6e9;
+  --color-paper-deep: #f6e8d2;
+  --color-surface: #fffdf8;
+  --color-line: #ecdcc2;
+  --color-line-strong: #d8bf95;
+
+  --color-ink: #2f1d16;
+  --color-ink-soft: #6b5445;
+  --color-ink-mute: #97806b;
+
+  --color-brand-50: #fdf2f4;
+  --color-brand-100: #f9dfe4;
+  --color-brand-200: #f0bdc7;
+  --color-brand-500: #b02a45;
+  --color-brand-600: #8e1f38;
+  --color-brand-700: #6d162a;
+
+  --color-gold-50: #fdf5e3;
+  --color-gold-100: #f9e7c2;
+  --color-gold-500: #d99a2b;
+  --color-gold-600: #b47a16;
+
+  --color-nirmaan-blue: #1b4f9c;
+  --color-nirmaan-sky: #29a3dc;
+  --color-nirmaan-gold: #f4a71d;
+  --color-nirmaan-red: #d6293e;
+  --color-nirmaan-green: #4aa93a;
 }
 
 @layer base {
@@ -14,10 +46,32 @@
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-paper text-ink antialiased;
+    /* Two faint marigold washes so the cream reads as paper, not flat grey. */
+    background-image:
+      radial-gradient(60rem 32rem at 12% -10%, rgba(244, 167, 29, 0.13), transparent 65%),
+      radial-gradient(48rem 30rem at 95% 4%, rgba(176, 42, 69, 0.09), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
   }
 
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-600;
   }
+}
+
+/* The logo's four panel colours as a hairline rule — used under the header. */
+@utility nirmaan-rule {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-nirmaan-blue) 0 25%,
+    var(--color-nirmaan-gold) 25% 50%,
+    var(--color-nirmaan-red) 50% 75%,
+    var(--color-nirmaan-green) 75% 100%
+  );
 }

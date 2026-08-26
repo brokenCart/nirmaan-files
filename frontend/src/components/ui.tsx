@@ -1,4 +1,10 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
+import type {
+  ButtonHTMLAttributes,
+  InputHTMLAttributes,
+  ReactNode,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from 'react'
 
 import type { EffectiveRole } from '@/api/types'
 import { ROLE_LABELS } from '@/api/types'
@@ -7,10 +13,10 @@ import { cn } from '@/lib/utils'
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 const BUTTON_STYLES: Record<ButtonVariant, string> = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 disabled:bg-brand-600/50',
-  secondary: 'bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50',
-  ghost: 'text-slate-600 hover:bg-slate-100',
-  danger: 'bg-red-600 text-white hover:bg-red-700',
+  primary: 'bg-brand-600 text-paper shadow-sm hover:bg-brand-700 disabled:bg-brand-600/50',
+  secondary: 'bg-surface text-ink-soft ring-1 ring-line-strong hover:bg-gold-50 hover:text-ink',
+  ghost: 'text-ink-soft hover:bg-gold-50 hover:text-brand-700',
+  danger: 'bg-nirmaan-red text-white hover:bg-brand-700',
 }
 
 export function Button({
@@ -21,7 +27,7 @@ export function Button({
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60',
         BUTTON_STYLES[variant],
         className,
       )}
@@ -32,24 +38,29 @@ export function Button({
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={cn('rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200', className)}>
+    <div
+      className={cn(
+        'rounded-xl border border-line bg-surface p-5 shadow-[0_1px_2px_rgba(47,29,22,0.05),0_8px_24px_-16px_rgba(47,29,22,0.35)]',
+        className,
+      )}
+    >
       {children}
     </div>
   )
 }
 
 const ROLE_STYLES: Record<EffectiveRole, string> = {
-  EXEC: 'bg-purple-100 text-purple-800',
-  LEAD: 'bg-brand-100 text-brand-700',
-  FINANCE_LEAD: 'bg-amber-100 text-amber-800',
-  VOLUNTEER: 'bg-slate-100 text-slate-700',
+  EXEC: 'bg-nirmaan-blue/10 text-nirmaan-blue ring-nirmaan-blue/20',
+  LEAD: 'bg-brand-50 text-brand-700 ring-brand-200',
+  FINANCE_LEAD: 'bg-gold-50 text-gold-600 ring-gold-100',
+  VOLUNTEER: 'bg-nirmaan-green/10 text-nirmaan-green ring-nirmaan-green/20',
 }
 
 export function RoleBadge({ role }: { role: EffectiveRole }) {
   return (
     <span
       className={cn(
-        'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+        'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset',
         ROLE_STYLES[role],
       )}
     >
@@ -62,8 +73,10 @@ export function KindBadge({ kind }: { kind: 'MOV' | 'MOM' }) {
   return (
     <span
       className={cn(
-        'inline-flex rounded px-1.5 py-0.5 text-xs font-semibold tracking-wide',
-        kind === 'MOV' ? 'bg-sky-100 text-sky-800' : 'bg-violet-100 text-violet-800',
+        'inline-flex rounded px-1.5 py-0.5 text-xs font-bold tracking-widest ring-1 ring-inset',
+        kind === 'MOV'
+          ? 'bg-nirmaan-sky/10 text-nirmaan-blue ring-nirmaan-sky/25'
+          : 'bg-brand-50 text-brand-600 ring-brand-200',
       )}
       title={kind === 'MOV' ? 'Moment of Visit' : 'Minutes of Meeting'}
     >
@@ -85,16 +98,18 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
+      <span className="mb-1.5 block text-xs font-semibold tracking-wide text-ink-soft uppercase">
+        {label}
+      </span>
       {children}
-      {hint && !error && <span className="mt-1 block text-xs text-slate-500">{hint}</span>}
-      {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
+      {hint && !error && <span className="mt-1 block text-xs text-ink-mute">{hint}</span>}
+      {error && <span className="mt-1 block text-xs text-nirmaan-red">{error}</span>}
     </label>
   )
 }
 
 const CONTROL =
-  'w-full rounded-md border-0 bg-white px-3 py-2 text-sm text-slate-900 ring-1 ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-brand-600'
+  'w-full rounded-lg border-0 bg-paper/60 px-3 py-2 text-sm text-ink ring-1 ring-line-strong placeholder:text-ink-mute focus:bg-surface focus:ring-2 focus:ring-brand-600'
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(CONTROL, className)} {...props} />
@@ -104,21 +119,25 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   return <textarea className={cn(CONTROL, 'min-h-32', className)} {...props} />
 }
 
+export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={cn(CONTROL, className)} {...props} />
+}
+
 export function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-lg border-2 border-dashed border-slate-200 p-10 text-center">
-      <p className="font-medium text-slate-700">{title}</p>
-      <p className="mt-1 text-sm text-slate-500">{description}</p>
+    <div className="rounded-xl border-2 border-dashed border-line-strong bg-surface/60 p-10 text-center">
+      <p className="font-display text-lg font-semibold text-ink">{title}</p>
+      <p className="mt-1 text-sm text-ink-soft">{description}</p>
     </div>
   )
 }
 
 export function Spinner({ label = 'Loading…' }: { label?: string }) {
   return (
-    <div className="flex items-center justify-center gap-3 p-10 text-sm text-slate-500">
+    <div className="flex items-center justify-center gap-3 p-10 text-sm text-ink-soft">
       <span
         aria-hidden
-        className="size-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600"
+        className="size-4 animate-spin rounded-full border-2 border-line-strong border-t-brand-600"
       />
       {label}
     </div>
@@ -127,7 +146,10 @@ export function Spinner({ label = 'Loading…' }: { label?: string }) {
 
 export function ErrorNote({ message }: { message: string }) {
   return (
-    <div role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-700 ring-1 ring-red-200">
+    <div
+      role="alert"
+      className="rounded-lg bg-brand-50 p-3 text-sm text-brand-700 ring-1 ring-brand-200"
+    >
       {message}
     </div>
   )

@@ -37,6 +37,12 @@ services:
   frontend:
     build: ./frontend
     command: npm run dev -- --host 0.0.0.0
+    environment:
+      # Read by the Vite dev proxy in Node, not by the browser. Inside the
+      # compose network the API is backend:8000 — `localhost` here is this
+      # container, so the .env value (which is right for a host-run `npm run
+      # dev`) would make every /api call fail with a 502.
+      VITE_API_BASE_URL: http://backend:8000
     env_file:
       - .env
     volumes:

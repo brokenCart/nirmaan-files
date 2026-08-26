@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# Local-only scratch: dev credentials, personal notes. Never committed.
+.local/
+
 # Python
 __pycache__/
 *.py[cod]

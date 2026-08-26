@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { ApiError } from '@/api/client'
 import type { Membership, Project } from '@/api/types'
-import { Button, ErrorNote, Field, Input, Textarea } from '@/components/ui'
+import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui'
 import { useCreateLog } from '@/features/projects/queries'
 
 const schema = z
@@ -77,13 +77,10 @@ export function LogComposer({
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <Field label="Entry type">
-        <select
-          {...register('kind')}
-          className="w-full rounded-md border-0 bg-white px-3 py-2 text-sm ring-1 ring-slate-300 focus:ring-2 focus:ring-brand-600"
-        >
+        <Select {...register('kind')}>
           <option value="MOV">MOV — Moment of Visit</option>
           <option value="MOM">MOM — Minutes of Meeting</option>
-        </select>
+        </Select>
       </Field>
 
       <Field label="Title" error={errors.title?.message}>
@@ -102,12 +99,11 @@ export function LogComposer({
 
       {kind === 'MOM' && (
         <Field label="Attendees" hint="Hold Ctrl/Cmd to select more than one.">
-          <select
+          <Select
             multiple
             {...register('attendee_ids', {
               setValueAs: (value: string[] | undefined) => value?.map(Number) ?? [],
             })}
-            className="w-full rounded-md border-0 bg-white px-3 py-2 text-sm ring-1 ring-slate-300 focus:ring-2 focus:ring-brand-600"
             size={Math.min(members.length || 1, 6)}
           >
             {members.map((member) => (
@@ -115,7 +111,7 @@ export function LogComposer({
                 {member.user.full_name || member.user.email}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
       )}
 
@@ -124,13 +120,10 @@ export function LogComposer({
       </Field>
 
       <Field label="Status">
-        <select
-          {...register('status')}
-          className="w-full rounded-md border-0 bg-white px-3 py-2 text-sm ring-1 ring-slate-300 focus:ring-2 focus:ring-brand-600"
-        >
+        <Select {...register('status')}>
           <option value="PUBLISHED">Publish to the project timeline</option>
           <option value="DRAFT">Save as a private draft</option>
-        </select>
+        </Select>
       </Field>
 
       {serverError && (
