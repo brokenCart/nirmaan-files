@@ -4,6 +4,7 @@ import { ProjectAttendancePage } from '@/features/attendance/ProjectAttendancePa
 import { LoginPage } from '@/features/auth/LoginPage'
 import { ProjectTimelinePage } from '@/features/logs/ProjectTimelinePage'
 import { ProjectListPage } from '@/features/projects/ProjectListPage'
+import { ProjectResourcesPage } from '@/features/resources/ProjectResourcesPage'
 import { ProjectArchivePage } from '@/features/semesters/ProjectArchivePage'
 import { AppLayout } from '@/routes/AppLayout'
 import { RequireAuth } from '@/routes/RequireAuth'
@@ -24,6 +25,7 @@ export function App() {
         <Route path="/projects/:slug" element={<ProjectTimelinePage />} />
         <Route path="/projects/:slug/attendance" element={<ProjectAttendancePage />} />
         <Route path="/projects/:slug/archive" element={<ProjectArchivePage />} />
+        <Route path="/projects/:slug/resources" element={<ProjectResourcesPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

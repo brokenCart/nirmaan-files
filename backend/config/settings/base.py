@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.projects",
     "apps.logs",
+    "apps.resources",
 ]
 
 MIDDLEWARE = [

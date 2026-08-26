@@ -11,6 +11,9 @@ import type {
   MembershipInput,
   Paginated,
   Project,
+  Resource,
+  ResourceInput,
+  ResourcePatch,
   Semester,
 } from '@/api/types'
 
@@ -26,6 +29,9 @@ export const queryKeys = {
   members: (slug: string, semester?: string) => ['memberships', slug, semester ?? null] as const,
   /** Prefix matching every term's roster for one project — see {@link attendanceForProject}. */
   membersForProject: (slug: string) => ['memberships', slug] as const,
+  // Resources carry no semester — the shelf is the same one every term — so
+  // the project slug is the whole key.
+  resources: (slug: string) => ['resources', slug] as const,
   attendance: (slug: string, semester?: string) =>
     ['attendance', slug, semester ?? null] as const,
   /**
@@ -240,6 +246,61 @@ export function useDeleteLog() {
       // A removed entry stops counting; the hook has no slug, so clear them all.
       void queryClient.invalidateQueries({ queryKey: ['attendance'] })
       void queryClient.invalidateQueries({ queryKey: ['archive'] })
+    },
+  })
+}
+
+/**
+ * A project's shelf of links.
+ *
+ * Not paginated: `ResourceViewSet` returns the whole shelf, because a
+ * reference list is scanned rather than read and paging one hides half of it
+ * behind a control nobody expects on this screen.
+ */
+export function useResources(slug: string) {
+  return useQuery({
+    queryKey: queryKeys.resources(slug),
+    queryFn: () => api.get<Resource[]>('/api/resources/', { project: slug }),
+  })
+}
+
+/**
+ * Adds one link to a project's shelf.
+ *
+ * Only the shelf goes stale. Resources are not counted anywhere and belong to
+ * no term, so neither the attendance table nor the archive is touched — the
+ * broad invalidation the log mutations do would be waste here.
+ */
+export function useCreateResource(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: ResourceInput) => api.post<Resource>('/api/resources/', body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.resources(projectSlug) })
+    },
+  })
+}
+
+export function useUpdateResource(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    // PATCH rather than PUT: the form carries only the editable fields, and
+    // the server owns `added_by` and the timestamps.
+    mutationFn: ({ id, ...body }: ResourcePatch & { id: number }) =>
+      api.patch<Resource>(`/api/resources/${id}/`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.resources(projectSlug) })
+    },
+  })
+}
+
+/** Removes a link. Hard on the server, unlike a log's soft delete. */
+export function useDeleteResource(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.delete<void>(`/api/resources/${id}/`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.resources(projectSlug) })
     },
   })
 }

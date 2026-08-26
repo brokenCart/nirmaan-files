@@ -115,9 +115,6 @@ class Project(models.Model):
     slug = models.SlugField(max_length=140, unique=True, blank=True)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
-    # Seam for the deferred media work: uploads will land in this folder and
-    # members will be granted read access on it. Unused in v1.
-    drive_folder_url = models.URLField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

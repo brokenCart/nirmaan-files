@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 from apps.accounts.models import User
 from apps.logs.models import DailyLog, LogKind, LogStatus
 from apps.projects.models import Membership, Project, Role, Semester
+from apps.resources.models import Resource, ResourceKind
 
 CAMPUS = "pilani.bits-pilani.ac.in"
 
@@ -84,6 +85,19 @@ class DailyLogFactory(factory.django.DjangoModelFactory):
     # entry lands in, and a date from 1974 belongs to no semester at all.
     occurred_on = factory.LazyFunction(lambda: timezone.localdate())
     status = LogStatus.PUBLISHED
+
+
+class ResourceFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Resource
+
+    project = factory.SubFactory(ProjectFactory)
+    added_by = factory.SubFactory(UserFactory)
+    kind = ResourceKind.OTHER
+    title = factory.Sequence(lambda n: f"Resource {n}")
+    # Sequenced rather than faked: `url` is unique per project, and a faker
+    # that repeats itself would fail the constraint rather than the assertion.
+    url = factory.Sequence(lambda n: f"https://drive.google.com/drive/folders/seed{n}")
 
 
 @pytest.fixture

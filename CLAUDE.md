@@ -16,9 +16,8 @@ Four modules are planned per project:
 3. **Volunteer visit tracking** — ◐ attendance counts shipped; see *Attendance* below for what
    that does and does not cover. There is no `apps/visits`: counting derives from
    `DailyLog.attendees` and lives in `apps/logs/stats.py`.
-4. **Resource links** — Drive URLs and similar — planned (`apps/resources`).
-   `Project.drive_folder_url` already exists as the seam and is exposed by the serializer, but
-   nothing in the SPA reads it yet.
+4. **Resource links** — Drive URLs and similar — ✅ shipped (`apps/resources`). See *Resource
+   links* below. The Drive folder is a resource like any other; there is no separate field for it.
 
 Django REST Framework backend, React + TypeScript SPA, one repo, PostgreSQL.
 
@@ -285,6 +284,77 @@ a total that counted drafts would leak their existence.
 Counts are headcounts. There is no duration field and no per-person rollup across projects, both
 deliberate — see *Open questions*.
 
+### Resource links
+
+`apps.resources.Resource` is a named link on a project's shelf — the Drive folder, the term plan,
+the feedback form. `GET /api/resources/?project=<slug>` is the shelf; the SPA renders it at
+`/projects/:slug/resources`.
+
+**A resource carries no semester**, and that is the decision to understand before changing
+anything here. Every other per-project row in this codebase is scoped to a term because it is a
+record of something that happened on a date, and the counting restarts each August. A resource is a
+pointer to something that exists *now*: the Drive folder is the same folder it was last term.
+Scoping one would empty every shelf at rollover and hand each project the problem
+`carry_forward_roster` exists to solve, for nothing in return. It follows that there is no frozen
+archive here either — a link added two terms ago is still editable, because there is no term to
+have closed.
+
+What does still resolve against the current term is the *person*. Reads use `visible_project_ids`,
+like the timeline, so a past member keeps the shelf. Writes need membership **this** semester, so
+someone dropped from the roster mid-term stops changing it.
+
+**The edit rule is deliberately wider than a log's**, and this is the one place the two modules
+diverge on purpose:
+
+| | may edit | may remove |
+| --- | --- | --- |
+| `DailyLog` | the author, nobody else | staff, exec, or the author |
+| `Resource` | whoever added it, **plus staff and exec** | the same set |
+
+An entry is one person's account of what happened, so rewording it under their name misrepresents
+them — which is why leads delete rather than edit. A link is not an account of anything. It is a
+pointer, and pointers go stale: when a Drive folder moves, the lead has to be able to fix the URL
+without hunting down the volunteer who first pasted it.
+
+Deletes are **hard**, unlike a log's. The timeline is a published account and removing one is
+moderation, which is what makes reversibility matter; a stale pointer left as a tombstone serves
+nobody, and whatever it pointed at is still in Drive either way.
+
+Two smaller things:
+
+- **The scheme is pinned to http/https.** `web_url_validator` in `models.py` guards the admin and
+  the shell, but **not** the API: DRF strips every `URLValidator` off a model `URLField` and
+  substitutes its own, which also accepts `ftp`. `ResourceSerializer.validate_url` therefore runs
+  the same validator by hand — both call the one object, so the two cannot drift.
+- **The list is unpaginated** (`pagination_class = None`). A shelf is a reference list that gets
+  scanned, not a feed that gets read, and paging a dozen links hides half of them behind a control
+  nobody expects on that screen. Note that this makes the response a bare array, not DRF's
+  `{count, results}` envelope — `useResources` types it accordingly.
+
+`Resource.added_by` is PROTECT, matching `DailyLog.author`, so `discard_placeholder_user` grew a
+fourth guard. Unreachable in practice for the same reason the authored-entry one is, but an
+unguarded PROTECT surfaces as a 500 on an ordinary roster removal.
+
+**`Project.drive_folder_url` is gone** (`projects.0003`). It predated this module as the one link a
+project could hold, and once a project can hold any number the field was a second, special-cased
+place to put a Drive URL — one the SPA could only ever read, so setting it meant the Django admin.
+A folder is now a `Resource` with `kind=FOLDER`, added and fixed by the same people through the
+same screen, and validated by the same `web_url_validator` (the old field was a plain `URLField`
+and would have taken an `ftp://`).
+
+The migration carries existing values across rather than dropping them, and two things about it are
+worth knowing:
+
+- **`added_by` is a guess.** Nothing recorded who set the field, and the column is NOT NULL, so
+  each row is attributed to the project's most recent lead — who *would* have set it — with an exec
+  as fallback and a `pk` tiebreak so two leads in one term cannot make the migration answer
+  differently on a replay. Same class of guess as `0002`'s backfilled rosters.
+- **The reverse restores only where it is unambiguous.** Nothing marks which row came from the
+  field, so a project with one `FOLDER` resource gets it back and a project with several is left
+  blank rather than handed a folder that was never in the column. Matching on the row's title would
+  look exact and break the moment somebody names their own folder the same thing. Nothing is lost
+  either way — the rows stay on the shelf, which is where the URLs live now.
+
 ### Archives
 
 `GET /api/projects/<slug>/archive/` returns one row per semester the project has a record in,
@@ -342,7 +412,10 @@ The agreed design for when it lands: one Drive folder per project; the backend g
 `@pilani` address read access via the Drive API on join; the SPA embeds Drive preview/thumbnail
 URLs so Google enforces auth against the viewer's own session. No media bytes flow through our
 server, and the external PR team can open the same folder natively.
-`Project.drive_folder_url` already exists as the seam.
+
+The seam is the project's `FOLDER` resource — `Project.drive_folder_url` used to be it and was
+removed in `projects.0003` (see *Resource links*). Note that nothing constrains a project to one
+`FOLDER` row, so that work has to decide which one it uploads into rather than assuming.
 
 ## Open questions
 

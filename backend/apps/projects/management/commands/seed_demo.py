@@ -14,6 +14,7 @@ from django.db import transaction
 from apps.accounts.models import User
 from apps.logs.models import DailyLog, LogKind, LogStatus
 from apps.projects.models import Membership, Project, Role, Semester
+from apps.resources.models import Resource, ResourceKind
 
 CAMPUS = "pilani.bits-pilani.ac.in"
 
@@ -32,6 +33,15 @@ MOM_TITLES = [
     "Weekly core team sync",
     "Budget review with finance",
     "Planning for the outreach drive",
+]
+
+# The shelf every project gets. Not semester-scoped, so one set per project is
+# the whole of it — see `apps.resources.models.Resource`.
+RESOURCES = [
+    (ResourceKind.FOLDER, "Project Drive folder", "Photos, reports and consent forms."),
+    (ResourceKind.DOCUMENT, "Semester plan", "Sessions, milestones and who owns what."),
+    (ResourceKind.SHEET, "Beneficiary list", "Names and attendance at the centre."),
+    (ResourceKind.FORM, "Volunteer feedback form", "Filled in after every visit."),
 ]
 
 
@@ -53,6 +63,9 @@ class Command(BaseCommand):
         random.seed(0)
 
         if options["reset"]:
+            # Resources first: `added_by` is PROTECT, so they have to go before
+            # the demo accounts that added them.
+            Resource.objects.all().delete()
             DailyLog.objects.all().delete()
             Membership.objects.all().delete()
             Semester.objects.all().delete()
@@ -103,11 +116,13 @@ class Command(BaseCommand):
 
             self._logs(project, lead, volunteers)
             self._logs(project, alumnus, [alumnus, volunteers[0]], semester=past)
+            self._resources(project, lead)
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seeded {Semester.objects.count()} semesters, {Project.objects.count()} projects, "
-                f"{User.objects.count()} users, {DailyLog.objects.count()} logs.\n"
+                f"{User.objects.count()} users, {DailyLog.objects.count()} logs, "
+                f"{Resource.objects.count()} resource links.\n"
                 f"Exec account: {exec_user.email}"
             )
         )
@@ -145,6 +160,24 @@ class Command(BaseCommand):
         Membership.objects.get_or_create(
             user=user, project=project, semester=semester, defaults={"role": role}
         )
+
+    def _resources(self, project: Project, lead: User) -> None:
+        """A handful of links per project.
+
+        The URLs are fabricated but well-formed, and unique per project — the
+        model refuses the same link twice on one shelf.
+        """
+        for kind, title, description in RESOURCES:
+            Resource.objects.get_or_create(
+                project=project,
+                url=f"https://drive.google.com/drive/folders/{project.slug}-{kind.lower()}",
+                defaults={
+                    "kind": kind,
+                    "title": title,
+                    "description": description,
+                    "added_by": lead,
+                },
+            )
 
     def _logs(
         self,

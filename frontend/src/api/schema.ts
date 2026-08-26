@@ -481,6 +481,158 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/resources/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description A project's shelf of links — Drive folders, reports, forms.
+         *
+         *     Write rules:
+         *       * any member of the project **this semester** may add a link;
+         *       * whoever added it, plus **leads, finance leads and exec**, may edit or
+         *         remove it;
+         *       * a past member reads the shelf and writes nothing, as everywhere else.
+         *
+         *     That edit rule is deliberately wider than the timeline's, where only the
+         *     author may edit and no role overrides it. An entry is one person's account
+         *     of what happened, so rewording it under their name misrepresents them. A
+         *     link is not an account of anything — it is a pointer, and pointers go stale.
+         *     When a Drive folder moves, whoever runs the project has to be able to fix
+         *     the URL without hunting down the volunteer who first pasted it.
+         *
+         *     There is no term boundary to enforce because a resource has no term: see
+         *     :class:`~apps.resources.models.Resource`. The shelf a project had in August
+         *     is the shelf it still has in January.
+         */
+        get: operations["resources_list"];
+        put?: never;
+        /**
+         * @description A project's shelf of links — Drive folders, reports, forms.
+         *
+         *     Write rules:
+         *       * any member of the project **this semester** may add a link;
+         *       * whoever added it, plus **leads, finance leads and exec**, may edit or
+         *         remove it;
+         *       * a past member reads the shelf and writes nothing, as everywhere else.
+         *
+         *     That edit rule is deliberately wider than the timeline's, where only the
+         *     author may edit and no role overrides it. An entry is one person's account
+         *     of what happened, so rewording it under their name misrepresents them. A
+         *     link is not an account of anything — it is a pointer, and pointers go stale.
+         *     When a Drive folder moves, whoever runs the project has to be able to fix
+         *     the URL without hunting down the volunteer who first pasted it.
+         *
+         *     There is no term boundary to enforce because a resource has no term: see
+         *     :class:`~apps.resources.models.Resource`. The shelf a project had in August
+         *     is the shelf it still has in January.
+         */
+        post: operations["resources_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/resources/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description A project's shelf of links — Drive folders, reports, forms.
+         *
+         *     Write rules:
+         *       * any member of the project **this semester** may add a link;
+         *       * whoever added it, plus **leads, finance leads and exec**, may edit or
+         *         remove it;
+         *       * a past member reads the shelf and writes nothing, as everywhere else.
+         *
+         *     That edit rule is deliberately wider than the timeline's, where only the
+         *     author may edit and no role overrides it. An entry is one person's account
+         *     of what happened, so rewording it under their name misrepresents them. A
+         *     link is not an account of anything — it is a pointer, and pointers go stale.
+         *     When a Drive folder moves, whoever runs the project has to be able to fix
+         *     the URL without hunting down the volunteer who first pasted it.
+         *
+         *     There is no term boundary to enforce because a resource has no term: see
+         *     :class:`~apps.resources.models.Resource`. The shelf a project had in August
+         *     is the shelf it still has in January.
+         */
+        get: operations["resources_retrieve"];
+        /**
+         * @description A project's shelf of links — Drive folders, reports, forms.
+         *
+         *     Write rules:
+         *       * any member of the project **this semester** may add a link;
+         *       * whoever added it, plus **leads, finance leads and exec**, may edit or
+         *         remove it;
+         *       * a past member reads the shelf and writes nothing, as everywhere else.
+         *
+         *     That edit rule is deliberately wider than the timeline's, where only the
+         *     author may edit and no role overrides it. An entry is one person's account
+         *     of what happened, so rewording it under their name misrepresents them. A
+         *     link is not an account of anything — it is a pointer, and pointers go stale.
+         *     When a Drive folder moves, whoever runs the project has to be able to fix
+         *     the URL without hunting down the volunteer who first pasted it.
+         *
+         *     There is no term boundary to enforce because a resource has no term: see
+         *     :class:`~apps.resources.models.Resource`. The shelf a project had in August
+         *     is the shelf it still has in January.
+         */
+        put: operations["resources_update"];
+        post?: never;
+        /**
+         * @description A project's shelf of links — Drive folders, reports, forms.
+         *
+         *     Write rules:
+         *       * any member of the project **this semester** may add a link;
+         *       * whoever added it, plus **leads, finance leads and exec**, may edit or
+         *         remove it;
+         *       * a past member reads the shelf and writes nothing, as everywhere else.
+         *
+         *     That edit rule is deliberately wider than the timeline's, where only the
+         *     author may edit and no role overrides it. An entry is one person's account
+         *     of what happened, so rewording it under their name misrepresents them. A
+         *     link is not an account of anything — it is a pointer, and pointers go stale.
+         *     When a Drive folder moves, whoever runs the project has to be able to fix
+         *     the URL without hunting down the volunteer who first pasted it.
+         *
+         *     There is no term boundary to enforce because a resource has no term: see
+         *     :class:`~apps.resources.models.Resource`. The shelf a project had in August
+         *     is the shelf it still has in January.
+         */
+        delete: operations["resources_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description A project's shelf of links — Drive folders, reports, forms.
+         *
+         *     Write rules:
+         *       * any member of the project **this semester** may add a link;
+         *       * whoever added it, plus **leads, finance leads and exec**, may edit or
+         *         remove it;
+         *       * a past member reads the shelf and writes nothing, as everywhere else.
+         *
+         *     That edit rule is deliberately wider than the timeline's, where only the
+         *     author may edit and no role overrides it. An entry is one person's account
+         *     of what happened, so rewording it under their name misrepresents them. A
+         *     link is not an account of anything — it is a pointer, and pointers go stale.
+         *     When a Drive folder moves, whoever runs the project has to be able to fix
+         *     the URL without hunting down the volunteer who first pasted it.
+         *
+         *     There is no term boundary to enforce because a resource has no term: see
+         *     :class:`~apps.resources.models.Resource`. The shelf a project had in August
+         *     is the shelf it still has in January.
+         */
+        patch: operations["resources_partial_update"];
+        trace?: never;
+    };
     "/api/semesters/": {
         parameters: {
             query?: never;
@@ -607,7 +759,7 @@ export interface components {
             readonly project_slug: string;
             readonly semester: number;
             readonly semester_slug: string;
-            kind: components["schemas"]["KindEnum"];
+            kind: components["schemas"]["DailyLogKindEnum"];
             title: string;
             /** @description Markdown. */
             body: string;
@@ -624,9 +776,15 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        /**
+         * @description * `MOV` - Moment of Visit
+         *     * `MOM` - Minutes of Meeting
+         * @enum {string}
+         */
+        DailyLogKindEnum: "MOV" | "MOM";
         DailyLogRequest: {
             project: number;
-            kind: components["schemas"]["KindEnum"];
+            kind: components["schemas"]["DailyLogKindEnum"];
             title: string;
             /** @description Markdown. */
             body: string;
@@ -642,12 +800,6 @@ export interface components {
             /** @description The ID token issued by Google Identity Services. */
             credential: string;
         };
-        /**
-         * @description * `MOV` - Moment of Visit
-         *     * `MOM` - Minutes of Meeting
-         * @enum {string}
-         */
-        KindEnum: "MOV" | "MOM";
         Membership: {
             readonly id: number;
             readonly user: components["schemas"]["User"];
@@ -768,7 +920,7 @@ export interface components {
         };
         PatchedDailyLogRequest: {
             project?: number;
-            kind?: components["schemas"]["KindEnum"];
+            kind?: components["schemas"]["DailyLogKindEnum"];
             title?: string;
             /** @description Markdown. */
             body?: string;
@@ -793,7 +945,15 @@ export interface components {
             name?: string;
             description?: string;
             is_active?: boolean;
-            drive_folder_url?: string;
+        };
+        PatchedResourceRequest: {
+            project?: number;
+            kind?: components["schemas"]["ResourceKindEnum"];
+            title?: string;
+            /** Format: uri */
+            url?: string;
+            /** @description What this is for, in a line or two. */
+            description?: string;
         };
         PatchedSemesterRequest: {
             /** @description e.g. "2025-26 Sem 1". */
@@ -809,7 +969,6 @@ export interface components {
             readonly slug: string;
             description?: string;
             is_active?: boolean;
-            drive_folder_url?: string;
             readonly member_count: number;
             /**
              * @description The requesting user's role here **this semester**, or ``EXEC``.
@@ -829,7 +988,40 @@ export interface components {
             name: string;
             description?: string;
             is_active?: boolean;
-            drive_folder_url?: string;
+        };
+        Resource: {
+            readonly id: number;
+            project: number;
+            readonly project_slug: string;
+            kind?: components["schemas"]["ResourceKindEnum"];
+            title: string;
+            /** Format: uri */
+            url: string;
+            /** @description What this is for, in a line or two. */
+            description?: string;
+            readonly added_by: components["schemas"]["User"];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /**
+         * @description * `FOLDER` - Drive folder
+         *     * `DOCUMENT` - Document
+         *     * `SHEET` - Spreadsheet
+         *     * `FORM` - Form
+         *     * `OTHER` - Link
+         * @enum {string}
+         */
+        ResourceKindEnum: "FOLDER" | "DOCUMENT" | "SHEET" | "FORM" | "OTHER";
+        ResourceRequest: {
+            project: number;
+            kind?: components["schemas"]["ResourceKindEnum"];
+            title: string;
+            /** Format: uri */
+            url: string;
+            /** @description What this is for, in a line or two. */
+            description?: string;
         };
         /**
          * @description * `LEAD` - Project Lead
@@ -1482,6 +1674,149 @@ export interface operations {
                 };
                 content: {
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+        };
+    };
+    resources_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Resource"][];
+                };
+            };
+        };
+    };
+    resources_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ResourceRequest"];
+                "multipart/form-data": components["schemas"]["ResourceRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Resource"];
+                };
+            };
+        };
+    };
+    resources_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this resource. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Resource"];
+                };
+            };
+        };
+    };
+    resources_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this resource. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ResourceRequest"];
+                "multipart/form-data": components["schemas"]["ResourceRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Resource"];
+                };
+            };
+        };
+    };
+    resources_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this resource. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    resources_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this resource. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedResourceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedResourceRequest"];
+                "multipart/form-data": components["schemas"]["PatchedResourceRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Resource"];
                 };
             };
         };

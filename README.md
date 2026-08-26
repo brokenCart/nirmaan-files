@@ -14,7 +14,7 @@ Four things are tracked per project:
 | **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting) | ✅ shipped |
 | **Knowledge base** — past context and how-things-work | planned |
 | **Volunteer visit tracking** — who showed up, when | ◐ counts shipped, see below |
-| **Resource links** — Drive folders and other pointers | planned |
+| **Resource links** — Drive folders and other pointers | ✅ shipped |
 
 Opening a new semester still has **no screen** — the API supports it, but exec does it through the
 Django admin at `/admin/` for now. Roster changes do have one: see *Adding members* below.
@@ -66,6 +66,31 @@ a project's only lead from stranding a roster nobody is left to manage. If the r
 unclaimable users. That only happens when nothing else needs the account: if they are on another
 project, on a past term's roster, or marked present at a visit, the account stays and only this
 term's roster row goes.
+
+## Resources
+
+Each project has a shelf of links at `/projects/<slug>/resources` — the Drive folder, the term
+plan, the beneficiary sheet, the feedback form. Each one gets a name, a type and a line saying what
+it is for, so the next batch can find things without asking.
+
+This stores **addresses, not files**. Opening a link still needs access to it in Drive; nothing is
+uploaded here.
+
+- **Anyone in the project** can add a link.
+- **Whoever added it, plus leads, finance leads and exec**, can edit or remove it. That is wider
+  than the timeline on purpose: a link is a pointer, not somebody's account of what happened, and
+  when a Drive folder moves the lead needs to fix the address without tracking down whoever pasted
+  it first.
+- Removing a link removes the link. The file itself is untouched in Drive.
+
+Unlike the timeline and the roster, the shelf is **not per semester** — a Drive folder is the same
+folder next term, so nothing resets in August and nothing is frozen in the archive. What does stop
+at the term boundary is who may write: someone off this semester's roster can open the links but
+not change them.
+
+The project's Drive folder is just one of these links, added the same way as any other. It used to
+be a separate field on the project that only the Django admin could set; if yours had one, it has
+been moved onto the shelf for you.
 
 ## Attendance
 
@@ -132,8 +157,9 @@ cd backend && uv run python manage.py seed_demo --reset
 ```
 
 Creates three projects with a lead, a finance lead, and two volunteers each, one exec-committee
-account, and sample MOV/MOM entries with attendees on both — including a person who leads one
-project while volunteering in another, which is the case the permission model exists for.
+account, sample MOV/MOM entries with attendees on both, and four resource links per project —
+including a person who leads one project while volunteering in another, which is the case the
+permission model exists for.
 
 If your database predates attendees on visits, existing MOVs have none and every visit count reads
 zero until entries are edited or the data is re-seeded. `--reset` drops the existing rows.

@@ -12,8 +12,15 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.conftest import CAMPUS, DailyLogFactory, MembershipFactory, UserFactory
+from apps.conftest import (
+    CAMPUS,
+    DailyLogFactory,
+    MembershipFactory,
+    ResourceFactory,
+    UserFactory,
+)
 from apps.projects.models import Membership, Role, Semester
+from apps.resources.models import Resource
 
 pytestmark = pytest.mark.django_db
 
@@ -689,6 +696,80 @@ class TestSemesterModel:
 
     def test_a_date_before_every_term_has_none(self, past_semester):
         assert Semester.for_date(past_semester.starts_on - datetime.timedelta(days=1)) is None
+
+
+class TestResourceLinks:
+    """The shelf answers to the term boundary on writes and ignores it on reads.
+
+    A resource carries no semester of its own — it points at something that
+    exists now — so the archive rules that freeze a past term's entries have no
+    equivalent here. What survives is the rule about the *person*: write access
+    ends when the membership does.
+    """
+
+    def _payload(self, project, **overrides):
+        payload = {
+            "project": project.pk,
+            "title": "Term plan",
+            "url": "https://docs.google.com/document/d/plan",
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_a_past_member_still_reads_the_shelf(self, auth_client, past_lead, project):
+        ResourceFactory(project=project, title="Drive folder")
+        response = auth_client(past_lead).get(reverse("resource-list"), {"project": project.slug})
+        assert [row["title"] for row in response.data] == ["Drive folder"]
+
+    def test_a_past_lead_cannot_add_a_link(self, auth_client, past_lead, project):
+        response = auth_client(past_lead).post(reverse("resource-list"), self._payload(project))
+        assert response.status_code == 403
+        assert not Resource.objects.exists()
+
+    def test_a_past_lead_cannot_edit_a_link(self, auth_client, past_lead, project):
+        resource = ResourceFactory(project=project)
+        response = auth_client(past_lead).patch(
+            reverse("resource-detail", kwargs={"pk": resource.pk}), {"title": "Still mine"}
+        )
+        assert response.status_code == 403
+
+    def test_a_past_member_cannot_edit_the_link_they_added(self, auth_client, past_lead, project):
+        """Authorship does not outlive the roster, exactly as on the timeline."""
+        resource = ResourceFactory(project=project, added_by=past_lead)
+        response = auth_client(past_lead).patch(
+            reverse("resource-detail", kwargs={"pk": resource.pk}), {"title": "Renamed"}
+        )
+        assert response.status_code == 403
+
+    def test_a_link_added_last_term_is_still_editable_this_term(
+        self, auth_client, lead, project, past_semester
+    ):
+        """The counterpart: the row has no term, so nothing about it is frozen."""
+        resource = ResourceFactory(project=project, title="Old folder")
+        response = auth_client(lead).patch(
+            reverse("resource-detail", kwargs={"pk": resource.pk}),
+            {"url": "https://drive.google.com/drive/folders/moved"},
+        )
+        assert response.status_code == 200
+
+    def test_removing_a_placeholder_who_added_a_link_keeps_the_account(
+        self, auth_client, lead, project, semester
+    ):
+        """`Resource.added_by` is PROTECT, so the cascade must be refused.
+
+        Unreachable in practice — adding a link needs a login, and logging in
+        claims the placeholder — but an unguarded PROTECT surfaces as a 500 on
+        an ordinary roster removal rather than as a refusal.
+        """
+        placeholder = UserFactory(email=f"ghost@{CAMPUS}", full_name="")
+        membership = MembershipFactory(user=placeholder, project=project, role=Role.VOLUNTEER)
+        ResourceFactory(project=project, added_by=placeholder)
+
+        response = auth_client(lead).delete(
+            reverse("membership-detail", kwargs={"pk": membership.pk})
+        )
+        assert response.status_code == 204
+        assert User.objects.filter(pk=placeholder.pk).exists()
 
 
 class TestCrossProjectRoles:

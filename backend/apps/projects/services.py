@@ -70,6 +70,9 @@ def discard_placeholder_user(user) -> bool:
       drop silently, quietly restating who was at a visit and moving the
       counts. A placeholder absolutely can be marked present: recording who
       turned up is the reason a lead adds them before they sign in.
+    - **a resource they added** — ``Resource.added_by`` is PROTECT for the same
+      reason ``DailyLog.author`` is, and unreachable for the same reason. Left
+      unchecked it would surface as a 500 on an otherwise ordinary removal.
 
     Call *after* the membership row is gone, so "no remaining memberships" is a
     question about what is left. Returns whether the user was deleted.
@@ -81,6 +84,8 @@ def discard_placeholder_user(user) -> bool:
     if user.authored_logs.exists():
         return False
     if user.attended_logs.exists():
+        return False
+    if user.added_resources.exists():
         return False
 
     user.delete()

@@ -49,7 +49,6 @@ class ProjectSerializer(serializers.ModelSerializer):
             "slug",
             "description",
             "is_active",
-            "drive_folder_url",
             "member_count",
             "my_role",
             "created_at",

@@ -24,8 +24,16 @@ export type MembershipInput = components['schemas']['MembershipRequest']
 /** One member's visit/meeting counts on a project. */
 export type AttendanceRow = components['schemas']['AttendanceRow']
 export type Role = components['schemas']['RoleEnum']
-export type LogKind = components['schemas']['KindEnum']
+export type LogKind = components['schemas']['DailyLogKindEnum']
 export type LogStatus = components['schemas']['StatusEnum']
+
+/** A named link on a project's shelf — a Drive folder, a report, a form. */
+export type Resource = components['schemas']['Resource']
+/** Body accepted by `POST /api/resources/`. */
+export type ResourceInput = components['schemas']['ResourceRequest']
+/** Body accepted by `PATCH /api/resources/{id}/`. */
+export type ResourcePatch = components['schemas']['PatchedResourceRequest']
+export type ResourceKind = components['schemas']['ResourceKindEnum']
 
 /** A project role, or the org-wide committee marker the API returns. */
 export type EffectiveRole = Role | 'EXEC'
@@ -55,6 +63,22 @@ export const ROLE_LABELS: Record<EffectiveRole, string> = {
   LEAD: 'Project Lead',
   FINANCE_LEAD: 'Finance Lead',
   VOLUNTEER: 'Volunteer',
+}
+
+/**
+ * What sits at the other end of a resource link.
+ *
+ * Ordered as the picker offers them — the project's Drive folder first, since
+ * it is the link most shelves start with.
+ */
+export const RESOURCE_KINDS: ResourceKind[] = ['FOLDER', 'DOCUMENT', 'SHEET', 'FORM', 'OTHER']
+
+export const RESOURCE_KIND_LABELS: Record<ResourceKind, string> = {
+  FOLDER: 'Drive folder',
+  DOCUMENT: 'Document',
+  SHEET: 'Spreadsheet',
+  FORM: 'Form',
+  OTHER: 'Link',
 }
 
 /** Roles permitted to edit any content within a project. */
@@ -186,4 +210,46 @@ export function canDeleteLog(
   if (!role) return false
   if (!isInOpenTerm(log, currentSemester)) return role === 'EXEC'
   return isProjectStaff(role) || log.author.id === userId
+}
+
+/**
+ * Whether the caller may add a link to a project's shelf, mirroring
+ * `ResourceViewSet.perform_create`.
+ *
+ * Any current member, which is the same bar as filing an entry. `role` is null
+ * for someone here on a past membership — they read the shelf and add nothing.
+ */
+export function canAddResource(role: EffectiveRole | null | undefined): boolean {
+  return Boolean(role)
+}
+
+/**
+ * Whether the caller may edit or remove `resource`, mirroring
+ * `ResourceViewSet._assert_can_change`.
+ *
+ * Whoever added it, or whoever runs the project. Deliberately wider than
+ * {@link canEditLog}: an entry is one person's account of what happened and
+ * nobody rewords it under their name, but a link is a pointer, and when a Drive
+ * folder moves the lead has to be able to fix the URL without hunting down the
+ * volunteer who first pasted it.
+ *
+ * `isExec` is passed separately rather than read off `role`, for the same
+ * reason {@link canManageRoster} takes it separately: `roleIn` reports a
+ * project membership in preference to the committee marker, so an exec who
+ * also volunteers here comes back `VOLUNTEER` and would lose a control the
+ * server would have granted.
+ *
+ * There is no term argument because a resource has no term — the shelf a
+ * project had in August is the shelf it still has in January.
+ */
+export function canChangeResource(
+  resource: Resource,
+  role: EffectiveRole | null | undefined,
+  isExec: boolean,
+  userId: number | undefined,
+): boolean {
+  if (isExec) return true
+  if (!role) return false
+  if (isProjectStaff(role)) return true
+  return userId !== undefined && resource.added_by.id === userId
 }

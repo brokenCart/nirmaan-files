@@ -1,4 +1,4 @@
-import { BarChart3, CalendarRange, Pencil, Plus, Trash2 } from 'lucide-react'
+import { BarChart3, CalendarRange, Library, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
@@ -168,6 +168,16 @@ export function ProjectTimelinePage() {
             <Button variant="secondary">
               <CalendarRange className="size-4" aria-hidden />
               Archive
+            </Button>
+          </Link>
+
+          {/* No `?semester=`, unlike Attendance: the shelf belongs to no term,
+              so carrying the viewed one across would promise a filter that
+              does not exist. */}
+          <Link to={`/projects/${slug}/resources`}>
+            <Button variant="secondary">
+              <Library className="size-4" aria-hidden />
+              Resources
             </Button>
           </Link>
 
