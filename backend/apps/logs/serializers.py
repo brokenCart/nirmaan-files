@@ -44,3 +44,19 @@ class DailyLogSerializer(serializers.ModelSerializer):
         if self.instance is not None and value != self.instance.project:
             raise serializers.ValidationError("An entry cannot be moved to another project.")
         return value
+
+
+class AttendanceRowSerializer(serializers.Serializer):
+    """One member's attendance on a project — see :mod:`apps.logs.stats`.
+
+    Read-only: the numbers are derived from the timeline, never written.
+    """
+
+    user = UserSerializer(read_only=True)
+    role = serializers.CharField(read_only=True)
+    visits = serializers.IntegerField(read_only=True)
+    meetings = serializers.IntegerField(read_only=True)
+    total = serializers.SerializerMethodField()
+
+    def get_total(self, membership) -> int:
+        return membership.visits + membership.meetings

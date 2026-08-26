@@ -15,6 +15,8 @@ export type DailyLog = components['schemas']['DailyLog']
 export type DailyLogInput = components['schemas']['DailyLogRequest']
 /** Body accepted by `PATCH /api/logs/{id}/`. */
 export type DailyLogPatch = components['schemas']['PatchedDailyLogRequest']
+/** One member's visit/meeting counts on a project. */
+export type AttendanceRow = components['schemas']['AttendanceRow']
 export type Role = components['schemas']['RoleEnum']
 export type LogKind = components['schemas']['KindEnum']
 export type LogStatus = components['schemas']['StatusEnum']

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
+import { ProjectAttendancePage } from '@/features/attendance/ProjectAttendancePage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { ProjectTimelinePage } from '@/features/logs/ProjectTimelinePage'
 import { ProjectListPage } from '@/features/projects/ProjectListPage'
@@ -20,6 +21,7 @@ export function App() {
       >
         <Route index element={<ProjectListPage />} />
         <Route path="/projects/:slug" element={<ProjectTimelinePage />} />
+        <Route path="/projects/:slug/attendance" element={<ProjectAttendancePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

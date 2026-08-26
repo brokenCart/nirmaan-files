@@ -13,8 +13,37 @@ Four things are tracked per project:
 | --- | --- |
 | **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting) | ✅ shipped |
 | **Knowledge base** — past context and how-things-work | planned |
-| **Volunteer visit tracking** — who showed up, when | planned |
+| **Volunteer visit tracking** — who showed up, when | ◐ counts shipped, see below |
 | **Resource links** — Drive folders and other pointers | planned |
+
+## Daily logs
+
+Every entry is a MOV or a MOM on one project's timeline, and both kinds carry an **attendee list** —
+that list is what visit and meeting counts are derived from, so mark who was actually there.
+Entries are text-only for now; photos and video are deferred (`CLAUDE.md` explains why).
+
+Who may do what:
+
+- **Anyone in the project** can file an entry, and save it as a private draft first.
+- **Only the author** can edit their own entry — at any point, published or not. No role overrides
+  this, leads and exec included: an entry is one person's account of what happened.
+- **Leads, finance leads and exec** can *remove* any entry in their project, and an author can
+  withdraw their own. That is the moderation lever instead of editing — you delete an entry you
+  disagree with rather than reword it under someone else's name. Deletes are soft, so nothing
+  actually leaves the database.
+
+## Attendance
+
+Each project has an attendance view at `/projects/<slug>/attendance` — per-member visit and meeting
+counts as a table and a bar chart, with an **Export to Excel** button that downloads a `.xlsx`.
+
+Only published entries count. Drafts are private to their author, and counting them would leak
+their existence through a total; removed entries stop counting for the same reason they leave the
+timeline.
+
+Behind it, `GET /api/projects/<slug>/attendance/` returns the rows and
+`GET /api/projects/<slug>/attendance/export/` returns the workbook. Any member of the project can
+read both.
 
 ## Stack
 
@@ -30,6 +59,13 @@ docker compose up --build
 
 The API is on `http://localhost:8000`, the app on `http://localhost:5173`, and interactive API
 docs on `http://localhost:8000/api/docs/`.
+
+> **After a pull that changes dependencies, rebuild:** `docker compose up -d --build backend`.
+> Compose bind-mounts `./backend` into the container, so code changes are picked up live — but the
+> virtualenv lives in the *image*. A new entry in `pyproject.toml` is therefore missing until you
+> rebuild, and Django dies at import with `ModuleNotFoundError`. The container still reports "Up"
+> while holding port 8000, so the symptom is **502 Bad Gateway** from the Vite proxy rather than an
+> obvious crash — check `docker compose logs backend`.
 
 To work without Docker, start just the database (`docker compose up -d db`) and run the two
 halves directly:
@@ -56,8 +92,11 @@ cd backend && uv run python manage.py seed_demo --reset
 ```
 
 Creates three projects with a lead, a finance lead, and two volunteers each, one exec-committee
-account, and sample MOV/MOM entries — including a person who leads one project while volunteering
-in another, which is the case the permission model exists for.
+account, and sample MOV/MOM entries with attendees on both — including a person who leads one
+project while volunteering in another, which is the case the permission model exists for.
+
+If your database predates attendees on visits, existing MOVs have none and every visit count reads
+zero until entries are edited or the data is re-seeded. `--reset` drops the existing rows.
 
 ## Tests
 

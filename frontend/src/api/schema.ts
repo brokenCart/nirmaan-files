@@ -80,24 +80,32 @@ export interface paths {
         /**
          * @description MOV and MOM entries on a project timeline.
          *
-         *     Write rules, beyond exec bypass:
-         *       * leads and finance leads may write any log in their project;
-         *       * a volunteer may create logs and edit their own while still a draft.
+         *     Write rules:
+         *       * any member of the project may file a log;
+         *       * only its **author** may edit one — including after publishing, and
+         *         including against leads and exec, who get no edit rights at all;
+         *       * leads, finance leads and exec may delete any log in their project, and
+         *         an author may delete their own.
          *
-         *     Once a volunteer's log is published it becomes the project's record and only
-         *     project staff can amend it.
+         *     An entry is one person's account of what happened, so staff who disagree
+         *     with it remove it rather than reword it under the author's name. Deletes
+         *     are soft, which is what makes that safe.
          */
         get: operations["logs_list"];
         put?: never;
         /**
          * @description MOV and MOM entries on a project timeline.
          *
-         *     Write rules, beyond exec bypass:
-         *       * leads and finance leads may write any log in their project;
-         *       * a volunteer may create logs and edit their own while still a draft.
+         *     Write rules:
+         *       * any member of the project may file a log;
+         *       * only its **author** may edit one — including after publishing, and
+         *         including against leads and exec, who get no edit rights at all;
+         *       * leads, finance leads and exec may delete any log in their project, and
+         *         an author may delete their own.
          *
-         *     Once a volunteer's log is published it becomes the project's record and only
-         *     project staff can amend it.
+         *     An entry is one person's account of what happened, so staff who disagree
+         *     with it remove it rather than reword it under the author's name. Deletes
+         *     are soft, which is what makes that safe.
          */
         post: operations["logs_create"];
         delete?: never;
@@ -116,35 +124,47 @@ export interface paths {
         /**
          * @description MOV and MOM entries on a project timeline.
          *
-         *     Write rules, beyond exec bypass:
-         *       * leads and finance leads may write any log in their project;
-         *       * a volunteer may create logs and edit their own while still a draft.
+         *     Write rules:
+         *       * any member of the project may file a log;
+         *       * only its **author** may edit one — including after publishing, and
+         *         including against leads and exec, who get no edit rights at all;
+         *       * leads, finance leads and exec may delete any log in their project, and
+         *         an author may delete their own.
          *
-         *     Once a volunteer's log is published it becomes the project's record and only
-         *     project staff can amend it.
+         *     An entry is one person's account of what happened, so staff who disagree
+         *     with it remove it rather than reword it under the author's name. Deletes
+         *     are soft, which is what makes that safe.
          */
         get: operations["logs_retrieve"];
         /**
          * @description MOV and MOM entries on a project timeline.
          *
-         *     Write rules, beyond exec bypass:
-         *       * leads and finance leads may write any log in their project;
-         *       * a volunteer may create logs and edit their own while still a draft.
+         *     Write rules:
+         *       * any member of the project may file a log;
+         *       * only its **author** may edit one — including after publishing, and
+         *         including against leads and exec, who get no edit rights at all;
+         *       * leads, finance leads and exec may delete any log in their project, and
+         *         an author may delete their own.
          *
-         *     Once a volunteer's log is published it becomes the project's record and only
-         *     project staff can amend it.
+         *     An entry is one person's account of what happened, so staff who disagree
+         *     with it remove it rather than reword it under the author's name. Deletes
+         *     are soft, which is what makes that safe.
          */
         put: operations["logs_update"];
         post?: never;
         /**
          * @description MOV and MOM entries on a project timeline.
          *
-         *     Write rules, beyond exec bypass:
-         *       * leads and finance leads may write any log in their project;
-         *       * a volunteer may create logs and edit their own while still a draft.
+         *     Write rules:
+         *       * any member of the project may file a log;
+         *       * only its **author** may edit one — including after publishing, and
+         *         including against leads and exec, who get no edit rights at all;
+         *       * leads, finance leads and exec may delete any log in their project, and
+         *         an author may delete their own.
          *
-         *     Once a volunteer's log is published it becomes the project's record and only
-         *     project staff can amend it.
+         *     An entry is one person's account of what happened, so staff who disagree
+         *     with it remove it rather than reword it under the author's name. Deletes
+         *     are soft, which is what makes that safe.
          */
         delete: operations["logs_destroy"];
         options?: never;
@@ -152,12 +172,16 @@ export interface paths {
         /**
          * @description MOV and MOM entries on a project timeline.
          *
-         *     Write rules, beyond exec bypass:
-         *       * leads and finance leads may write any log in their project;
-         *       * a volunteer may create logs and edit their own while still a draft.
+         *     Write rules:
+         *       * any member of the project may file a log;
+         *       * only its **author** may edit one — including after publishing, and
+         *         including against leads and exec, who get no edit rights at all;
+         *       * leads, finance leads and exec may delete any log in their project, and
+         *         an author may delete their own.
          *
-         *     Once a volunteer's log is published it becomes the project's record and only
-         *     project staff can amend it.
+         *     An entry is one person's account of what happened, so staff who disagree
+         *     with it remove it rather than reword it under the author's name. Deletes
+         *     are soft, which is what makes that safe.
          */
         patch: operations["logs_partial_update"];
         trace?: never;
@@ -304,10 +328,56 @@ export interface paths {
         patch: operations["projects_partial_update"];
         trace?: never;
     };
+    "/api/projects/{slug}/attendance/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Per-member visit and meeting counts for this project. */
+        get: operations["projects_attendance_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{slug}/attendance/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The same counts as a downloadable Excel workbook. */
+        get: operations["projects_attendance_export_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description One member's attendance on a project — see :mod:`apps.logs.stats`.
+         *
+         *     Read-only: the numbers are derived from the timeline, never written.
+         */
+        AttendanceRow: {
+            readonly user: components["schemas"]["User"];
+            readonly role: string;
+            readonly visits: number;
+            readonly meetings: number;
+            readonly total: number;
+        };
         DailyLog: {
             readonly id: number;
             project: number;
@@ -375,6 +445,21 @@ export interface components {
             project_slug: string;
             project_name: string;
             role: string;
+        };
+        PaginatedAttendanceRowList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["AttendanceRow"][];
         };
         PaginatedDailyLogList: {
             /** @example 123 */
@@ -1021,6 +1106,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Project"];
+                };
+            };
+        };
+    };
+    projects_attendance_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAttendanceRowList"];
+                };
+            };
+        };
+    };
+    projects_attendance_export_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
                 };
             };
         };

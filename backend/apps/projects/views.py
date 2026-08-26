@@ -1,7 +1,17 @@
 from django.db.models import Count, Q
+from django.http import HttpResponse
+from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from apps.logs.exports import attendance_workbook
+from apps.logs.serializers import AttendanceRowSerializer
+from apps.logs.stats import attendance_for
 
 from .models import Membership, Project, Role
 from .permissions import (
@@ -43,6 +53,43 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_exec:
             raise PermissionDenied("Only the Executive Committee can delete projects.")
         instance.delete()
+
+    # Both attendance routes are GETs, so `IsProjectLead` lets any member
+    # through and `get_queryset` 404s everyone else — reading your own
+    # project's counts needs no special role.
+
+    @extend_schema(responses=AttendanceRowSerializer(many=True))
+    @action(detail=True, methods=["get"])
+    def attendance(self, request, slug=None):
+        """Per-member visit and meeting counts for this project."""
+        project = self.get_object()
+        rows = attendance_for(project)
+        return Response(AttendanceRowSerializer(rows, many=True).data)
+
+    @extend_schema(
+        responses={
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): (
+                OpenApiTypes.BINARY
+            )
+        }
+    )
+    # `attendance.xlsx` would collide with DRF's format-suffix patterns; the
+    # extension that matters is the one in Content-Disposition.
+    @action(detail=True, methods=["get"], url_path="attendance/export")
+    def attendance_export(self, request, slug=None):
+        """The same counts as a downloadable Excel workbook."""
+        project = self.get_object()
+        content = attendance_workbook(project, attendance_for(project))
+
+        response = HttpResponse(
+            content,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        stamp = timezone.localdate().isoformat()
+        # The slug keeps the filename ASCII, which spares us RFC 5987 encoding.
+        filename = f"nirmaan-{project.slug}-attendance-{stamp}.xlsx"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
 
 class MembershipViewSet(viewsets.ModelViewSet):

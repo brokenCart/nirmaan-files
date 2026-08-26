@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { BarChart3, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -99,19 +99,28 @@ export function ProjectTimelinePage() {
           )}
         </div>
 
-        {!composing && (
-          <Button
-            onClick={() => {
-              setComposing(true)
-              // One editor open at a time, so it is never ambiguous which form
-              // a Save applies to.
-              setEditingId(null)
-            }}
-          >
-            <Plus className="size-4" aria-hidden />
-            New entry
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Link to={`/projects/${slug}/attendance`}>
+            <Button variant="secondary">
+              <BarChart3 className="size-4" aria-hidden />
+              Attendance
+            </Button>
+          </Link>
+
+          {!composing && (
+            <Button
+              onClick={() => {
+                setComposing(true)
+                // One editor open at a time, so it is never ambiguous which
+                // form a Save applies to.
+                setEditingId(null)
+              }}
+            >
+              <Plus className="size-4" aria-hidden />
+              New entry
+            </Button>
+          )}
+        </div>
       </div>
 
       {composing && (

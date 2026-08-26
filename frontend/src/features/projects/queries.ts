@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 
 import { api } from '@/api/client'
 import type {
+  AttendanceRow,
   DailyLog,
   DailyLogInput,
   DailyLogPatch,
@@ -15,6 +16,7 @@ export const queryKeys = {
   project: (slug: string) => ['projects', slug] as const,
   logs: (filters: LogFilters) => ['logs', filters] as const,
   members: (slug: string) => ['memberships', slug] as const,
+  attendance: (slug: string) => ['attendance', slug] as const,
 }
 
 /**
@@ -67,6 +69,19 @@ export function useProjectMembers(slug: string) {
   })
 }
 
+/**
+ * Per-member visit and meeting counts.
+ *
+ * Not paginated — a project roster is tens of people, and both the chart and
+ * the export need the whole set at once.
+ */
+export function useAttendance(slug: string) {
+  return useQuery({
+    queryKey: queryKeys.attendance(slug),
+    queryFn: () => api.get<AttendanceRow[]>(`/api/projects/${slug}/attendance/`),
+  })
+}
+
 export function useCreateLog(projectSlug: string) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -76,6 +91,8 @@ export function useCreateLog(projectSlug: string) {
       // rather than guessing which cached filter combinations went stale.
       void queryClient.invalidateQueries({ queryKey: ['logs'] })
       void queryClient.invalidateQueries({ queryKey: queryKeys.project(projectSlug) })
+      // Attendees on a new entry move the counts.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.attendance(projectSlug) })
     },
   })
 }
@@ -92,6 +109,8 @@ export function useUpdateLog(projectSlug: string) {
       // and moves rows between drafts and the public timeline.
       void queryClient.invalidateQueries({ queryKey: ['logs'] })
       void queryClient.invalidateQueries({ queryKey: queryKeys.project(projectSlug) })
+      // Editing attendees, kind or status all change what the counts include.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.attendance(projectSlug) })
     },
   })
 }
@@ -100,6 +119,10 @@ export function useDeleteLog() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => api.delete<void>(`/api/logs/${id}/`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['logs'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['logs'] })
+      // A removed entry stops counting; the hook has no slug, so clear them all.
+      void queryClient.invalidateQueries({ queryKey: ['attendance'] })
+    },
   })
 }

@@ -114,7 +114,13 @@ interface RequestOptions {
   retryOnUnauthorized?: boolean
 }
 
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+/**
+ * One authenticated round-trip, with the refresh-and-replay dance.
+ *
+ * Returns the raw `Response` so both JSON callers and file downloads share the
+ * token handling rather than each reimplementing the 401 retry.
+ */
+async function fetchWithAuth(path: string, options: RequestOptions = {}): Promise<Response> {
   const { method = 'GET', body, query, retryOnUnauthorized = true } = options
 
   const url = new URL(path, window.location.origin)
@@ -142,16 +148,57 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     // refresh once and replay the request before surfacing an error.
     const session = await refreshSession()
     if (session) {
-      return request<T>(path, { ...options, retryOnUnauthorized: false })
+      return fetchWithAuth(path, { ...options, retryOnUnauthorized: false })
     }
     endSession()
     throw await toApiError(response)
   }
 
   if (!response.ok) throw await toApiError(response)
+  return response
+}
+
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await fetchWithAuth(path, options)
   if (response.status === 204) return undefined as T
 
   return (await response.json()) as T
+}
+
+/** Filename the server asked for, if it sent a `filename="…"`. */
+function filenameFrom(disposition: string | null): string | undefined {
+  return disposition?.match(/filename="([^"]+)"/)?.[1]
+}
+
+/**
+ * Download a file endpoint and hand it to the browser's save flow.
+ *
+ * This cannot be a plain `<a href>`: the access token lives in a module
+ * variable rather than a cookie, so a browser-initiated navigation would reach
+ * the API unauthenticated. Fetching it ourselves attaches the header, and the
+ * bytes are handed on as an object URL.
+ */
+export async function downloadFile(
+  path: string,
+  fallbackFilename: string,
+  query?: RequestOptions['query'],
+): Promise<void> {
+  const response = await fetchWithAuth(path, { query })
+  const blob = await response.blob()
+
+  const href = URL.createObjectURL(blob)
+  try {
+    const anchor = document.createElement('a')
+    anchor.href = href
+    anchor.download = filenameFrom(response.headers.get('Content-Disposition')) ?? fallbackFilename
+    document.body.append(anchor)
+    anchor.click()
+    anchor.remove()
+  } finally {
+    // Revoking immediately can race the save in some browsers; one frame is
+    // enough for the click to have been taken up.
+    requestAnimationFrame(() => URL.revokeObjectURL(href))
+  }
 }
 
 export const api = {
