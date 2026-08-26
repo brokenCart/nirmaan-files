@@ -8,11 +8,12 @@ Project tracking for Nirmaan, a student-run NGO at BITS Pilani, Pilani campus. A
 called a **project** in Nirmaan's vocabulary, and that word means a `projects.Project` row
 throughout the codebase — never a software project.
 
-Four modules are planned per project:
+Four modules are tracked per project:
 
 1. **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting) — ✅ shipped, with
    per-semester counting and a project archive
-2. **Knowledge base** — past context, lore — planned (`apps/knowledge`)
+2. **Knowledge base** — ✅ shipped as collaborative Markdown pages with complete revision history
+   (`apps/knowledge`); see *Knowledge base* below
 3. **Volunteer visit tracking** — ✅ shipped as per-member attendance counts; see *Attendance*
    below for the scope, which stops at counts by decision rather than for want of finishing.
    There is no `apps/visits`: counting derives from `DailyLog.attendees` and lives in
@@ -33,7 +34,7 @@ docker compose up -d db
 # Backend
 uv run python manage.py migrate
 uv run python manage.py runserver
-uv run python manage.py seed_demo --reset      # demo projects, every role, sample logs
+uv run python manage.py seed_demo --reset      # demo projects, every role, sample content
 uv run pytest                                  # whole suite
 uv run pytest apps/projects/tests/test_permissions.py::TestCrossProjectRoles   # one class
 uv run pytest -k finance_lead                  # one pattern
@@ -183,6 +184,13 @@ has:
 - **an attendance mark** — `DailyLog.attendees` is a plain M2M and drops silently, restating who
   was at a visit and moving the counts. A placeholder can absolutely be marked present: recording
   who turned up is *why* a lead adds someone before they sign in.
+- **a resource they added** — `Resource.added_by` is PROTECT. Unreachable in practice for an
+  unclaimed user, but an explicit guard turns a broken invariant into "keep the account" rather
+  than a 500 during an ordinary roster removal.
+- **anything in the knowledge base** — `Article.created_by`, `Article.updated_by` and
+  `ArticleRevision.edited_by` are all PROTECT. The revision reference is normally the broad one,
+  but all three are checked rather than relying on that invariant; soft-deleted pages count too,
+  because their content and history deliberately remain in the database.
 
 So the rule is "remove the roster row always, delete the account only when nothing is left pointing
 at it". Removing is a hard delete, unlike a log — a roster row is a fact about the present term,
@@ -292,34 +300,35 @@ the feedback form. `GET /api/resources/?project=<slug>` is the shelf; the SPA re
 `/projects/:slug/resources`.
 
 **A resource carries no semester**, and that is the decision to understand before changing
-anything here. Every other per-project row in this codebase is scoped to a term because it is a
-record of something that happened on a date, and the counting restarts each August. A resource is a
-pointer to something that exists *now*: the Drive folder is the same folder it was last term.
-Scoping one would empty every shelf at rollover and hand each project the problem
-`carry_forward_roster` exists to solve, for nothing in return. It follows that there is no frozen
-archive here either — a link added two terms ago is still editable, because there is no term to
-have closed.
+anything here. Logs and memberships are term-scoped because they record what happened or who held
+a role then, and their counting restarts each August. Resources and articles instead describe what
+exists *now*: the Drive folder is the same folder it was last term. Scoping one would empty every
+shelf at rollover and hand each project the problem `carry_forward_roster` exists to solve, for
+nothing in return. It follows that there is no frozen archive here either — a link added two terms
+ago is still editable, because there is no term to have closed.
 
 What does still resolve against the current term is the *person*. Reads use `visible_project_ids`,
 like the timeline, so a past member keeps the shelf. Writes need membership **this** semester, so
 someone dropped from the roster mid-term stops changing it.
 
-**The edit rule is deliberately wider than a log's**, and this is the one place the two modules
-diverge on purpose:
+**The resource edit rule is deliberately wider than a log's.** The knowledge base widens it again,
+so the three content types have intentionally different ownership rules:
 
 | | may edit | may remove |
 | --- | --- | --- |
-| `DailyLog` | the author, nobody else | staff, exec, or the author |
-| `Resource` | whoever added it, **plus staff and exec** | the same set |
+| `DailyLog` | the current author, nobody else | current staff/author, or exec |
+| `Resource` | the current adder, **current staff, or exec** | the same set |
+| `Article` | **any current member, or exec** | current staff/starter, or exec |
 
 An entry is one person's account of what happened, so rewording it under their name misrepresents
 them — which is why leads delete rather than edit. A link is not an account of anything. It is a
 pointer, and pointers go stale: when a Drive folder moves, the lead has to be able to fix the URL
-without hunting down the volunteer who first pasted it.
+without hunting down the volunteer who first pasted it. An article is collectively owned and keeps
+every version, so any current member may correct it; see *Knowledge base* below.
 
-Deletes are **hard**, unlike a log's. The timeline is a published account and removing one is
-moderation, which is what makes reversibility matter; a stale pointer left as a tombstone serves
-nobody, and whatever it pointed at is still in Drive either way.
+Resource deletes are **hard**, unlike logs and articles. A stale pointer left as a tombstone serves
+nobody, and whatever it pointed at is still in Drive either way; the other two rows hold the
+content itself, so their removal is reversible.
 
 Two smaller things:
 
@@ -332,9 +341,9 @@ Two smaller things:
   nobody expects on that screen. Note that this makes the response a bare array, not DRF's
   `{count, results}` envelope — `useResources` types it accordingly.
 
-`Resource.added_by` is PROTECT, matching `DailyLog.author`, so `discard_placeholder_user` grew a
-fourth guard. Unreachable in practice for the same reason the authored-entry one is, but an
-unguarded PROTECT surfaces as a 500 on an ordinary roster removal.
+`Resource.added_by` is PROTECT, matching `DailyLog.author`, so `discard_placeholder_user` checks it
+before deleting an unclaimed account. Unreachable in practice for the same reason the authored-log
+case is, but an unguarded PROTECT surfaces as a 500 on an ordinary roster removal.
 
 **`Project.drive_folder_url` is gone** (`projects.0003`). It predated this module as the one link a
 project could hold, and once a project can hold any number the field was a second, special-cased
@@ -355,6 +364,46 @@ worth knowing:
   blank rather than handed a folder that was never in the column. Matching on the row's title would
   look exact and break the moment somebody names their own folder the same thing. Nothing is lost
   either way — the rows stay on the shelf, which is where the URLs live now.
+
+### Knowledge base
+
+`apps.knowledge.Article` is a Markdown page of context, process, partner information or lessons
+learned. `GET /api/articles/?project=<slug>` is the index, and the SPA renders it at
+`/projects/:slug/knowledge`; `/api/articles/<id>/revisions/` returns its complete history.
+
+**An article has no semester and no draft state.** Like a resource, it describes what is true now,
+not what happened on a date, so putting it in a term would empty the knowledge base at rollover.
+Unlike a log draft, a half-written handover page must not become invisible forever when its author
+graduates. Written is published to the project immediately; the revision trail is what makes early
+and collaborative writing safe.
+
+Reads use `ArticleQuerySet.visible_to`, so anyone who has belonged to the project in any semester
+keeps the pages and their histories; foreign-project rows are filtered out and therefore 404.
+Writes use the current roster. Exec bypasses as usual, while a past member has read-only access.
+
+The defining rule is that **any current member may edit any article**, regardless of who started
+it. A shared statement of current practice would quickly go stale if only its original author
+could fix it. Every meaningful API save records a complete `ArticleRevision` snapshot — title,
+body, category, editor, timestamp and optional note — and creation records version one. Restoring
+an old version is an ordinary edit that appends another snapshot; it never rewinds or deletes
+history. A no-op save creates no revision and does not change `updated_by`. Create and update wrap
+the article and revision writes in one transaction, and `updated_by` is denormalized from the
+newest revision.
+
+Removal is deliberately narrower: exec, current staff, or the current member who started the page
+may remove it. Deletes are **soft** (`is_deleted`), because the article row is the content this
+module exists to preserve, and all of its revisions remain. This differs from the resource shelf,
+where the row is only a pointer and deletion is hard.
+
+The live `(project, title)` pair is unique under a partial constraint, so a removed page releases
+its title without losing its tombstone. `project` is rejected on update because permission was
+checked against the project the article already belongs to. The index is unpaginated and carries a
+240-character excerpt instead of each body; `?category=` and `?q=` filter it, with the latter using
+a case-insensitive substring match across titles and bodies. Detail responses carry the full body.
+
+The SPA renders bodies with `react-markdown`, which creates React elements without enabling raw
+HTML, and opens page-authored links in a separate, non-opener tab. Keep that trust boundary intact
+if Markdown plugins are added later.
 
 ### Archives
 

@@ -12,7 +12,7 @@ Four things are tracked per project:
 | Module | Status |
 | --- | --- |
 | **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting) | ✅ shipped |
-| **Knowledge base** — past context and how-things-work | planned |
+| **Knowledge base** — past context and how-things-work | ✅ shipped |
 | **Volunteer visit tracking** — who showed up, when | ✅ shipped |
 | **Resource links** — Drive folders and other pointers | ✅ shipped |
 
@@ -27,13 +27,36 @@ Entries are text-only for now; photos and video are deferred (`CLAUDE.md` explai
 
 Who may do what:
 
-- **Anyone in the project** can file an entry, and save it as a private draft first.
-- **Only the author** can edit their own entry — at any point, published or not. No role overrides
-  this, leads and exec included: an entry is one person's account of what happened.
-- **Leads, finance leads and exec** can *remove* any entry in their project, and an author can
-  withdraw their own. That is the moderation lever instead of editing — you delete an entry you
+- **Any current member, and exec** can file an entry, and save it as a private draft first.
+- **Only the author** can edit their own entry while its semester is open, and a former member
+  loses that access — whether the entry is published or still a draft. No role overrides this,
+  leads and exec included: an entry is one person's account of what happened.
+- **Current leads, finance leads and the author** can *remove* an open-term entry; exec can remove
+  one from any term. That is the moderation lever instead of editing — you delete an entry you
   disagree with rather than reword it under someone else's name. Deletes are soft, so nothing
   actually leaves the database.
+
+A closed semester is frozen: nobody edits its entries, and only exec retains the removal lever.
+
+## Knowledge base
+
+Each project has a searchable knowledge base at `/projects/<slug>/knowledge` for the context,
+processes, partner details and lessons that the next batch should not have to rediscover. Pages
+support Markdown and are grouped by topic; search matches both names and page contents.
+
+Unlike a timeline entry, a knowledge page is **shared writing**:
+
+- **Any current member, and exec**, can start a page or edit any existing page. A phone number or
+  process should not stay wrong just because the person who first wrote it has graduated.
+- Every meaningful save creates a complete, attributed version in the page history. An optional
+  change note explains what moved, and restoring an older version adds it as a new version rather
+  than erasing the edits made since.
+- **A current member who started the page, leads, finance leads and exec** can remove it. Removal
+  is soft, so its text and history remain in the database.
+
+Pages are not tied to semesters and have no private draft state: they describe what is true now,
+not what happened on a date. A former member therefore keeps read-only access to the pages and
+their histories, while writing remains limited to this semester's roster.
 
 ## Adding members
 
@@ -64,8 +87,8 @@ project is something a colleague does for you rather than something you do quiet
 a project's only lead from stranding a roster nobody is left to manage. If the row was a placeholder nobody has ever signed in to
 — a mistyped address, say — the account is deleted along with it, so typos do not pile up as
 unclaimable users. That only happens when nothing else needs the account: if they are on another
-project, on a past term's roster, or marked present at a visit, the account stays and only this
-term's roster row goes.
+project, on a past term's roster, marked present at a visit, or attached to a resource or knowledge
+page, the account stays and only this term's roster row goes.
 
 ## Resources
 
@@ -76,11 +99,11 @@ it is for, so the next batch can find things without asking.
 This stores **addresses, not files**. Opening a link still needs access to it in Drive; nothing is
 uploaded here.
 
-- **Anyone in the project** can add a link.
-- **Whoever added it, plus leads, finance leads and exec**, can edit or remove it. That is wider
-  than the timeline on purpose: a link is a pointer, not somebody's account of what happened, and
-  when a Drive folder moves the lead needs to fix the address without tracking down whoever pasted
-  it first.
+- **Any current member, and exec** can add a link.
+- **The current member who added it, current leads, finance leads and exec** can edit or remove it.
+  That is wider than the timeline on purpose: a link is a pointer, not somebody's account of what
+  happened, and when a Drive folder moves the lead needs to fix the address without tracking down
+  whoever pasted it first.
 - Removing a link removes the link. The file itself is untouched in Drive.
 
 Unlike the timeline and the roster, the shelf is **not per semester** — a Drive folder is the same
@@ -157,9 +180,9 @@ cd backend && uv run python manage.py seed_demo --reset
 ```
 
 Creates three projects with a lead, a finance lead, and two volunteers each, one exec-committee
-account, sample MOV/MOM entries with attendees on both, and four resource links per project —
-including a person who leads one project while volunteering in another, which is the case the
-permission model exists for.
+account, sample MOV/MOM entries with attendees on both, four resource links and four knowledge
+pages per project. One knowledge page has an alumnus-to-current-lead revision trail, and one person
+leads a project while volunteering in another — the cases those permission models exist for.
 
 If your database predates attendees on visits, existing MOVs have none and every visit count reads
 zero until entries are edited or the data is re-seeded. `--reset` drops the existing rows.
@@ -172,5 +195,5 @@ cd backend && uv run pytest
 
 ## Contributing
 
-`CLAUDE.md` documents the architecture, the permission model, and the conventions to follow.
-Read it before adding a module.
+`CLAUDE.md` and `AGENTS.md` contain the same architecture, permission model and conventions for
+their respective coding agents. Read the one your tool uses before adding a module.
