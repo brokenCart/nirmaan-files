@@ -4,7 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '@/api/client'
 import type { EffectiveRole } from '@/api/types'
-import { canDeleteLog, canEditLog, isProjectStaff } from '@/api/types'
+import { canDeleteLog, canEditLog } from '@/api/types'
 import { useAuth } from '@/auth/AuthContext'
 import { Ornament } from '@/components/Logo'
 import {
@@ -100,8 +100,11 @@ export function ProjectTimelinePage() {
   }
 
   const role = roleIn(slug)
-  // Undefined rather than a boolean flag so the panel's prop stays narrowed.
-  const roster = isProjectStaff(role) ? members.data?.results : undefined
+  // The roster is a read for everyone the API already hands it to — any member
+  // of any term, volunteers and archive-only viewers included. Undefined rather
+  // than a boolean flag so the panel's prop stays narrowed, and an empty term
+  // collapses the rail instead of rendering an empty card.
+  const roster = members.data?.results.length ? members.data.results : undefined
 
   if (project.isPending) return <Spinner label="Loading project…" />
   if (project.error) return <ErrorNote message={project.error.message} />
