@@ -10,7 +10,13 @@ export function AppLayout() {
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-10 border-b border-line bg-surface/85 backdrop-blur">
+      {/*
+        The ::before strip extends the bar upward off-screen, so a browser that
+        rubber-bands regardless of `overscroll-behavior` reveals more header
+        rather than the page background. It is solid rather than the bar's own
+        translucent fill because there is nothing behind it to show through.
+      */}
+      <header className="sticky top-0 z-10 border-b border-line bg-surface/85 backdrop-blur before:absolute before:inset-x-0 before:bottom-full before:h-[50vh] before:bg-surface before:content-['']">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <Link to="/" className="rounded-lg">
             <NirmaanLogo subtitle="Files" imgClassName="h-11" />

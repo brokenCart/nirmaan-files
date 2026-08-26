@@ -47,6 +47,13 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /*
+     * Overscrolling past the top drags the whole document down, and the sticky
+     * header goes with it — leaving a strip of page background above the bar.
+     * Refusing the bounce is the fix; the header's ::before covers the browsers
+     * that bounce anyway.
+     */
+    overscroll-behavior-y: none;
   }
 
   body {
