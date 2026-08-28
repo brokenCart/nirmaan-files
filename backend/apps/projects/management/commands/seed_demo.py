@@ -6,6 +6,7 @@ and unusable passwords, and none of them belong in a real deployment.
 
 import datetime
 import random
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -15,6 +16,7 @@ from apps.accounts.models import User
 from apps.knowledge.models import Article, ArticleCategory
 from apps.logs.models import DailyLog, LogKind, LogStatus
 from apps.projects.models import Membership, Project, Role, Semester
+from apps.reimbursements.models import Reimbursement, ReimbursementStatus
 from apps.resources.models import Resource, ResourceKind
 
 CAMPUS = "pilani.bits-pilani.ac.in"
@@ -91,6 +93,49 @@ ARTICLES = [
 ]
 
 
+# One reimbursement request per state, so the finance lead's queue has
+# something in each tab and the freeze-on-review rule is visible by hand: the
+# approved and rejected rows refuse an edit, the pending one accepts it.
+#
+# The last entry is the finance lead's *own* claim, left pending on purpose —
+# it is the row they cannot review themselves, which is the separation-of-duties
+# rule you would otherwise have to read the source to discover.
+REIMBURSEMENTS = [
+    (
+        "volunteer",
+        "Bus fare for the Saturday visit",
+        Decimal("480.00"),
+        "Four volunteers, return tickets to the centre and back. Receipts with me.",
+        ReimbursementStatus.APPROVED,
+        "",
+    ),
+    (
+        "volunteer",
+        "Chart paper and markers",
+        Decimal("1250.00"),
+        "Stationery for the exam-prep drive, bought at the market outside campus.",
+        ReimbursementStatus.REJECTED,
+        "Stationery comes out of the centre's own budget — claim it from Sunita ma'am.",
+    ),
+    (
+        "lead",
+        "Printing for the parent meeting",
+        Decimal("2100.00"),
+        "Sixty handouts and two banners for the parents' session on the 14th.",
+        ReimbursementStatus.PENDING,
+        "",
+    ),
+    (
+        "finance",
+        "Auto to the block education office",
+        Decimal("260.00"),
+        "Dropped the permission letter off in person after the post went missing.",
+        ReimbursementStatus.PENDING,
+        "",
+    ),
+]
+
+
 class Command(BaseCommand):
     help = "Create demo projects, users in every role, and sample logs."
 
@@ -115,6 +160,7 @@ class Command(BaseCommand):
             # its revisions with it.
             Resource.objects.all().delete()
             Article.objects.all().delete()
+            Reimbursement.objects.all().delete()
             DailyLog.objects.all().delete()
             Membership.objects.all().delete()
             Semester.objects.all().delete()
@@ -167,13 +213,19 @@ class Command(BaseCommand):
             self._logs(project, alumnus, [alumnus, volunteers[0]], semester=past)
             self._resources(project, lead)
             self._articles(project, {"lead": lead, "alumnus": alumnus, "volunteer": volunteers[0]})
+            self._reimbursements(
+                project,
+                {"lead": lead, "finance": finance, "volunteer": volunteers[0]},
+                finance,
+            )
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seeded {Semester.objects.count()} semesters, {Project.objects.count()} projects, "
                 f"{User.objects.count()} users, {DailyLog.objects.count()} logs, "
                 f"{Resource.objects.count()} resource links, "
-                f"{Article.objects.count()} knowledge pages.\n"
+                f"{Article.objects.count()} knowledge pages, "
+                f"{Reimbursement.objects.count()} reimbursement requests.\n"
                 f"Exec account: {exec_user.email}"
             )
         )
@@ -259,6 +311,31 @@ class Command(BaseCommand):
                 article.body = f"{body} The room is ours outright now."
                 article.save(update_fields=["body"])
                 article.record_revision(authors["lead"], note=note)
+
+    def _reimbursements(self, project: Project, authors: dict[str, User], finance: User) -> None:
+        """A queue per project, with one request in each state.
+
+        Decisions go through `record_decision` rather than being written as
+        fields, so the seeded rows carry a reviewer and a timestamp exactly as
+        an API review leaves them — a settled request with no reviewer on it is
+        a state the app cannot produce.
+
+        The finance lead signs everything here except their own claim, which is
+        left pending because the API would refuse it and the demo should not
+        show a state the rules forbid.
+        """
+        for handle, title, amount, description, status, note in REIMBURSEMENTS:
+            request, created = Reimbursement.objects.get_or_create(
+                project=project,
+                title=title,
+                defaults={
+                    "amount": amount,
+                    "description": description,
+                    "submitted_by": authors[handle],
+                },
+            )
+            if created and status != ReimbursementStatus.PENDING:
+                request.record_decision(finance, status=status, note=note)
 
     def _logs(
         self,

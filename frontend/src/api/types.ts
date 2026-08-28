@@ -5,7 +5,7 @@
  * backend's OpenAPI document by `npm run gen:api`. Renaming a serializer field
  * therefore breaks the build rather than the running app.
  */
-import type { components } from './schema'
+import type { components, operations } from './schema'
 
 export type User = components['schemas']['User']
 export type Project = components['schemas']['Project']
@@ -25,7 +25,10 @@ export type MembershipInput = components['schemas']['MembershipRequest']
 export type AttendanceRow = components['schemas']['AttendanceRow']
 export type Role = components['schemas']['RoleEnum']
 export type LogKind = components['schemas']['DailyLogKindEnum']
-export type LogStatus = components['schemas']['StatusEnum']
+// Renamed from `StatusEnum` when reimbursements added a third `status` field
+// and drf-spectacular disambiguated the three. The generated-types contract
+// working exactly as intended: the build broke, the app did not.
+export type LogStatus = components['schemas']['DailyLogStatusEnum']
 
 /** A named link on a project's shelf — a Drive folder, a report, a form. */
 export type Resource = components['schemas']['Resource']
@@ -349,4 +352,188 @@ export function canDeleteArticle(
   if (!role) return false
   if (isProjectStaff(role)) return true
   return userId !== undefined && article.created_by.id === userId
+}
+
+/** A reimbursement request, with whatever decision has been made on it. */
+export type Reimbursement = components['schemas']['Reimbursement']
+/** Body accepted by `POST /api/reimbursements/`. */
+export type ReimbursementInput = components['schemas']['ReimbursementRequest']
+/** Body accepted by `PATCH /api/reimbursements/{id}/`. */
+export type ReimbursementPatch = components['schemas']['PatchedReimbursementRequest']
+/** Body accepted by `POST /api/reimbursements/{id}/review/`. */
+export type ReimbursementReview = components['schemas']['ReimbursementReviewRequest']
+export type ReimbursementStatus = components['schemas']['ReimbursementStatusEnum']
+/** The two values a review may set. Deliberately excludes `PENDING`. */
+export type ReviewDecision = components['schemas']['ReimbursementReviewStatusEnum']
+
+/**
+ * How many requests sit in each state, and what they come to.
+ *
+ * Derived from the operation rather than hand-written as a `Record`, because
+ * the endpoint returns an inline object rather than a named serializer — the
+ * generated shape is the only thing that can go stale, so it is the only thing
+ * spelled out.
+ */
+export type ReimbursementSummary =
+  operations['reimbursements_summary_retrieve']['responses'][200]['content']['application/json']
+
+/** One status's line of {@link ReimbursementSummary}. */
+export type ReimbursementStatusSummary = ReimbursementSummary[ReimbursementStatus]
+
+/**
+ * The states a request moves through, in the order the queue's tabs offer them.
+ *
+ * Pending first: the queue exists to be emptied, and the tab a finance lead
+ * opens the screen for is the one with work in it.
+ */
+export const REIMBURSEMENT_STATUSES: ReimbursementStatus[] = ['PENDING', 'APPROVED', 'REJECTED']
+
+/**
+ * The two decisions a review can set, in the order the controls offer them.
+ *
+ * `PENDING` is deliberately absent — mirrors `ReimbursementReviewSerializer`,
+ * where a reviewer may decide either way but never put a request back to
+ * undecided. Undoing a decision is making the other one, which stays on the
+ * record with the reviewer's name against it.
+ */
+export const REVIEW_DECISIONS: ReviewDecision[] = ['APPROVED', 'REJECTED']
+
+export const REIMBURSEMENT_STATUS_LABELS: Record<ReimbursementStatus, string> = {
+  PENDING: 'Awaiting review',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+}
+
+/**
+ * Whether the caller may file a request, mirroring
+ * `ReimbursementViewSet.perform_create`.
+ *
+ * Any current member — the same bar as filing an entry or adding a link. `role`
+ * is null for someone here on a past membership: they can still see what they
+ * once claimed, but not add to it.
+ */
+export function canAddReimbursement(role: EffectiveRole | null | undefined): boolean {
+  return Boolean(role)
+}
+
+/**
+ * Whether `request` sits in the term that is currently open.
+ *
+ * Same shape as {@link isInOpenTerm} for a log, and separate from it only
+ * because the two carry different row types. `currentSemester` being undefined
+ * — still loading, or none exists — counts as closed, so the UI never offers a
+ * control the server is about to refuse.
+ */
+export function isReimbursementInOpenTerm(
+  request: Reimbursement,
+  currentSemester: Semester | null | undefined,
+): boolean {
+  return currentSemester != null && request.semester === currentSemester.id
+}
+
+/**
+ * Whether the caller may edit `request`, mirroring
+ * `ReimbursementViewSet._assert_can_edit`.
+ *
+ * The narrowest write predicate in the app, and narrower than {@link canEditLog}
+ * by one clause: the submitter, on the open term, **and only while the request
+ * is still pending**. No role overrides any of it, exec included — a finance
+ * lead who could reword a claim could approve one its submitter never made.
+ *
+ * The status clause is the one worth understanding. An approval is an approval
+ * of specific content, so the text stops moving the moment somebody signs it.
+ * That matters more once receipt images land than it does today with two text
+ * fields, which is why it is enforced now rather than later.
+ */
+export function canEditReimbursement(
+  request: Reimbursement,
+  role: EffectiveRole | null | undefined,
+  userId: number | undefined,
+  currentSemester: Semester | null | undefined,
+): boolean {
+  if (!role) return false
+  if (!isReimbursementInOpenTerm(request, currentSemester)) return false
+  if (request.status !== 'PENDING') return false
+  return userId !== undefined && request.submitted_by.id === userId
+}
+
+/**
+ * Whether the caller may approve or reject `request`, mirroring
+ * `ReimbursementViewSet._assert_can_review`.
+ *
+ * The finance lead, or exec, on the open term, and **never on their own
+ * request** — the same separation-of-duties rule `_assert_not_self` applies to
+ * the roster, and a live case rather than a theoretical one, since a finance
+ * lead is exactly the sort of person who buys things for the project.
+ *
+ * A plain `LEAD` is deliberately excluded, and this is the only predicate in
+ * this file where `LEAD` and `FINANCE_LEAD` differ. Running the project means
+ * seeing what is claimed against it; signing it off is the finance lead's job.
+ * A lead therefore reads the queue with no Approve button on it, which is why
+ * the screen says so rather than leaving the absence to be guessed at.
+ *
+ * `isExec` is passed separately rather than read off `role`, for the reason
+ * {@link canChangeResource} takes it separately: `roleIn` reports a project
+ * membership in preference to the committee marker, so an exec who also
+ * volunteers here comes back `VOLUNTEER` and would lose a control the server
+ * would have granted.
+ */
+export function canReviewReimbursement(
+  request: Reimbursement,
+  role: EffectiveRole | null | undefined,
+  isExec: boolean,
+  userId: number | undefined,
+  currentSemester: Semester | null | undefined,
+): boolean {
+  if (userId !== undefined && request.submitted_by.id === userId) return false
+  // Exec reviews a closed term too — the moderation lever survives the archive,
+  // as it does on the timeline.
+  if (isExec) return true
+  if (!isReimbursementInOpenTerm(request, currentSemester)) return false
+  return role === 'FINANCE_LEAD'
+}
+
+/**
+ * The decisions worth offering on `request` — the ones that would change it.
+ *
+ * A pending request can go either way, so both are offered. A request already
+ * approved offers only rejection, and one already rejected only approval: an
+ * Approve button on an approved claim promises nothing, and a reviewer who
+ * pressed it would be re-stamping their own name and the clock onto a decision
+ * that had not moved.
+ *
+ * Separate from {@link canReviewReimbursement}, which answers *whether this
+ * person may decide at all*. This answers *what there is left to decide*, and
+ * the two compose: the controls render only when the first says yes, and then
+ * only the buttons this returns. Never empty — a status is always one of three,
+ * and every one of them leaves at least the opposite decision available.
+ *
+ * The server is deliberately more permissive: it still accepts a review that
+ * repeats the current status, which is what lets a reviewer amend the note on a
+ * decision without reversing it. This is the UI declining to offer a button
+ * that would read as a no-op, not a rule the API enforces.
+ */
+export function availableDecisions(request: Reimbursement): ReviewDecision[] {
+  return REVIEW_DECISIONS.filter((decision) => decision !== request.status)
+}
+
+/**
+ * Whether the caller may withdraw or remove `request`, mirroring
+ * `ReimbursementViewSet._assert_can_delete`.
+ *
+ * The submitter withdraws their own; staff — lead or finance lead — clear the
+ * queue. Both stop at the decision: once reviewed, the row is part of the
+ * project's financial record and only exec removes it, closed term or not.
+ */
+export function canDeleteReimbursement(
+  request: Reimbursement,
+  role: EffectiveRole | null | undefined,
+  userId: number | undefined,
+  currentSemester: Semester | null | undefined,
+): boolean {
+  if (role === 'EXEC') return true
+  if (!role) return false
+  if (!isReimbursementInOpenTerm(request, currentSemester)) return false
+  if (request.status !== 'PENDING') return false
+  return isProjectStaff(role) || (userId !== undefined && request.submitted_by.id === userId)
 }

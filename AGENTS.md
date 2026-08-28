@@ -1,6 +1,12 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+Guidance for coding agents working in this repository — Claude Code, Codex, and anything else that
+reads an agents file.
+
+**This is the only instructions file.** `CLAUDE.md` is a one-line `@AGENTS.md` import and nothing
+else, because Claude Code reads `CLAUDE.md` and not this file. Put project instructions here; never
+copy them back into `CLAUDE.md`. The two were maintained as separate copies of the same document
+until they drifted, which is why they were merged.
 
 ## What this is
 
@@ -20,6 +26,12 @@ Four modules are tracked per project:
    `apps/logs/stats.py`.
 4. **Resource links** — Drive URLs and similar — ✅ shipped (`apps/resources`). See *Resource
    links* below. The Drive folder is a resource like any other; there is no separate field for it.
+
+A fifth module sits alongside them, added after the four above rather than as one of them:
+
+5. **Reimbursements** — volunteers claim money back, the project finance lead approves or rejects
+   — ✅ shipped (`apps/reimbursements`). See *Reimbursements* below. Text-only for now; receipt
+   images are deferred for the same Drive reason media is everywhere else.
 
 Django REST Framework backend, React + TypeScript SPA, one repo, PostgreSQL.
 
@@ -191,6 +203,10 @@ has:
   `ArticleRevision.edited_by` are all PROTECT. The revision reference is normally the broad one,
   but all three are checked rather than relying on that invariant; soft-deleted pages count too,
   because their content and history deliberately remain in the database.
+- **a reimbursement request they filed or reviewed** — `Reimbursement.submitted_by` and
+  `reviewed_by` are both PROTECT. Unreachable in practice like the two above, and the reviewed
+  case not even reachable in principle, but a settled claim is the last row whose names a
+  financial record can afford to lose. Soft-deleted requests count, as removed pages do.
 
 So the rule is "remove the roster row always, delete the account only when nothing is left pointing
 at it". Removing is a hard delete, unlike a log — a roster row is a fact about the present term,
@@ -319,6 +335,7 @@ so the three content types have intentionally different ownership rules:
 | `DailyLog` | the current author, nobody else | current staff/author, or exec |
 | `Resource` | the current adder, **current staff, or exec** | the same set |
 | `Article` | **any current member, or exec** | current staff/starter, or exec |
+| `Reimbursement` | the submitter, **and only while `PENDING`** | current staff/submitter while `PENDING`, else exec |
 
 An entry is one person's account of what happened, so rewording it under their name misrepresents
 them — which is why leads delete rather than edit. A link is not an account of anything. It is a
@@ -405,6 +422,103 @@ The SPA renders bodies with `react-markdown`, which creates React elements witho
 HTML, and opens page-authored links in a separate, non-opener tab. Keep that trust boundary intact
 if Markdown plugins are added later.
 
+### Reimbursements
+
+`apps.reimbursements.Reimbursement` is a volunteer's claim for money spent on the project, and the
+decision made on it. `GET /api/reimbursements/?project=<slug>` is the queue, `POST
+/api/reimbursements/<id>/review/` is the decision, and the SPA renders both at
+`/projects/:slug/reimbursements`.
+
+**Scoped to a semester**, like a log and unlike a resource or an article. The rubric is whether the
+row records something that *happened on a date* or describes what *exists now*: a Drive folder is
+the same folder it was last term, but a claim is an event, and the budget it comes out of restarts
+each August with everything else this app counts. The term is derived from the **clock** at
+creation rather than from a date field — there is no `occurred_on` here, because a log is written up
+days after the visit while a request is filed when it is filed.
+
+Three rules exist nowhere else in the codebase, and they are the module:
+
+**A volunteer sees their own requests and nobody else's.** Every other list endpoint hands a member
+everything in their project; this one is the first with a per-row read rule outside draft privacy,
+because one member's spending is not another member's business. Leads and finance leads see the
+whole queue. That inner set resolves against **this** term via `membership_roles` — the read/write
+split applied to a *read*, and the one place where getting it wrong exposes other people's money
+rather than a shared record everyone already reads. `visible_to` is where it lives, so a permission
+class never has to hide a row.
+
+**`FINANCE_LEAD` can do something `LEAD` cannot.** Until this module the two were synonyms —
+`IsProjectStaff` covers both, and every write rule treats them alike. Approving and rejecting is the
+finance lead's alone (`REVIEWER_ROLES`), while reading the queue is both roles' (`QUEUE_ROLES`):
+running a project includes knowing what is claimed against it, signing it off is the finance lead's
+actual job. A project with no finance lead this term is not stuck, since exec bypasses. If that
+turns out to be the common case, adding `Role.LEAD` to `REVIEWER_ROLES` is the whole change — the
+SPA's `canReviewReimbursement` mirrors it and would need the same one-line edit.
+
+**Nobody reviews their own request, exec included.** Same shape as `_assert_not_self` on the roster,
+and a live case rather than a theoretical one: a finance lead is exactly the sort of person who buys
+things for the project. Their own claim goes to exec or to a second finance lead. Authority is
+asserted before selfhood, so someone with no business reviewing gets the generic refusal rather than
+a hint about whose row it is.
+
+Two more things worth knowing:
+
+- **Content freezes at the decision.** Only the submitter edits, only while `PENDING`, only in the
+  open term, and no role overrides any of it. An approval is an approval of *specific content*, so a
+  claim whose text can change after it is signed is a signature on a blank page. This matters far
+  more once receipts land than it does today with two text fields, which is exactly why it is
+  enforced now.
+- **A rejection must carry a note**, enforced in `ReimbursementReviewSerializer.validate`. An
+  approval need not — the money arriving is the message. A claim turned down with no reason gets
+  refiled unchanged.
+
+Reviewing is a `POST` to its own route rather than a `PATCH` of `status`, because the person allowed
+to decide is precisely the person not allowed to edit; given separate endpoints the two rules sit
+side by side instead of branching inside one handler on which field changed. `status` is read-only
+on `ReimbursementSerializer`, so a request cannot be filed pre-approved. A decision **can** be
+changed while the term is open (`record_decision` re-stamps reviewer and timestamp) — a wrong
+approval needs a way back that is not "ask exec", and the only alternative, deleting the claim,
+would lose the record of a decision having been made.
+
+The SPA offers only the decisions that would *change* something: `availableDecisions` in
+`api/types.ts` drops the request's current status, so an approved claim shows Reject alone and a
+rejected one Approve alone, while a pending claim shows both. The API stays wider and still accepts
+a review repeating the current status, which is what lets a reviewer amend a note without reversing
+themselves — this is the UI declining to offer a no-op, not a rule the server enforces.
+
+Deletes are **soft**, like a log's: the submitter withdraws while `PENDING`, staff clear the queue,
+and once reviewed the row is a financial record only exec removes. Closed terms are frozen as on the
+timeline, with exec keeping the moderation lever.
+
+**`amount` is a `DecimalField`, never a float**, and DRF serializes it as a *string* — so the figure
+survives the trip to the browser without passing through a binary fraction. `formatRupees` in
+`lib/utils.ts` is the one place it becomes a `number`, immediately before rendering, and nothing is
+computed from the result. Arithmetic happens on the server. There is **no currency column**: Nirmaan
+is one campus spending rupees, and a second column nothing would ever set is worse than the
+assumption written down. `MinValueValidator(0.01)` refuses zero and negatives — a claim for nothing
+is a mistake, and a negative one is a refund this module does not model. Unlike the `URLField` case
+on the resource shelf, DRF keeps a model `DecimalField`'s validators, so the column's rules *are*
+the API's rules and `ReimbursementSerializer` restates none of them. (A `validate_amount` hook would
+also never fire: field validators raise before `validate_<field>` is reached.)
+
+`GET /api/reimbursements/summary/` returns a count **and a total** per status, under the same
+visibility and term scope as the list. It exists because the list is **paginated**
+(`ReimbursementPagination`, `page_size = 20`, mirrored by `REIMBURSEMENTS_PAGE_SIZE` in
+`queries.ts`) — "₹4,200 awaiting review" must not become "₹1,800" on page two, and the totals are
+what a finance lead actually opens the screen for. Unlike the shelf and the knowledge index this
+list *is* paged, because those are bounded by a project's own tidiness and nobody prunes last
+month's claims. The summary deliberately ignores `?status=`, since a count *per* status cannot
+honour a filter *on* one. Its response is an inline object rather than a serializer, so the SPA
+derives `ReimbursementSummary` from the generated `operations` type instead of hand-writing a
+`Record`.
+
+**Scope: no attachments.** Receipt images are the same unresolved Drive-quota problem that defers
+photos on the timeline (see *Deferred: photos and video*), so when it is settled proof arrives as a
+child table — `ReimbursementAttachment`, FK to the request, one row per file — rather than as a
+field, because a claim carries several receipts and a child table can gain Drive ids without
+touching this one. The freeze-on-review rule above is what makes that safe (it is the *amount* that
+rule most exists to protect), and `submitted_by` is the account a Drive grant would be issued
+against.
+
 ### Archives
 
 `GET /api/projects/<slug>/archive/` returns one row per semester the project has a record in,
@@ -441,7 +555,10 @@ serializer and run `npm run gen:api`. A renamed field then breaks the build inst
   — `occurred_on` decides which term an entry lands in, so a fixed date drifts out of the open term
   as time passes. Use offsets from `timezone.localdate()`.
 - When adding a module, extend `apps/projects/tests/test_permissions.py` alongside it. That file is
-  the regression net for every endpoint's role behaviour.
+  the regression net for every endpoint's role behaviour. What belongs there is the project and
+  semester boundaries; a module's own rules live in its own test package (see
+  `apps/reimbursements/tests/`, which holds the review workflow while `test_permissions.py` holds
+  only the two boundaries).
 - `AUTH_FAKE_GOOGLE_TOKENS` accepts a plain JSON claims blob instead of a signed token. It exists
   in the dev and test settings only and must never reach `prod.py`.
 - TypeScript is pinned to the latest 5.x release because `openapi-typescript` still declares a
@@ -466,6 +583,11 @@ server, and the external PR team can open the same folder natively.
 The seam is the project's `FOLDER` resource — `Project.drive_folder_url` used to be it and was
 removed in `projects.0003` (see *Resource links*). Note that nothing constrains a project to one
 `FOLDER` row, so that work has to decide which one it uploads into rather than assuming.
+
+**The same question blocks reimbursement receipts**, which are the other place users will expect to
+attach a file. Whatever resolves the quota question resolves both, and they should land together
+rather than growing two upload paths — see *Reimbursements* for the child-table shape that side
+expects.
 
 ## Open questions
 

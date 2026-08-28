@@ -764,6 +764,375 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reimbursements/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Money claimed back from a project, and the finance lead's review of it.
+         *
+         *     Read rules — narrower than every other module's, because this is the only
+         *     screen in the app where one member's row is none of another member's
+         *     business:
+         *
+         *       * a volunteer sees **their own requests**, on any project they have ever
+         *         belonged to;
+         *       * a **lead or finance lead** sees the project's whole queue for the terms
+         *         they hold that role in;
+         *       * exec sees everything, as always.
+         *
+         *     Write rules:
+         *
+         *       * any member of the project **this semester** may file a request;
+         *       * only the **submitter** may edit one, and only while it is still
+         *         ``PENDING`` — a decision is a decision about specific content, so the
+         *         content stops moving the moment somebody signs it;
+         *       * only a **finance lead**, or exec, may approve or reject, and **nobody
+         *         reviews their own request**;
+         *       * the submitter may withdraw a pending request; staff may remove one; once
+         *         reviewed it is a financial record and only exec removes it;
+         *       * a closed semester is frozen, as on the timeline.
+         *
+         *     Two of those are worth saying out loud because they are new here.
+         *
+         *     **Reviewing is the finance lead's, not the lead's.** ``FINANCE_LEAD`` has
+         *     until now been a synonym for ``LEAD`` everywhere in this codebase — both are
+         *     "project staff" and both get the same write powers. This is the first place
+         *     they come apart, and it is the role's actual job: the lead runs the project
+         *     and can see what is being claimed against it, the finance lead is the one
+         *     who signs. A project with no finance lead this term is not stuck, because
+         *     exec bypasses; if that turns out to be the common case rather than the
+         *     exception, widening :data:`~apps.reimbursements.models.REVIEWER_ROLES` to
+         *     include ``LEAD`` is the whole change.
+         *
+         *     **Nobody reviews their own request**, exec included, and this holds even
+         *     though a finance lead is exactly the sort of person who buys things for the
+         *     project. It is the same shape as ``_assert_not_self`` on the roster and for
+         *     the same reason: someone else does it, so the decision is witnessed rather
+         *     than unilateral. A finance lead's own claim goes to exec or to a second
+         *     finance lead. Authority is checked *before* selfhood, so a volunteer poking
+         *     at the endpoint gets the generic refusal rather than a hint about whose row
+         *     it is.
+         */
+        get: operations["reimbursements_list"];
+        put?: never;
+        /**
+         * @description Money claimed back from a project, and the finance lead's review of it.
+         *
+         *     Read rules — narrower than every other module's, because this is the only
+         *     screen in the app where one member's row is none of another member's
+         *     business:
+         *
+         *       * a volunteer sees **their own requests**, on any project they have ever
+         *         belonged to;
+         *       * a **lead or finance lead** sees the project's whole queue for the terms
+         *         they hold that role in;
+         *       * exec sees everything, as always.
+         *
+         *     Write rules:
+         *
+         *       * any member of the project **this semester** may file a request;
+         *       * only the **submitter** may edit one, and only while it is still
+         *         ``PENDING`` — a decision is a decision about specific content, so the
+         *         content stops moving the moment somebody signs it;
+         *       * only a **finance lead**, or exec, may approve or reject, and **nobody
+         *         reviews their own request**;
+         *       * the submitter may withdraw a pending request; staff may remove one; once
+         *         reviewed it is a financial record and only exec removes it;
+         *       * a closed semester is frozen, as on the timeline.
+         *
+         *     Two of those are worth saying out loud because they are new here.
+         *
+         *     **Reviewing is the finance lead's, not the lead's.** ``FINANCE_LEAD`` has
+         *     until now been a synonym for ``LEAD`` everywhere in this codebase — both are
+         *     "project staff" and both get the same write powers. This is the first place
+         *     they come apart, and it is the role's actual job: the lead runs the project
+         *     and can see what is being claimed against it, the finance lead is the one
+         *     who signs. A project with no finance lead this term is not stuck, because
+         *     exec bypasses; if that turns out to be the common case rather than the
+         *     exception, widening :data:`~apps.reimbursements.models.REVIEWER_ROLES` to
+         *     include ``LEAD`` is the whole change.
+         *
+         *     **Nobody reviews their own request**, exec included, and this holds even
+         *     though a finance lead is exactly the sort of person who buys things for the
+         *     project. It is the same shape as ``_assert_not_self`` on the roster and for
+         *     the same reason: someone else does it, so the decision is witnessed rather
+         *     than unilateral. A finance lead's own claim goes to exec or to a second
+         *     finance lead. Authority is checked *before* selfhood, so a volunteer poking
+         *     at the endpoint gets the generic refusal rather than a hint about whose row
+         *     it is.
+         */
+        post: operations["reimbursements_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reimbursements/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Money claimed back from a project, and the finance lead's review of it.
+         *
+         *     Read rules — narrower than every other module's, because this is the only
+         *     screen in the app where one member's row is none of another member's
+         *     business:
+         *
+         *       * a volunteer sees **their own requests**, on any project they have ever
+         *         belonged to;
+         *       * a **lead or finance lead** sees the project's whole queue for the terms
+         *         they hold that role in;
+         *       * exec sees everything, as always.
+         *
+         *     Write rules:
+         *
+         *       * any member of the project **this semester** may file a request;
+         *       * only the **submitter** may edit one, and only while it is still
+         *         ``PENDING`` — a decision is a decision about specific content, so the
+         *         content stops moving the moment somebody signs it;
+         *       * only a **finance lead**, or exec, may approve or reject, and **nobody
+         *         reviews their own request**;
+         *       * the submitter may withdraw a pending request; staff may remove one; once
+         *         reviewed it is a financial record and only exec removes it;
+         *       * a closed semester is frozen, as on the timeline.
+         *
+         *     Two of those are worth saying out loud because they are new here.
+         *
+         *     **Reviewing is the finance lead's, not the lead's.** ``FINANCE_LEAD`` has
+         *     until now been a synonym for ``LEAD`` everywhere in this codebase — both are
+         *     "project staff" and both get the same write powers. This is the first place
+         *     they come apart, and it is the role's actual job: the lead runs the project
+         *     and can see what is being claimed against it, the finance lead is the one
+         *     who signs. A project with no finance lead this term is not stuck, because
+         *     exec bypasses; if that turns out to be the common case rather than the
+         *     exception, widening :data:`~apps.reimbursements.models.REVIEWER_ROLES` to
+         *     include ``LEAD`` is the whole change.
+         *
+         *     **Nobody reviews their own request**, exec included, and this holds even
+         *     though a finance lead is exactly the sort of person who buys things for the
+         *     project. It is the same shape as ``_assert_not_self`` on the roster and for
+         *     the same reason: someone else does it, so the decision is witnessed rather
+         *     than unilateral. A finance lead's own claim goes to exec or to a second
+         *     finance lead. Authority is checked *before* selfhood, so a volunteer poking
+         *     at the endpoint gets the generic refusal rather than a hint about whose row
+         *     it is.
+         */
+        get: operations["reimbursements_retrieve"];
+        /**
+         * @description Money claimed back from a project, and the finance lead's review of it.
+         *
+         *     Read rules — narrower than every other module's, because this is the only
+         *     screen in the app where one member's row is none of another member's
+         *     business:
+         *
+         *       * a volunteer sees **their own requests**, on any project they have ever
+         *         belonged to;
+         *       * a **lead or finance lead** sees the project's whole queue for the terms
+         *         they hold that role in;
+         *       * exec sees everything, as always.
+         *
+         *     Write rules:
+         *
+         *       * any member of the project **this semester** may file a request;
+         *       * only the **submitter** may edit one, and only while it is still
+         *         ``PENDING`` — a decision is a decision about specific content, so the
+         *         content stops moving the moment somebody signs it;
+         *       * only a **finance lead**, or exec, may approve or reject, and **nobody
+         *         reviews their own request**;
+         *       * the submitter may withdraw a pending request; staff may remove one; once
+         *         reviewed it is a financial record and only exec removes it;
+         *       * a closed semester is frozen, as on the timeline.
+         *
+         *     Two of those are worth saying out loud because they are new here.
+         *
+         *     **Reviewing is the finance lead's, not the lead's.** ``FINANCE_LEAD`` has
+         *     until now been a synonym for ``LEAD`` everywhere in this codebase — both are
+         *     "project staff" and both get the same write powers. This is the first place
+         *     they come apart, and it is the role's actual job: the lead runs the project
+         *     and can see what is being claimed against it, the finance lead is the one
+         *     who signs. A project with no finance lead this term is not stuck, because
+         *     exec bypasses; if that turns out to be the common case rather than the
+         *     exception, widening :data:`~apps.reimbursements.models.REVIEWER_ROLES` to
+         *     include ``LEAD`` is the whole change.
+         *
+         *     **Nobody reviews their own request**, exec included, and this holds even
+         *     though a finance lead is exactly the sort of person who buys things for the
+         *     project. It is the same shape as ``_assert_not_self`` on the roster and for
+         *     the same reason: someone else does it, so the decision is witnessed rather
+         *     than unilateral. A finance lead's own claim goes to exec or to a second
+         *     finance lead. Authority is checked *before* selfhood, so a volunteer poking
+         *     at the endpoint gets the generic refusal rather than a hint about whose row
+         *     it is.
+         */
+        put: operations["reimbursements_update"];
+        post?: never;
+        /**
+         * @description Money claimed back from a project, and the finance lead's review of it.
+         *
+         *     Read rules — narrower than every other module's, because this is the only
+         *     screen in the app where one member's row is none of another member's
+         *     business:
+         *
+         *       * a volunteer sees **their own requests**, on any project they have ever
+         *         belonged to;
+         *       * a **lead or finance lead** sees the project's whole queue for the terms
+         *         they hold that role in;
+         *       * exec sees everything, as always.
+         *
+         *     Write rules:
+         *
+         *       * any member of the project **this semester** may file a request;
+         *       * only the **submitter** may edit one, and only while it is still
+         *         ``PENDING`` — a decision is a decision about specific content, so the
+         *         content stops moving the moment somebody signs it;
+         *       * only a **finance lead**, or exec, may approve or reject, and **nobody
+         *         reviews their own request**;
+         *       * the submitter may withdraw a pending request; staff may remove one; once
+         *         reviewed it is a financial record and only exec removes it;
+         *       * a closed semester is frozen, as on the timeline.
+         *
+         *     Two of those are worth saying out loud because they are new here.
+         *
+         *     **Reviewing is the finance lead's, not the lead's.** ``FINANCE_LEAD`` has
+         *     until now been a synonym for ``LEAD`` everywhere in this codebase — both are
+         *     "project staff" and both get the same write powers. This is the first place
+         *     they come apart, and it is the role's actual job: the lead runs the project
+         *     and can see what is being claimed against it, the finance lead is the one
+         *     who signs. A project with no finance lead this term is not stuck, because
+         *     exec bypasses; if that turns out to be the common case rather than the
+         *     exception, widening :data:`~apps.reimbursements.models.REVIEWER_ROLES` to
+         *     include ``LEAD`` is the whole change.
+         *
+         *     **Nobody reviews their own request**, exec included, and this holds even
+         *     though a finance lead is exactly the sort of person who buys things for the
+         *     project. It is the same shape as ``_assert_not_self`` on the roster and for
+         *     the same reason: someone else does it, so the decision is witnessed rather
+         *     than unilateral. A finance lead's own claim goes to exec or to a second
+         *     finance lead. Authority is checked *before* selfhood, so a volunteer poking
+         *     at the endpoint gets the generic refusal rather than a hint about whose row
+         *     it is.
+         */
+        delete: operations["reimbursements_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description Money claimed back from a project, and the finance lead's review of it.
+         *
+         *     Read rules — narrower than every other module's, because this is the only
+         *     screen in the app where one member's row is none of another member's
+         *     business:
+         *
+         *       * a volunteer sees **their own requests**, on any project they have ever
+         *         belonged to;
+         *       * a **lead or finance lead** sees the project's whole queue for the terms
+         *         they hold that role in;
+         *       * exec sees everything, as always.
+         *
+         *     Write rules:
+         *
+         *       * any member of the project **this semester** may file a request;
+         *       * only the **submitter** may edit one, and only while it is still
+         *         ``PENDING`` — a decision is a decision about specific content, so the
+         *         content stops moving the moment somebody signs it;
+         *       * only a **finance lead**, or exec, may approve or reject, and **nobody
+         *         reviews their own request**;
+         *       * the submitter may withdraw a pending request; staff may remove one; once
+         *         reviewed it is a financial record and only exec removes it;
+         *       * a closed semester is frozen, as on the timeline.
+         *
+         *     Two of those are worth saying out loud because they are new here.
+         *
+         *     **Reviewing is the finance lead's, not the lead's.** ``FINANCE_LEAD`` has
+         *     until now been a synonym for ``LEAD`` everywhere in this codebase — both are
+         *     "project staff" and both get the same write powers. This is the first place
+         *     they come apart, and it is the role's actual job: the lead runs the project
+         *     and can see what is being claimed against it, the finance lead is the one
+         *     who signs. A project with no finance lead this term is not stuck, because
+         *     exec bypasses; if that turns out to be the common case rather than the
+         *     exception, widening :data:`~apps.reimbursements.models.REVIEWER_ROLES` to
+         *     include ``LEAD`` is the whole change.
+         *
+         *     **Nobody reviews their own request**, exec included, and this holds even
+         *     though a finance lead is exactly the sort of person who buys things for the
+         *     project. It is the same shape as ``_assert_not_self`` on the roster and for
+         *     the same reason: someone else does it, so the decision is witnessed rather
+         *     than unilateral. A finance lead's own claim goes to exec or to a second
+         *     finance lead. Authority is checked *before* selfhood, so a volunteer poking
+         *     at the endpoint gets the generic refusal rather than a hint about whose row
+         *     it is.
+         */
+        patch: operations["reimbursements_partial_update"];
+        trace?: never;
+    };
+    "/api/reimbursements/{id}/review/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Approve or reject one request.
+         *
+         *     A POST to its own route rather than a PATCH of ``status``, because the
+         *     permission rule here is not the one that governs editing — the person
+         *     allowed to do this is precisely the person not allowed to do that. Given
+         *     its own endpoint, the rules sit side by side instead of branching inside
+         *     one handler on which field changed.
+         *
+         *     Re-reviewing an already-decided request is allowed while the term is
+         *     open and re-stamps the decision; see ``record_decision``.
+         */
+        post: operations["reimbursements_review_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reimbursements/summary/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description How many requests sit in each state, and what they come to.
+         *
+         *     Exists because the list is paginated and a badge saying "3 waiting,
+         *     ₹4,200" must not depend on which page you are on. It runs the same
+         *     visibility and the same term scope as the list, so a volunteer's summary
+         *     covers a volunteer's own requests and a finance lead's covers the queue —
+         *     there is no second place for that rule to be got wrong.
+         *
+         *     The totals are what make this endpoint carry its weight now that a
+         *     request has an amount. What a finance lead needs on opening the screen is
+         *     not "four requests" but "₹4,200 waiting on me", and summing the page in
+         *     hand would have answered a different question.
+         *
+         *     Every status is present even at zero, so the client renders a fixed row
+         *     of tabs without filling in gaps.
+         */
+        get: operations["reimbursements_summary_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/resources/": {
         parameters: {
             query?: never;
@@ -1142,7 +1511,7 @@ export interface components {
             occurred_on: string;
             readonly attendees: components["schemas"]["User"][];
             readonly author: components["schemas"]["User"];
-            status?: components["schemas"]["StatusEnum"];
+            status?: components["schemas"]["DailyLogStatusEnum"];
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -1166,8 +1535,14 @@ export interface components {
              */
             occurred_on: string;
             attendee_ids?: number[];
-            status?: components["schemas"]["StatusEnum"];
+            status?: components["schemas"]["DailyLogStatusEnum"];
         };
+        /**
+         * @description * `DRAFT` - Draft
+         *     * `PUBLISHED` - Published
+         * @enum {string}
+         */
+        DailyLogStatusEnum: "DRAFT" | "PUBLISHED";
         GoogleLoginRequest: {
             /** @description The ID token issued by Google Identity Services. */
             credential: string;
@@ -1275,6 +1650,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Project"][];
         };
+        PaginatedReimbursementList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Reimbursement"][];
+        };
         PaginatedSemesterList: {
             /** @example 123 */
             count: number;
@@ -1312,7 +1702,7 @@ export interface components {
              */
             occurred_on?: string;
             attendee_ids?: number[];
-            status?: components["schemas"]["StatusEnum"];
+            status?: components["schemas"]["DailyLogStatusEnum"];
         };
         PatchedMembershipRequest: {
             /** Format: email */
@@ -1327,6 +1717,27 @@ export interface components {
             name?: string;
             description?: string;
             is_active?: boolean;
+        };
+        /**
+         * @description One claim, as it is read and as the submitter writes it.
+         *
+         *     Deliberately cannot write the decision. ``status``, ``reviewed_by``,
+         *     ``reviewed_at`` and ``review_note`` are all read-only here and are set only
+         *     through :class:`ReimbursementReviewSerializer` on the ``review`` action —
+         *     filing a claim and signing one off are different acts by different people
+         *     under different rules, and one writable ``status`` field would collapse them
+         *     into a PATCH that the viewset would then have to unpick.
+         */
+        PatchedReimbursementRequest: {
+            project?: number;
+            title?: string;
+            /**
+             * Format: decimal
+             * @description What is being claimed back, in rupees.
+             */
+            amount?: string;
+            /** @description What the money was spent on, and why. */
+            description?: string;
         };
         PatchedResourceRequest: {
             project?: number;
@@ -1371,6 +1782,91 @@ export interface components {
             description?: string;
             is_active?: boolean;
         };
+        /**
+         * @description One claim, as it is read and as the submitter writes it.
+         *
+         *     Deliberately cannot write the decision. ``status``, ``reviewed_by``,
+         *     ``reviewed_at`` and ``review_note`` are all read-only here and are set only
+         *     through :class:`ReimbursementReviewSerializer` on the ``review`` action —
+         *     filing a claim and signing one off are different acts by different people
+         *     under different rules, and one writable ``status`` field would collapse them
+         *     into a PATCH that the viewset would then have to unpick.
+         */
+        Reimbursement: {
+            readonly id: number;
+            project: number;
+            readonly project_slug: string;
+            readonly semester: number;
+            readonly semester_slug: string;
+            title: string;
+            /**
+             * Format: decimal
+             * @description What is being claimed back, in rupees.
+             */
+            amount: string;
+            /** @description What the money was spent on, and why. */
+            description: string;
+            readonly status: components["schemas"]["ReimbursementStatusEnum"];
+            readonly submitted_by: components["schemas"]["User"];
+            readonly reviewed_by: components["schemas"]["User"] | null;
+            /** Format: date-time */
+            readonly reviewed_at: string | null;
+            /** @description Why it was approved or turned down. Required when rejecting. */
+            readonly review_note: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /**
+         * @description One claim, as it is read and as the submitter writes it.
+         *
+         *     Deliberately cannot write the decision. ``status``, ``reviewed_by``,
+         *     ``reviewed_at`` and ``review_note`` are all read-only here and are set only
+         *     through :class:`ReimbursementReviewSerializer` on the ``review`` action —
+         *     filing a claim and signing one off are different acts by different people
+         *     under different rules, and one writable ``status`` field would collapse them
+         *     into a PATCH that the viewset would then have to unpick.
+         */
+        ReimbursementRequest: {
+            project: number;
+            title: string;
+            /**
+             * Format: decimal
+             * @description What is being claimed back, in rupees.
+             */
+            amount: string;
+            /** @description What the money was spent on, and why. */
+            description: string;
+        };
+        /**
+         * @description The body of ``POST /api/reimbursements/{id}/review/``.
+         *
+         *     A serializer of its own rather than a corner of the model one, because the
+         *     two describe different acts: this is the only place ``status`` is writable,
+         *     and it is writable to two of the three values — a decision is a decision, so
+         *     a reviewer cannot set a claim back to ``PENDING``. Undoing a decision is
+         *     making the other one, which stays on the record with the reviewer's name on
+         *     it.
+         */
+        ReimbursementReviewRequest: {
+            status: components["schemas"]["ReimbursementReviewStatusEnum"];
+            /** @description Why. Required when rejecting. */
+            note?: string;
+        };
+        /**
+         * @description * `APPROVED` - Approved
+         *     * `REJECTED` - Rejected
+         * @enum {string}
+         */
+        ReimbursementReviewStatusEnum: "APPROVED" | "REJECTED";
+        /**
+         * @description * `PENDING` - Awaiting review
+         *     * `APPROVED` - Approved
+         *     * `REJECTED` - Rejected
+         * @enum {string}
+         */
+        ReimbursementStatusEnum: "PENDING" | "APPROVED" | "REJECTED";
         Resource: {
             readonly id: number;
             project: number;
@@ -1439,12 +1935,6 @@ export interface components {
             user: components["schemas"]["User"];
             memberships: components["schemas"]["MembershipSummary"][];
         };
-        /**
-         * @description * `DRAFT` - Draft
-         *     * `PUBLISHED` - Published
-         * @enum {string}
-         */
-        StatusEnum: "DRAFT" | "PUBLISHED";
         User: {
             readonly id: number;
             /**
@@ -2228,6 +2718,232 @@ export interface operations {
                 };
                 content: {
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+        };
+    };
+    reimbursements_list: {
+        parameters: {
+            query?: {
+                /** @description `true` narrows the list to the caller's own requests. */
+                mine?: boolean;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Project slug. */
+                project?: string;
+                /** @description Semester slug, or `all`. Defaults to the term in progress. */
+                semester?: string;
+                /** @description One ReimbursementStatus — PENDING is the review queue. */
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedReimbursementList"];
+                };
+            };
+        };
+    };
+    reimbursements_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReimbursementRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReimbursementRequest"];
+                "multipart/form-data": components["schemas"]["ReimbursementRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reimbursement"];
+                };
+            };
+        };
+    };
+    reimbursements_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this reimbursement. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reimbursement"];
+                };
+            };
+        };
+    };
+    reimbursements_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this reimbursement. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReimbursementRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReimbursementRequest"];
+                "multipart/form-data": components["schemas"]["ReimbursementRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reimbursement"];
+                };
+            };
+        };
+    };
+    reimbursements_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this reimbursement. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reimbursements_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this reimbursement. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedReimbursementRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedReimbursementRequest"];
+                "multipart/form-data": components["schemas"]["PatchedReimbursementRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reimbursement"];
+                };
+            };
+        };
+    };
+    reimbursements_review_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this reimbursement. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReimbursementReviewRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReimbursementReviewRequest"];
+                "multipart/form-data": components["schemas"]["ReimbursementReviewRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reimbursement"];
+                };
+            };
+        };
+    };
+    reimbursements_summary_retrieve: {
+        parameters: {
+            query?: {
+                /** @description `true` narrows the list to the caller's own requests. */
+                mine?: boolean;
+                /** @description Project slug. */
+                project?: string;
+                /** @description Semester slug, or `all`. Defaults to the term in progress. */
+                semester?: string;
+                /** @description One ReimbursementStatus — PENDING is the review queue. */
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        PENDING: {
+                            count: number;
+                            /** Format: decimal */
+                            total: string;
+                        };
+                        APPROVED: {
+                            count: number;
+                            /** Format: decimal */
+                            total: string;
+                        };
+                        REJECTED: {
+                            count: number;
+                            /** Format: decimal */
+                            total: string;
+                        };
+                    };
                 };
             };
         };

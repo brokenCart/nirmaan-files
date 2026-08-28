@@ -17,6 +17,11 @@ import type {
   MembershipInput,
   Paginated,
   Project,
+  Reimbursement,
+  ReimbursementInput,
+  ReimbursementPatch,
+  ReimbursementReview,
+  ReimbursementSummary,
   Resource,
   ResourceInput,
   ResourcePatch,
@@ -51,6 +56,23 @@ export const queryKeys = {
    */
   article: (id: number) => ['article', id] as const,
   articleRevisions: (id: number) => ['article', id, 'revisions'] as const,
+  /**
+   * One project's queue, and the counts beside it.
+   *
+   * The filters are part of the key, and the term among them: reimbursements
+   * are semester-scoped like logs and unlike the shelf, so switching terms must
+   * not read the previous one's rows from cache.
+   */
+  reimbursements: (slug: string, filters: ReimbursementFilters) =>
+    ['reimbursements', slug, filters] as const,
+  /**
+   * Prefix matching every filtered and paged view of one project's queue.
+   *
+   * Invalidation uses this rather than a fully-specified key: a review moves a
+   * row between status tabs, so the tab it left and the tab it arrived on are
+   * both stale, and so is the summary.
+   */
+  reimbursementsForProject: (slug: string) => ['reimbursements', slug] as const,
   attendance: (slug: string, semester?: string) =>
     ['attendance', slug, semester ?? null] as const,
   /**
@@ -81,6 +103,26 @@ export type LogFilters = {
   until?: string
   /** A semester slug, or `all` to read across every term. Defaults to the open one. */
   semester?: string
+  page?: number
+} & Record<string, string | number | undefined>
+
+/**
+ * Rows per page of `/api/reimbursements/`.
+ *
+ * Mirrors `ReimbursementPagination.page_size`, for the reason
+ * {@link LOGS_PAGE_SIZE} mirrors the timeline's: DRF reports `count` but not
+ * the page size, and the SPA needs the size to turn one into a page total.
+ * Change both together.
+ */
+export const REIMBURSEMENTS_PAGE_SIZE = 20
+
+/** Filters accepted by the reimbursement queue. */
+export type ReimbursementFilters = {
+  status?: string
+  /** A semester slug, or `all`. Defaults to the open term. */
+  semester?: string
+  /** `true` narrows a finance lead's view to their own requests. */
+  mine?: string
   page?: number
 } & Record<string, string | number | undefined>
 
@@ -411,6 +453,113 @@ export function useDeleteArticle(projectSlug: string) {
     onSuccess: (_result, id) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.articlesForProject(projectSlug) })
       void queryClient.invalidateQueries({ queryKey: queryKeys.article(id) })
+    },
+  })
+}
+
+/**
+ * One project's reimbursement queue for one term.
+ *
+ * Paginated, unlike the shelf and the knowledge index — those are bounded by a
+ * project's own tidiness and this is not, because nobody prunes last month's
+ * claims. What the reader sees depends on who they are: the server returns a
+ * volunteer their own requests and a lead or finance lead the whole queue, so
+ * there is nothing to filter here.
+ */
+export function useReimbursements(slug: string, filters: ReimbursementFilters = {}) {
+  return useQuery({
+    queryKey: queryKeys.reimbursements(slug, filters),
+    queryFn: () =>
+      api.get<Paginated<Reimbursement>>('/api/reimbursements/', { project: slug, ...filters }),
+    // Hold the current page while the next loads, so switching status tabs does
+    // not collapse the list to a spinner.
+    placeholderData: keepPreviousData,
+  })
+}
+
+/**
+ * How many requests sit in each state.
+ *
+ * A request of its own rather than a count off the list, because the list is
+ * paginated: "3 awaiting review" must not become "2" when the reader turns the
+ * page. The server runs the identical visibility rules, so a volunteer's counts
+ * are of their own requests.
+ *
+ * Deliberately does not take `status` — it is a count *per* status, and the
+ * server ignores that filter for the same reason.
+ */
+export function useReimbursementSummary(slug: string, filters: ReimbursementFilters = {}) {
+  const { status: _status, page: _page, ...rest } = filters
+  return useQuery({
+    queryKey: [...queryKeys.reimbursementsForProject(slug), 'summary', rest] as const,
+    queryFn: () =>
+      api.get<ReimbursementSummary>('/api/reimbursements/summary/', { project: slug, ...rest }),
+  })
+}
+
+export function useCreateReimbursement(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: ReimbursementInput) =>
+      api.post<Reimbursement>('/api/reimbursements/', body),
+    onSuccess: () => {
+      // Only the queue and its counts. Reimbursements are not counted in the
+      // attendance table and do not appear in the archive's per-term totals,
+      // so the broader invalidation the log mutations do would be waste.
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.reimbursementsForProject(projectSlug),
+      })
+    },
+  })
+}
+
+export function useUpdateReimbursement(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    // PATCH rather than PUT: the form carries the two editable fields, and the
+    // server owns the submitter, the term and the whole decision.
+    mutationFn: ({ id, ...body }: ReimbursementPatch & { id: number }) =>
+      api.patch<Reimbursement>(`/api/reimbursements/${id}/`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.reimbursementsForProject(projectSlug),
+      })
+    },
+  })
+}
+
+/**
+ * Approves or rejects one request.
+ *
+ * Its own endpoint rather than a PATCH of `status`, mirroring the server: the
+ * person allowed to do this is precisely the person not allowed to edit the
+ * request, so the two are different calls under different rules.
+ */
+export function useReviewReimbursement(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: ReimbursementReview & { id: number }) =>
+      api.post<Reimbursement>(`/api/reimbursements/${id}/review/`, body),
+    onSuccess: () => {
+      // A decision moves the row between status tabs, so the tab it left, the
+      // tab it arrived on and the counts are all stale. The prefix clears them
+      // together rather than guessing which cached filters were affected.
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.reimbursementsForProject(projectSlug),
+      })
+    },
+  })
+}
+
+/** Withdraws or removes a request. Soft on the server, like a log. */
+export function useDeleteReimbursement(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.delete<void>(`/api/reimbursements/${id}/`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.reimbursementsForProject(projectSlug),
+      })
     },
   })
 }

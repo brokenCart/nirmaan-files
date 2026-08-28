@@ -82,6 +82,14 @@ def discard_placeholder_user(user) -> bool:
       cost of it being wrong is the 500 this function exists to avoid. Note
       that a soft-deleted page still holds its references, so a placeholder who
       started a page that was later removed is correctly refused.
+    - **a reimbursement request, filed or reviewed** —
+      ``Reimbursement.submitted_by`` and ``reviewed_by`` are both PROTECT. The
+      submitted case is unreachable in practice for the same reason the
+      authored-entry one is; the *reviewed* case is not even reachable in
+      principle, since reviewing needs a finance lead's login, but both are
+      asserted rather than argued about. A soft-deleted request still holds its
+      references, and a settled claim is precisely the row a financial record
+      cannot afford to lose the names off.
 
     Call *after* the membership row is gone, so "no remaining memberships" is a
     question about what is left. Returns whether the user was deleted.
@@ -99,6 +107,8 @@ def discard_placeholder_user(user) -> bool:
     if user.article_revisions.exists():
         return False
     if user.authored_articles.exists() or user.edited_articles.exists():
+        return False
+    if user.submitted_reimbursements.exists() or user.reviewed_reimbursements.exists():
         return False
 
     user.delete()

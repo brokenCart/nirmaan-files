@@ -6,6 +6,7 @@ import { ArticlePage } from '@/features/knowledge/ArticlePage'
 import { ProjectKnowledgePage } from '@/features/knowledge/ProjectKnowledgePage'
 import { ProjectTimelinePage } from '@/features/logs/ProjectTimelinePage'
 import { ProjectListPage } from '@/features/projects/ProjectListPage'
+import { ProjectReimbursementsPage } from '@/features/reimbursements/ProjectReimbursementsPage'
 import { ProjectResourcesPage } from '@/features/resources/ProjectResourcesPage'
 import { ProjectArchivePage } from '@/features/semesters/ProjectArchivePage'
 import { AppLayout } from '@/routes/AppLayout'
@@ -28,6 +29,10 @@ export function App() {
         <Route path="/projects/:slug/attendance" element={<ProjectAttendancePage />} />
         <Route path="/projects/:slug/archive" element={<ProjectArchivePage />} />
         <Route path="/projects/:slug/resources" element={<ProjectResourcesPage />} />
+        <Route
+          path="/projects/:slug/reimbursements"
+          element={<ProjectReimbursementsPage />}
+        />
         <Route path="/projects/:slug/knowledge" element={<ProjectKnowledgePage />} />
         <Route path="/projects/:slug/knowledge/:articleId" element={<ArticlePage />} />
       </Route>

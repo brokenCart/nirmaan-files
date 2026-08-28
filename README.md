@@ -7,7 +7,7 @@ Nirmaan runs several *verticals* — called **projects** here. Each one accumula
 meetings, and context, and today none of it lives anywhere durable: institutional memory leaves
 with every graduating batch. This app is the shared record.
 
-Four things are tracked per project:
+Five things are tracked per project:
 
 | Module | Status |
 | --- | --- |
@@ -15,6 +15,7 @@ Four things are tracked per project:
 | **Knowledge base** — past context and how-things-work | ✅ shipped |
 | **Volunteer visit tracking** — who showed up, when | ✅ shipped |
 | **Resource links** — Drive folders and other pointers | ✅ shipped |
+| **Reimbursements** — volunteers claim money back, the finance lead signs it off | ✅ shipped |
 
 Opening a new semester still has **no screen** — the API supports it, but exec does it through the
 Django admin at `/admin/` for now. Roster changes do have one: see *Adding members* below.
@@ -23,7 +24,7 @@ Django admin at `/admin/` for now. Roster changes do have one: see *Adding membe
 
 Every entry is a MOV or a MOM on one project's timeline, and both kinds carry an **attendee list** —
 that list is what visit and meeting counts are derived from, so mark who was actually there.
-Entries are text-only for now; photos and video are deferred (`CLAUDE.md` explains why).
+Entries are text-only for now; photos and video are deferred (`AGENTS.md` explains why).
 
 Who may do what:
 
@@ -87,8 +88,8 @@ project is something a colleague does for you rather than something you do quiet
 a project's only lead from stranding a roster nobody is left to manage. If the row was a placeholder nobody has ever signed in to
 — a mistyped address, say — the account is deleted along with it, so typos do not pile up as
 unclaimable users. That only happens when nothing else needs the account: if they are on another
-project, on a past term's roster, marked present at a visit, or attached to a resource or knowledge
-page, the account stays and only this term's roster row goes.
+project, on a past term's roster, marked present at a visit, or attached to a resource, a knowledge
+page or a reimbursement request, the account stays and only this term's roster row goes.
 
 ## Resources
 
@@ -126,12 +127,53 @@ timeline.
 
 Counts are **headcounts, not hours** — a half-hour call and a full-day site visit each count once —
 and they are per project, so someone active in two verticals has no combined total. A visit also
-only counts if a MOV was actually filed for it. All three are deliberate for now; `CLAUDE.md`
+only counts if a MOV was actually filed for it. All three are deliberate for now; `AGENTS.md`
 records why under *Open questions*.
 
 Behind it, `GET /api/projects/<slug>/attendance/` returns the rows and
 `GET /api/projects/<slug>/attendance/export/` returns the workbook. Any member of the project can
 read both.
+
+## Reimbursements
+
+Volunteers spend their own money on a project — bus fares, chart paper, printing for a parents'
+session — and claim it back at `/projects/<slug>/reimbursements`. A request says what the money was
+for, how much in rupees, and enough detail for whoever reviews it.
+
+This is the one screen where **what you see depends on who you are**. Everywhere else in the app,
+everyone on a project reads the same rows:
+
+- **A volunteer sees their own requests and nobody else's.** What one member spent is not another
+  member's business, so the filtering happens on the server rather than in the browser.
+- **Leads and finance leads see the project's whole queue**, filtered by state, with a count and a
+  running total against each.
+- **Only the finance lead, and exec, can approve or reject.** A plain lead reads the queue without
+  deciding it: running a project means knowing what is being claimed against it, but signing it off
+  is the finance lead's job. If a project has no finance lead this semester, exec can step in.
+- **Nobody reviews their own request**, exec included. A finance lead who buys something for the
+  project sends that claim to exec or to a second finance lead, so no one approves their own money.
+
+A rejection has to say why. The volunteer reads that note, and a claim turned down without a reason
+simply gets refiled unchanged; an approval needs no note, since the money arriving is the message. A
+reviewer can change their mind while the term is open, and the screen then offers only the other
+decision — an approved claim shows *Change to rejected* and nothing else.
+
+Editing and removal both stop at that decision:
+
+- **The submitter can edit a request, but only while it is still awaiting review.** Once it has been
+  approved or rejected the wording and the amount are fixed: an approval is an approval of a
+  *specific* claim, and a figure that could change afterwards would be a signature on a blank page.
+  No role overrides this — a finance lead who disagrees reviews the claim rather than rewriting it.
+- **The submitter can withdraw a pending request**, and leads and finance leads can clear one off
+  the queue. Once reviewed it is part of the project's financial record and only exec removes it.
+  Removal is soft either way.
+
+Requests are **per semester**, like the timeline and unlike the resource shelf: a claim is an event,
+and the budget it comes out of restarts each August. A closed term is frozen, and a former member
+keeps read-only access to what they once claimed — "was I ever paid" outlives a roster.
+
+Receipts cannot be attached yet, so say where yours is in the details. Photographs are deferred for
+the same reason photos on the timeline are (`AGENTS.md` explains why, and what the shape will be).
 
 ## Stack
 
@@ -180,9 +222,11 @@ cd backend && uv run python manage.py seed_demo --reset
 ```
 
 Creates three projects with a lead, a finance lead, and two volunteers each, one exec-committee
-account, sample MOV/MOM entries with attendees on both, four resource links and four knowledge
-pages per project. One knowledge page has an alumnus-to-current-lead revision trail, and one person
-leads a project while volunteering in another — the cases those permission models exist for.
+account, sample MOV/MOM entries with attendees on both, and four resource links, four knowledge
+pages and four reimbursement requests per project. One knowledge page has an alumnus-to-current-lead
+revision trail, one reimbursement is the finance lead's own claim — the one they cannot review
+themselves — and one person leads a project while volunteering in another. Each is a case those
+permission models exist for, sitting where you can click on it.
 
 If your database predates attendees on visits, existing MOVs have none and every visit count reads
 zero until entries are edited or the data is re-seeded. `--reset` drops the existing rows.
@@ -195,5 +239,9 @@ cd backend && uv run pytest
 
 ## Contributing
 
-`CLAUDE.md` and `AGENTS.md` contain the same architecture, permission model and conventions for
-their respective coding agents. Read the one your tool uses before adding a module.
+`AGENTS.md` holds the architecture, permission model and conventions. Read it before adding a
+module — whichever coding agent you use, and whether or not you use one.
+
+`CLAUDE.md` is a one-line `@AGENTS.md` import and holds no content of its own: Claude Code reads
+`CLAUDE.md` rather than `AGENTS.md`, so the pointer is what makes both tools see the same document.
+Edit `AGENTS.md`.

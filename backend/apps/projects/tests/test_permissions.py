@@ -17,11 +17,13 @@ from apps.conftest import (
     ArticleFactory,
     DailyLogFactory,
     MembershipFactory,
+    ReimbursementFactory,
     ResourceFactory,
     UserFactory,
 )
 from apps.knowledge.models import Article
 from apps.projects.models import Membership, Role, Semester
+from apps.reimbursements.models import Reimbursement, ReimbursementStatus
 from apps.resources.models import Resource
 
 pytestmark = pytest.mark.django_db
@@ -896,3 +898,83 @@ class TestCrossProjectRoles:
             ).status_code
             == 403
         )
+
+
+class TestReimbursementRoles:
+    """The two boundaries this file is the net for, applied to money.
+
+    The module's own rules — the review workflow, the freeze on a settled
+    request — live in `apps/reimbursements/tests/`. What belongs here is what
+    every module has to get right independently: the project boundary and the
+    semester boundary. Reimbursements raise the stakes on both, because this is
+    the first endpoint where crossing one exposes other people's spending
+    rather than a shared record everyone on the roster already reads.
+    """
+
+    def test_an_outsider_sees_nothing_of_another_projects_queue(
+        self, auth_client, outsider, volunteer, project
+    ):
+        ReimbursementFactory(project=project, submitted_by=volunteer)
+        response = auth_client(outsider).get(reverse("reimbursement-list"))
+        assert response.data["results"] == []
+
+    def test_an_outsider_cannot_file_against_another_project(self, auth_client, outsider, project):
+        response = auth_client(outsider).post(
+            reverse("reimbursement-list"),
+            {
+                "project": project.pk,
+                "title": "Not mine",
+                "amount": "100.00",
+                "description": "Nor this.",
+            },
+        )
+        assert response.status_code in (400, 403)
+        assert not Reimbursement.objects.filter(project=project).exists()
+
+    def test_a_finance_lead_of_one_project_cannot_review_anothers(
+        self, auth_client, volunteer, project, other_project
+    ):
+        """`FINANCE_LEAD` is per project, like every other role.
+
+        The first role in this codebase to carry a power of its own, so the
+        cross-project case is worth pinning: signing off Aarogya's spending is
+        no part of being Shiksha's finance lead.
+        """
+        elsewhere = UserFactory(email=f"finance.elsewhere@{CAMPUS}")
+        MembershipFactory(user=elsewhere, project=other_project, role=Role.FINANCE_LEAD)
+        row = ReimbursementFactory(project=project, submitted_by=volunteer)
+
+        response = auth_client(elsewhere).post(
+            reverse("reimbursement-review", kwargs={"pk": row.pk}),
+            {"status": ReimbursementStatus.APPROVED},
+        )
+        assert response.status_code == 404
+        row.refresh_from_db()
+        assert row.is_pending
+
+    def test_a_past_lead_loses_the_queue_but_keeps_their_own_rows(
+        self, auth_client, past_lead, volunteer, project
+    ):
+        """The read/write split, on the one endpoint where reading is the risk.
+
+        `past_lead` still passes the project boundary, so a queue resolved
+        against unscoped membership would hand them this term's claims. Their
+        own history has to survive, though — "was I ever paid" outlives a term.
+        """
+        ReimbursementFactory(project=project, submitted_by=volunteer, title="Not theirs")
+        ReimbursementFactory(project=project, submitted_by=past_lead, title="Theirs")
+
+        response = auth_client(past_lead).get(reverse("reimbursement-list"), {"semester": "all"})
+        assert {row["title"] for row in response.data["results"]} == {"Theirs"}
+
+    def test_a_past_lead_cannot_file(self, auth_client, past_lead, project):
+        response = auth_client(past_lead).post(
+            reverse("reimbursement-list"),
+            {
+                "project": project.pk,
+                "title": "Late claim",
+                "amount": "100.00",
+                "description": "From last year.",
+            },
+        )
+        assert response.status_code == 403

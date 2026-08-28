@@ -1,6 +1,7 @@
 """Shared fixtures and factories."""
 
 import datetime
+from decimal import Decimal
 
 import factory
 import pytest
@@ -11,6 +12,7 @@ from apps.accounts.models import User
 from apps.knowledge.models import Article, ArticleCategory
 from apps.logs.models import DailyLog, LogKind, LogStatus
 from apps.projects.models import Membership, Project, Role, Semester
+from apps.reimbursements.models import Reimbursement
 from apps.resources.models import Resource, ResourceKind
 
 CAMPUS = "pilani.bits-pilani.ac.in"
@@ -123,6 +125,31 @@ class ArticleFactory(factory.django.DjangoModelFactory):
     # and a faker that repeats itself would fail it rather than the assertion.
     title = factory.Sequence(lambda n: f"Article {n}")
     body = factory.Faker("paragraph")
+
+
+class ReimbursementFactory(factory.django.DjangoModelFactory):
+    """A claim awaiting review.
+
+    No ``semester``: `Reimbursement.save` stamps the open term, which is what a
+    request filed through the API gets, and passing one would let a test drift
+    out of the term its fixtures live in. Tests about the frozen-archive rule
+    set ``semester=past_semester`` explicitly.
+
+    Left ``PENDING`` — the state every request starts in and the one most rules
+    branch on. Tests about the freeze approve or reject it first.
+    """
+
+    class Meta:
+        model = Reimbursement
+
+    project = factory.SubFactory(ProjectFactory)
+    submitted_by = factory.SubFactory(UserFactory)
+    title = factory.Sequence(lambda n: f"Reimbursement {n}")
+    # Sequenced rather than faked, and distinct per row, so a test asserting a
+    # summary total fails on the arithmetic rather than on two rows happening
+    # to carry the same figure.
+    amount = factory.Sequence(lambda n: Decimal(f"{100 + n}.50"))
+    description = factory.Faker("sentence")
 
 
 @pytest.fixture

@@ -1,4 +1,13 @@
-import { BarChart3, BookOpen, CalendarRange, Library, Pencil, Plus, Trash2 } from 'lucide-react'
+import {
+  BarChart3,
+  BookOpen,
+  CalendarRange,
+  IndianRupee,
+  Library,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
@@ -186,6 +195,18 @@ export function ProjectTimelinePage() {
             <Button variant="secondary">
               <BookOpen className="size-4" aria-hidden />
               Knowledge
+            </Button>
+          </Link>
+
+          {/* Carries `?semester=` like Attendance and unlike Resources: a claim
+              belongs to the term it was filed in, so the queue is per term and
+              the viewed one means something there. */}
+          <Link
+            to={`/projects/${slug}/reimbursements${viewedTerm ? `?semester=${viewedTerm}` : ''}`}
+          >
+            <Button variant="secondary">
+              <IndianRupee className="size-4" aria-hidden />
+              Reimbursements
             </Button>
           </Link>
 
