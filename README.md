@@ -24,7 +24,8 @@ Django admin at `/admin/` for now. Roster changes do have one: see *Adding membe
 
 Every entry is a MOV or a MOM on one project's timeline, and both kinds carry an **attendee list** —
 that list is what visit and meeting counts are derived from, so mark who was actually there.
-Entries are text-only for now; photos and video are deferred (`AGENTS.md` explains why).
+Entries are text-only for now; photos and video are deferred
+([`docs/deferred-media.md`](docs/deferred-media.md) explains why).
 
 Who may do what:
 
@@ -127,8 +128,8 @@ timeline.
 
 Counts are **headcounts, not hours** — a half-hour call and a full-day site visit each count once —
 and they are per project, so someone active in two verticals has no combined total. A visit also
-only counts if a MOV was actually filed for it. All three are deliberate for now; `AGENTS.md`
-records why under *Open questions*.
+only counts if a MOV was actually filed for it. All three are deliberate for now;
+[`docs/open-questions.md`](docs/open-questions.md) records why.
 
 Behind it, `GET /api/projects/<slug>/attendance/` returns the rows and
 `GET /api/projects/<slug>/attendance/export/` returns the workbook. Any member of the project can
@@ -173,7 +174,8 @@ and the budget it comes out of restarts each August. A closed term is frozen, an
 keeps read-only access to what they once claimed — "was I ever paid" outlives a roster.
 
 Receipts cannot be attached yet, so say where yours is in the details. Photographs are deferred for
-the same reason photos on the timeline are (`AGENTS.md` explains why, and what the shape will be).
+the same reason photos on the timeline are
+([`docs/deferred-media.md`](docs/deferred-media.md) explains why, and what the shape will be).
 
 ## Stack
 
@@ -239,9 +241,26 @@ cd backend && uv run pytest
 
 ## Contributing
 
-`AGENTS.md` holds the architecture, permission model and conventions. Read it before adding a
-module — whichever coding agent you use, and whether or not you use one.
+`AGENTS.md` holds the role model, the conventions and the rules that apply to every change. Read it
+before adding a module — whichever coding agent you use, and whether or not you use one. It is
+deliberately short so it is cheap to keep loaded.
+
+Everything module-specific lives in [`docs/`](docs/), one file per area, with a routing table in
+`AGENTS.md` saying which to open. Each explains decisions that are not recoverable from the code, so
+read the relevant one before changing that area:
+
+| Area | File |
+| --- | --- |
+| Semesters, rollover, the archive | [`docs/semesters.md`](docs/semesters.md) |
+| Membership rows and roster changes | [`docs/roster.md`](docs/roster.md) |
+| Sign-in and tokens | [`docs/auth.md`](docs/auth.md) |
+| MOVs, MOMs and attendance | [`docs/daily-logs.md`](docs/daily-logs.md) |
+| The resource shelf | [`docs/resources.md`](docs/resources.md) |
+| Knowledge base pages | [`docs/knowledge-base.md`](docs/knowledge-base.md) |
+| Reimbursements | [`docs/reimbursements.md`](docs/reimbursements.md) |
+| File upload, and why there is none | [`docs/deferred-media.md`](docs/deferred-media.md) |
+| What is deliberately unsettled | [`docs/open-questions.md`](docs/open-questions.md) |
 
 `CLAUDE.md` is a one-line `@AGENTS.md` import and holds no content of its own: Claude Code reads
 `CLAUDE.md` rather than `AGENTS.md`, so the pointer is what makes both tools see the same document.
-Edit `AGENTS.md`.
+Edit `AGENTS.md` or the file in `docs/`, never `CLAUDE.md`.
