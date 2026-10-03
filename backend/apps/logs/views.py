@@ -1,3 +1,5 @@
+from django.db.models import Q
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -9,7 +11,45 @@ from .models import DailyLog
 from .pagination import DailyLogPagination
 from .serializers import DailyLogSerializer
 
+FEED_PARAMS = [
+    OpenApiParameter(name="project", description="Project slug.", required=False, type=str),
+    OpenApiParameter(name="kind", description="MOV or MOM.", required=False, type=str),
+    OpenApiParameter(
+        name="semester",
+        description="Semester slug, or `all`. Defaults to the open term.",
+        required=False,
+        type=str,
+    ),
+    OpenApiParameter(
+        name="q",
+        description="Free-text match over title, body, author and attendees.",
+        required=False,
+        type=str,
+    ),
+]
 
+
+def _matches(search: str) -> Q:
+    """Entries whose text, author or attendees mention `search`.
+
+    A plain ILIKE, as in the knowledge base: a project files a few hundred
+    entries a year, which a sequential scan handles for free.
+
+    Attendees match through a subquery on the primary key rather than a join,
+    because joining the M2M would return an entry once per matching attendee
+    and break the page counts.
+    """
+    people = Q(attendees__full_name__icontains=search) | Q(attendees__email__icontains=search)
+    return (
+        Q(title__icontains=search)
+        | Q(body__icontains=search)
+        | Q(author__full_name__icontains=search)
+        | Q(author__email__icontains=search)
+        | Q(pk__in=DailyLog.objects.filter(people).values("pk"))
+    )
+
+
+@extend_schema_view(list=extend_schema(parameters=FEED_PARAMS))
 class DailyLogViewSet(viewsets.ModelViewSet):
     """MOV and MOM entries on a project timeline.
 
@@ -52,6 +92,8 @@ class DailyLogViewSet(viewsets.ModelViewSet):
             qs = qs.filter(occurred_on__gte=since)
         if until := params.get("until"):
             qs = qs.filter(occurred_on__lte=until)
+        if search := params.get("q", "").strip():
+            qs = qs.filter(_matches(search))
 
         # Scoping to a term is a property of the *feed*, not of an entry. A
         # detail route must reach an archived entry by its own URL — otherwise

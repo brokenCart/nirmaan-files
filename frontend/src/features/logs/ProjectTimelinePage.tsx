@@ -1,29 +1,22 @@
-import {
-  BarChart3,
-  BookOpen,
-  CalendarRange,
-  IndianRupee,
-  Library,
-  Pencil,
-  Plus,
-  Trash2,
-} from 'lucide-react'
-import { useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { useDeferredValue, useState } from 'react'
+import { useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '@/api/client'
-import type { EffectiveRole } from '@/api/types'
 import { canDeleteLog, canEditLog, canManageRoster, canRemoveMember } from '@/api/types'
 import { useAuth } from '@/auth/AuthContext'
-import { Ornament } from '@/components/Logo'
+import { ProjectHeader } from '@/components/ProjectHeader'
 import {
   Button,
   Card,
   EmptyState,
   ErrorNote,
   KindBadge,
+  Notice,
   Pagination,
-  RoleBadge,
+  SearchField,
+  Segmented,
+  SectionIntro,
   Spinner,
 } from '@/components/ui'
 import { ProjectMembersPanel } from '@/features/projects/ProjectMembersPanel'
@@ -38,7 +31,7 @@ import {
 } from '@/features/projects/queries'
 import { SemesterSwitcher } from '@/features/semesters/SemesterSwitcher'
 import { ALL_TERMS, isArchivedTerm } from '@/features/semesters/terms'
-import { cn, formatDate } from '@/lib/utils'
+import { cn, dateParts } from '@/lib/utils'
 
 import { CopyLogButton } from './CopyLogButton'
 import { LogComposer } from './LogComposer'
@@ -50,6 +43,9 @@ export function ProjectTimelinePage() {
   const { roleIn, user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [kindFilter, setKindFilter] = useState<KindFilter>('ALL')
+  const [search, setSearch] = useState('')
+  // Typing stays responsive; the request follows the deferred value.
+  const deferredSearch = useDeferredValue(search.trim())
   const [page, setPage] = useState(1)
   const [composing, setComposing] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -68,6 +64,7 @@ export function ProjectTimelinePage() {
     project: slug,
     kind: kindFilter === 'ALL' ? undefined : kindFilter,
     semester: viewedTerm,
+    q: deferredSearch || undefined,
     page,
   })
 
@@ -90,6 +87,14 @@ export function ProjectTimelinePage() {
     setKindFilter(next)
     setPage(1)
   }
+
+  // Same reason as `changeFilter`: fewer matches can mean fewer pages.
+  function changeSearch(next: string) {
+    setSearch(next)
+    setPage(1)
+  }
+
+  const filtering = deferredSearch.length > 0 || kindFilter !== 'ALL'
 
   function changePage(next: number) {
     setPage(next)
@@ -140,321 +145,298 @@ export function ProjectTimelinePage() {
   if (!project.data) return <ErrorNote message="Project not found." />
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link to="/" className="text-sm text-ink-mute hover:text-brand-600">
-            ← All projects
-          </Link>
-          <h1 className="mt-1 flex items-center gap-3 font-display text-2xl font-semibold text-ink">
-            {project.data.name}
-            {role ? (
-              <RoleBadge role={role as EffectiveRole} />
-            ) : (
-              // No role this term: here on a past membership, and read-only.
-              // Same marker the project list uses.
-              <span className="inline-flex shrink-0 rounded-full bg-paper-deep px-2.5 py-0.5 text-xs font-semibold text-ink-mute ring-1 ring-line-strong ring-inset">
-                Archive only
-              </span>
-            )}
-          </h1>
-          {project.data.description && (
-            <p className="mt-1 max-w-2xl text-sm text-ink-soft">{project.data.description}</p>
-          )}
-        </div>
+    <div>
+      <ProjectHeader project={project.data} />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to={`/projects/${slug}/attendance${viewedTerm ? `?semester=${viewedTerm}` : ''}`}
-          >
-            <Button variant="secondary">
-              <BarChart3 className="size-4" aria-hidden />
-              Attendance
-            </Button>
-          </Link>
-
-          <Link to={`/projects/${slug}/archive`}>
-            <Button variant="secondary">
-              <CalendarRange className="size-4" aria-hidden />
-              Archive
-            </Button>
-          </Link>
-
-          {/* No `?semester=`, unlike Attendance: the shelf belongs to no term,
-              so carrying the viewed one across would promise a filter that
-              does not exist. */}
-          <Link to={`/projects/${slug}/resources`}>
-            <Button variant="secondary">
-              <Library className="size-4" aria-hidden />
-              Resources
-            </Button>
-          </Link>
-
-          {/* Knowledge, like resources, carries across semesters. */}
-          <Link to={`/projects/${slug}/knowledge`}>
-            <Button variant="secondary">
-              <BookOpen className="size-4" aria-hidden />
-              Knowledge
-            </Button>
-          </Link>
-
-          {/* Carries `?semester=` like Attendance and unlike Resources: a claim
-              belongs to the term it was filed in, so the queue is per term and
-              the viewed one means something there. */}
-          <Link
-            to={`/projects/${slug}/reimbursements${viewedTerm ? `?semester=${viewedTerm}` : ''}`}
-          >
-            <Button variant="secondary">
-              <IndianRupee className="size-4" aria-hidden />
-              Reimbursements
-            </Button>
-          </Link>
-
-          {/* Filing is only possible against the open term, so the button is
-              absent rather than disabled on an archived one. */}
-          {!composing && !viewingArchive && role && (
-            <Button
-              onClick={() => {
-                setComposing(true)
-                // One editor open at a time, so it is never ambiguous which
-                // form a Save applies to.
-                setEditingId(null)
-              }}
-            >
-              <Plus className="size-4" aria-hidden />
-              New entry
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {semesters.data && semesters.data.results.length > 1 && (
-        <SemesterSwitcher
-          semesters={semesters.data.results}
-          value={viewedTerm}
-          current={currentSemester.data}
-          onChange={changeTerm}
-        />
-      )}
-
-      {viewingArchive ? (
-        <Card className="border-line-strong bg-paper-deep/40">
-          <p className="text-sm text-ink-soft">
-            You are reading a closed semester. Its entries are part of the project&rsquo;s record
-            and cannot be edited or removed.
-          </p>
-        </Card>
-      ) : (
-        // The open term, but not on its roster — the one case where a reader
-        // sees a live feed with no way to add to it. Say why, or the missing
-        // compose box reads as a bug.
-        !role && (
-          <Card className="border-line-strong bg-paper-deep/40">
-            <p className="text-sm text-ink-soft">
-              You are not on this project&rsquo;s roster this semester. You can read the timeline
-              and the archive, but adding, editing and removing entries is for current members.
-            </p>
-          </Card>
-        )
-      )}
-
-      {composing && (
-        <Card className="border-gold-500/40">
-          <h2 className="font-display text-lg font-semibold text-brand-600">New timeline entry</h2>
-          <Ornament className="mt-2 mb-5" />
-          <LogComposer
-            project={project.data}
-            members={members.data?.results ?? []}
-            semester={currentSemester.data}
-            onDone={() => {
-              setComposing(false)
-              // A new entry sorts to the top of the feed, which is page 1.
-              setPage(1)
-            }}
-          />
-        </Card>
-      )}
-
-      <div
-        className={cn(
-          'grid gap-6',
-          // 19rem, not 16: the roster carries full names next to a role badge,
-          // and the narrower rail truncated most of them.
-          showRoster && 'lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start',
-        )}
-      >
-        {showRoster && (
-          // Last on a stacked layout — the timeline is what the page is for.
-          <aside className="order-last lg:sticky lg:top-24 lg:order-first">
-            <ProjectMembersPanel
-              members={roster ?? []}
-              project={project.data}
-              manageableTerm={canAddMembers ? viewedSemester : undefined}
-              canRemove={(member) =>
-                canRemoveMember(
-                  member,
-                  role,
-                  user?.is_exec ?? false,
-                  viewedSemester,
-                  currentSemester.data,
-                  user?.id,
-                )
-              }
-            />
-          </aside>
-        )}
-
-        <div className="space-y-6">
-          <div
-            className="flex gap-1 rounded-full border border-line bg-surface p-1 sm:w-fit"
-            role="group"
-            aria-label="Filter by entry type"
-          >
-            {(['ALL', 'MOV', 'MOM'] as const).map((option) => (
+      <div className="space-y-6">
+        <SectionIntro
+          title="Timeline"
+          description="Visits (MOV) and meetings (MOM), newest first."
+          actions={
+            // Filing is only possible against the open term, so the button is
+            // absent rather than disabled on an archived one.
+            !composing &&
+            !viewingArchive &&
+            role && (
               <Button
-                key={option}
-                variant={kindFilter === option ? 'primary' : 'ghost'}
-                className="flex-1 px-5 sm:flex-none"
-                onClick={() => changeFilter(option)}
+                onClick={() => {
+                  setComposing(true)
+                  // One editor open at a time, so it is never ambiguous which
+                  // form a Save applies to.
+                  setEditingId(null)
+                }}
               >
-                {option === 'ALL' ? 'All' : option}
+                <Plus className="size-4" aria-hidden />
+                New entry
               </Button>
-            ))}
+            )
+          }
+        />
+
+        <div className="flex flex-wrap items-center gap-3">
+          <SearchField
+            value={search}
+            onChange={changeSearch}
+            label="Search entries"
+            placeholder="Search entries or people"
+            className="w-full sm:w-72"
+          />
+
+          <Segmented
+            options={['ALL', 'MOV', 'MOM'] as const}
+            value={kindFilter}
+            onChange={changeFilter}
+            label="Filter by entry type"
+            renderLabel={(option) =>
+              option === 'ALL' ? 'All entries' : option === 'MOV' ? 'Visits' : 'Meetings'
+            }
+          />
+
+          {semesters.data && semesters.data.results.length > 1 && (
+            <div className="sm:ml-auto">
+              <SemesterSwitcher
+                semesters={semesters.data.results}
+                value={viewedTerm}
+                current={currentSemester.data}
+                onChange={changeTerm}
+              />
+            </div>
+          )}
+        </div>
+
+        {deferredSearch && logs.data && logs.data.count > 0 && (
+          <p aria-live="polite" className="text-sm text-ink-soft">
+            {logs.data.count} {logs.data.count === 1 ? 'entry matches' : 'entries match'} &ldquo;
+            {deferredSearch}&rdquo; in this semester.
+          </p>
+        )}
+
+        {viewingArchive ? (
+          <Notice>This semester is closed. Its entries can&rsquo;t be changed.</Notice>
+        ) : (
+          // The open term, but not on its roster — the one case where a reader
+          // sees a live feed with no way to add to it. Say why, or the missing
+          // compose box reads as a bug.
+          !role && (
+            <Notice>
+              You&rsquo;re not a member this semester, so you can read entries but not add or edit
+              them.
+            </Notice>
+          )
+        )}
+
+        {composing && (
+          <Card className="border-brand-200">
+            <h3 className="mb-5 text-xl font-semibold text-ink">New timeline entry</h3>
+            <LogComposer
+              project={project.data}
+              members={members.data?.results ?? []}
+              semester={currentSemester.data}
+              onDone={() => {
+                setComposing(false)
+                // A new entry sorts to the top of the feed, which is page 1.
+                setPage(1)
+              }}
+            />
+          </Card>
+        )}
+
+        <div
+          className={cn(
+            'grid gap-6',
+            // 19rem, not 16: the roster carries full names next to a role
+            // badge, and the narrower rail truncated most of them.
+            showRoster && 'lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start',
+          )}
+        >
+          <div className="space-y-4">
+            {logs.isPending ? (
+              <Spinner label="Loading timeline…" />
+            ) : logs.error ? (
+              <ErrorNote message={logs.error.message} />
+            ) : (logs.data?.results.length ?? 0) === 0 ? (
+              <EmptyState
+                title={filtering ? 'No entries match' : 'No entries yet'}
+                description={
+                  filtering
+                    ? 'Try a different search, filter or semester.'
+                    : 'Add a visit or meeting to get started.'
+                }
+              />
+            ) : (
+              // The register: one sheet, a ruled row per entry, the date in a
+              // gutter of its own so the feed scans by when as well as what.
+              <ol
+                className={cn(
+                  'overflow-hidden rounded-[10px] border border-line bg-surface',
+                  logs.isPlaceholderData && 'opacity-60',
+                )}
+              >
+                {logs.data?.results.map((log) => {
+                  const date = dateParts(log.occurred_on)
+                  return (
+                    <li
+                      key={log.id}
+                      className={cn(
+                        // Alternate rows tinted so consecutive entries separate.
+                        'grid grid-cols-[3.75rem_minmax(0,1fr)] border-b border-line last:border-0 even:bg-stripe sm:grid-cols-[5.5rem_minmax(0,1fr)]',
+                        editingId === log.id && 'bg-gold-50 even:bg-gold-50',
+                      )}
+                    >
+                      <div className="border-r border-line px-2 py-5 text-center">
+                        <time dateTime={log.occurred_on} className="block">
+                          <span className="block text-2xl leading-none font-bold text-ink tabular-nums sm:text-3xl">
+                            {date.day}
+                          </span>
+                          <span className="mt-1 block text-sm text-ink-mute">
+                            {date.month} {date.year}
+                          </span>
+                        </time>
+                      </div>
+
+                      <div className="min-w-0 p-4 sm:p-5">
+                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+                          <KindBadge kind={log.kind} />
+                          <h3 className="min-w-0 text-xl font-semibold break-words text-ink">
+                            {log.title}
+                          </h3>
+                          {log.status === 'DRAFT' && (
+                            <span className="rounded border border-dashed border-line-strong px-1.5 py-0.5 text-sm text-ink-mute">
+                              Draft
+                            </span>
+                          )}
+                        </div>
+
+                        {confirmingDeleteId === log.id && deleteLog.error && (
+                          <div className="mt-3">
+                            <ErrorNote
+                              message={
+                                deleteLog.error instanceof ApiError
+                                  ? deleteLog.error.detail
+                                  : deleteLog.error.message
+                              }
+                            />
+                          </div>
+                        )}
+
+                        {editingId === log.id ? (
+                          <div className="mt-4">
+                            <LogComposer
+                              project={project.data}
+                              members={members.data?.results ?? []}
+                              log={log}
+                              semester={currentSemester.data}
+                              onDone={() => setEditingId(null)}
+                            />
+                          </div>
+                        ) : (
+                          <>
+                            <p className="mt-1 text-sm text-ink-mute">
+                              By {log.author.full_name || log.author.email}
+                            </p>
+
+                            <p className="mt-3 max-w-[70ch] text-[0.95rem] leading-relaxed whitespace-pre-wrap text-ink-soft">
+                              {log.body}
+                            </p>
+
+                            {log.attendees.length > 0 && (
+                              // The names are content, not chrome — visit and
+                              // meeting counts are derived from this list, so
+                              // it is the part of an entry people check.
+                              <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+                                <span className="text-ink-mute">
+                                  {log.attendees.length} present:{' '}
+                                </span>
+                                {log.attendees.map((a) => a.full_name || a.email).join(', ')}
+                              </p>
+                            )}
+
+                            {confirmingDeleteId === log.id ? (
+                              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                                <span className="text-sm text-ink-soft">
+                                  Remove from the timeline?
+                                </span>
+                                <Button
+                                  variant="danger"
+                                  disabled={deleteLog.isPending}
+                                  onClick={() => confirmDelete(log.id)}
+                                >
+                                  {deleteLog.isPending ? 'Removing…' : 'Remove'}
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  disabled={deleteLog.isPending}
+                                  onClick={() => setConfirmingDeleteId(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="-ml-2 mt-3 flex flex-wrap gap-1">
+                                <CopyLogButton log={log} />
+
+                                {canEditLog(log, role, user?.id, currentSemester.data) && (
+                                  <Button
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setEditingId(log.id)
+                                      setComposing(false)
+                                    }}
+                                  >
+                                    <Pencil className="size-4" aria-hidden />
+                                    Edit
+                                  </Button>
+                                )}
+                                {canDeleteLog(log, role, user?.id, currentSemester.data) && (
+                                  <Button
+                                    variant="ghost"
+                                    aria-label={`Remove “${log.title}” from the timeline`}
+                                    onClick={() => setConfirmingDeleteId(log.id)}
+                                  >
+                                    <Trash2 className="size-4" aria-hidden />
+                                    Delete
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ol>
+            )}
+
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onChange={changePage}
+              label="Timeline pages"
+              prevLabel="Newer"
+              nextLabel="Older"
+            />
           </div>
 
-          {logs.isPending ? (
-            <Spinner label="Loading timeline…" />
-          ) : logs.error ? (
-            <ErrorNote message={logs.error.message} />
-          ) : (logs.data?.results.length ?? 0) === 0 ? (
-            <EmptyState
-              title="Nothing logged yet"
-              description="Add the first MOV or MOM to start this project's record."
-            />
-          ) : (
-            <ol className="space-y-3">
-              {logs.data?.results.map((log) => (
-                <li key={log.id}>
-                  <Card className={cn(editingId === log.id && 'border-gold-500/40')}>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <KindBadge kind={log.kind} />
-                      <h3 className="font-display text-lg font-semibold text-ink">{log.title}</h3>
-                      {log.status === 'DRAFT' && (
-                        <span className="rounded-full bg-paper-deep px-2 py-0.5 text-xs text-ink-soft">
-                          Draft
-                        </span>
-                      )}
-
-                      {editingId !== log.id && confirmingDeleteId !== log.id && (
-                        <div className="ml-auto flex gap-1">
-                          <CopyLogButton log={log} />
-
-                          {canEditLog(log, role, user?.id, currentSemester.data) && (
-                            <Button
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingId(log.id)
-                                setComposing(false)
-                              }}
-                            >
-                              <Pencil className="size-4" aria-hidden />
-                              Edit
-                            </Button>
-                          )}
-                          {canDeleteLog(log, role, user?.id, currentSemester.data) && (
-                            <Button
-                              variant="ghost"
-                              aria-label={`Remove “${log.title}” from the timeline`}
-                              onClick={() => setConfirmingDeleteId(log.id)}
-                            >
-                              <Trash2 className="size-4" aria-hidden />
-                              Delete
-                            </Button>
-                          )}
-                        </div>
-                      )}
-
-                      {confirmingDeleteId === log.id && (
-                        <div className="ml-auto flex items-center gap-2">
-                          <span className="text-xs text-ink-soft">Remove from the timeline?</span>
-                          <Button
-                            variant="danger"
-                            disabled={deleteLog.isPending}
-                            onClick={() => confirmDelete(log.id)}
-                          >
-                            {deleteLog.isPending ? 'Removing…' : 'Remove'}
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            disabled={deleteLog.isPending}
-                            onClick={() => setConfirmingDeleteId(null)}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-
-                    {confirmingDeleteId === log.id && deleteLog.error && (
-                      <div className="mt-3">
-                        <ErrorNote
-                          message={
-                            deleteLog.error instanceof ApiError
-                              ? deleteLog.error.detail
-                              : deleteLog.error.message
-                          }
-                        />
-                      </div>
-                    )}
-
-                    {editingId === log.id ? (
-                      <div className="mt-4">
-                        <LogComposer
-                          project={project.data}
-                          members={members.data?.results ?? []}
-                          log={log}
-                          semester={currentSemester.data}
-                          onDone={() => setEditingId(null)}
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <p className="mt-1 text-xs text-ink-mute">
-                          {formatDate(log.occurred_on)} · {log.author.full_name || log.author.email}
-                        </p>
-
-                        <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
-                          {log.body}
-                        </p>
-
-                        {log.attendees.length > 0 && (
-                          // The names are content, not chrome — visit and meeting
-                          // counts are derived from this list, so it is the part
-                          // of an entry people check. `text-sm`/`ink-soft` rather
-                          // than the `text-xs`/`ink-mute` used for the dateline,
-                          // and relaxed leading because it wraps to several lines
-                          // on a well-attended visit. Only the label stays muted.
-                          <p className="mt-3 border-t border-line pt-3 text-sm leading-relaxed text-ink-soft">
-                            <span className="text-ink-mute">Attendees: </span>
-                            {log.attendees.map((a) => a.full_name || a.email).join(', ')}
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </Card>
-                </li>
-              ))}
-            </ol>
+          {showRoster && (
+            <aside className="lg:sticky lg:top-24">
+              <ProjectMembersPanel
+                members={roster ?? []}
+                project={project.data}
+                manageableTerm={canAddMembers ? viewedSemester : undefined}
+                canRemove={(member) =>
+                  canRemoveMember(
+                    member,
+                    role,
+                    user?.is_exec ?? false,
+                    viewedSemester,
+                    currentSemester.data,
+                    user?.id,
+                  )
+                }
+              />
+            </aside>
           )}
-
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            onChange={changePage}
-            label="Timeline pages"
-            prevLabel="Newer"
-            nextLabel="Older"
-          />
         </div>
       </div>
     </div>

@@ -5,13 +5,10 @@ import { z } from 'zod'
 import { ApiError } from '@/api/client'
 import type { Project, Reimbursement } from '@/api/types'
 import { Button, ErrorNote, Field, Input, Textarea } from '@/components/ui'
-import {
-  useCreateReimbursement,
-  useUpdateReimbursement,
-} from '@/features/projects/queries'
+import { useCreateReimbursement, useUpdateReimbursement } from '@/features/projects/queries'
 
 const schema = z.object({
-  title: z.string().trim().min(1, 'Say what the money was for.').max(200),
+  title: z.string().trim().min(1, 'Add a title.').max(200),
   // Validated as text rather than coerced to a number, so the value posted is
   // the string the server's `DecimalField` wants — the same reason `amount`
   // arrives as a string in the first place. The rules mirror the column:
@@ -19,13 +16,10 @@ const schema = z.object({
   amount: z
     .string()
     .trim()
-    .min(1, 'How much are you claiming?')
+    .min(1, 'Enter an amount.')
     .regex(/^\d{1,8}(\.\d{1,2})?$/, 'Enter an amount in rupees, like 480 or 480.50.')
-    .refine((value) => Number(value) > 0, 'Claim an amount greater than zero.'),
-  description: z
-    .string()
-    .trim()
-    .min(1, 'Describe the expense — whoever reviews this has only what you write here.'),
+    .refine((value) => Number(value) > 0, 'Enter an amount greater than zero.'),
+  description: z.string().trim().min(1, 'Add details so the reviewer can check the claim.'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -96,7 +90,7 @@ export function ReimbursementForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <Field label="What was it for" error={errors.title?.message}>
+      <Field label="Title" error={errors.title?.message}>
         <Input {...register('title')} placeholder="Bus fare for the Saturday visit" />
       </Field>
 
@@ -128,7 +122,7 @@ export function ReimbursementForm({
       <Field
         label="Details"
         error={errors.description?.message}
-        hint="Say what it was for and where the receipt is — this is all the reviewer sees."
+        hint="Include what you paid for and where the receipt is."
       >
         <Textarea
           {...register('description')}

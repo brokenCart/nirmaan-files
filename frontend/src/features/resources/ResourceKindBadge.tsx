@@ -17,27 +17,21 @@ type IconComponent = ComponentType<SVGProps<SVGSVGElement>>
  */
 const KIND_STYLES: Record<ResourceKind, { icon: IconComponent; className: string }> = {
   FOLDER: { icon: FolderOpen, className: 'bg-gold-50 text-gold-600 ring-gold-100' },
-  DOCUMENT: { icon: FileText, className: 'bg-nirmaan-sky/10 text-nirmaan-blue ring-nirmaan-sky/25' },
+  DOCUMENT: { icon: FileText, className: 'bg-brand-50 text-brand-700 ring-brand-200' },
   SHEET: {
     icon: Table2,
     className: 'bg-nirmaan-green/10 text-nirmaan-green-ink ring-nirmaan-green/20',
   },
-  FORM: { icon: ClipboardList, className: 'bg-brand-50 text-brand-600 ring-brand-200' },
-  OTHER: { icon: Link2, className: 'bg-paper-deep text-ink-mute ring-line-strong' },
+  FORM: { icon: ClipboardList, className: 'bg-paper-deep text-ink-soft ring-line-strong' },
+  OTHER: { icon: Link2, className: 'bg-surface text-ink-mute ring-line-strong' },
 }
 
-export function ResourceKindBadge({
-  kind,
-  className,
-}: {
-  kind: ResourceKind
-  className?: string
-}) {
+export function ResourceKindBadge({ kind, className }: { kind: ResourceKind; className?: string }) {
   const { icon: Icon, className: styles } = KIND_STYLES[kind]
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset',
+        'inline-flex shrink-0 items-center gap-1.5 rounded px-2 py-0.5 text-sm font-medium whitespace-nowrap ring-1 ring-inset',
         styles,
         className,
       )}

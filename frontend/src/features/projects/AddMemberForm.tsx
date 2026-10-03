@@ -12,7 +12,7 @@ import { useAddMember } from '@/features/projects/queries'
 const schema = z.object({
   // Shape only. The domain rule is the server's — `is_allowed_email` is an exact
   // match on one campus domain, and a second copy here is a copy that can drift.
-  user_email: z.string().min(1, 'Enter an email address.').email('That is not an email address.'),
+  user_email: z.string().min(1, 'Enter an email address.').email('Enter a valid email address.'),
   role: z.enum(['VOLUNTEER', 'FINANCE_LEAD', 'LEAD']),
 })
 
@@ -74,7 +74,7 @@ export function AddMemberForm({
       <Field
         label="Email"
         error={errors.user_email?.message ?? emailError}
-        hint="They do not need to have signed in yet."
+        hint="They don’t need to have signed in yet."
       >
         <Input
           type="email"
@@ -95,10 +95,7 @@ export function AddMemberForm({
           </Select>
         </Field>
       ) : (
-        <Field
-          label="Role"
-          hint="Appointing a lead or finance lead is for the Executive Committee."
-        >
+        <Field label="Role" hint="Only the Executive Committee can appoint leads.">
           <p className="text-sm text-ink-soft">{ROLE_LABELS[roles[0]]}</p>
         </Field>
       )}
@@ -114,7 +111,7 @@ export function AddMemberForm({
       {/* The term is a caption rather than the button's label: it is the one
           piece of text here with no length bound — "2026-27 Sem 1" already
           wrapped the button inside the rail, and a longer name would be worse. */}
-      <p className="text-xs text-ink-mute">
+      <p className="text-sm text-ink-mute">
         Joining <span className="font-medium text-ink-soft">{semester.name}</span>
       </p>
 

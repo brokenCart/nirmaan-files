@@ -34,7 +34,7 @@ export function AttendanceChart({ rows, measure }: { rows: AttendanceRow[]; meas
             key={row.user.id}
             className="group grid grid-cols-[7rem_1fr_2.5rem] items-center gap-3 sm:grid-cols-[11rem_1fr_2.5rem]"
           >
-            <span className="truncate text-right text-xs text-ink-soft" title={name}>
+            <span className="truncate text-right text-sm text-ink-soft" title={name}>
               {name}
             </span>
 
@@ -42,21 +42,21 @@ export function AttendanceChart({ rows, measure }: { rows: AttendanceRow[]; meas
                 grows from — present but recessive. */}
             <div className="relative border-l border-line-strong py-1">
               <div
-                className="h-5 rounded-r-[4px] bg-brand-600 transition-[width] duration-300 group-hover:bg-brand-500"
+                className="h-6 rounded-r-[3px] bg-brand-600 transition-[width] duration-300 group-hover:bg-brand-500"
                 style={{ width: `${(value / peak) * 100}%` }}
               />
 
               <div
                 role="tooltip"
-                className="pointer-events-none absolute -top-1 left-2 z-10 hidden -translate-y-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs whitespace-nowrap text-ink-soft shadow-md group-hover:block"
+                className="pointer-events-none absolute -top-1 left-2 z-10 hidden -translate-y-full rounded-md bg-ink px-2.5 py-1.5 text-sm whitespace-nowrap text-white/80 group-hover:block"
               >
-                <span className="font-semibold text-ink">{name}</span> · {row.visits} visits ·{' '}
+                <span className="font-semibold text-white">{name}</span> · {row.visits} visits ·{' '}
                 {row.meetings} meetings
               </div>
             </div>
 
             {/* Value at the tip, in a text token — never the series colour. */}
-            <span className="text-xs text-ink-mute tabular-nums">{value}</span>
+            <span className="text-sm font-medium text-ink tabular-nums">{value}</span>
           </div>
         )
       })}

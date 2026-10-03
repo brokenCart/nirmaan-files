@@ -2215,8 +2215,16 @@ export interface operations {
     logs_list: {
         parameters: {
             query?: {
+                /** @description MOV or MOM. */
+                kind?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Project slug. */
+                project?: string;
+                /** @description Free-text match over title, body, author and attendees. */
+                q?: string;
+                /** @description Semester slug, or `all`. Defaults to the open term. */
+                semester?: string;
             };
             header?: never;
             path?: never;
@@ -2731,6 +2739,8 @@ export interface operations {
                 page?: number;
                 /** @description Project slug. */
                 project?: string;
+                /** @description Free-text match over title, details and who filed it. */
+                q?: string;
                 /** @description Semester slug, or `all`. Defaults to the term in progress. */
                 semester?: string;
                 /** @description One ReimbursementStatus — PENDING is the review queue. */
@@ -2911,6 +2921,8 @@ export interface operations {
                 mine?: boolean;
                 /** @description Project slug. */
                 project?: string;
+                /** @description Free-text match over title, details and who filed it. */
+                q?: string;
                 /** @description Semester slug, or `all`. Defaults to the term in progress. */
                 semester?: string;
                 /** @description One ReimbursementStatus — PENDING is the review queue. */

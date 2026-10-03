@@ -77,6 +77,50 @@ class TestTimelineVisibility:
         assert [row["title"] for row in response.data["results"]] == ["meeting"]
 
 
+class TestTimelineSearch:
+    def search(self, client, project, q):
+        response = client.get(reverse("log-list"), {"project": project.slug, "q": q})
+        assert response.status_code == 200
+        return {row["title"] for row in response.data["results"]}
+
+    def test_matches_title_and_body_case_insensitively(self, auth_client, lead, project):
+        DailyLogFactory(project=project, title="Village school visit", body="Ran a quiz.")
+        DailyLogFactory(project=project, title="Core sync", body="Planned the QUIZ night.")
+        DailyLogFactory(project=project, title="Budget review", body="Nothing else.")
+        assert self.search(auth_client(lead), project, "quiz") == {
+            "Village school visit",
+            "Core sync",
+        }
+
+    def test_matches_author_and_attendees(self, auth_client, lead, volunteer, project):
+        DailyLogFactory(project=project, author=volunteer, title="Filed by them")
+        attended = DailyLogFactory(project=project, author=lead, title="They attended")
+        attended.attendees.add(volunteer)
+        DailyLogFactory(project=project, author=lead, title="Unrelated")
+        assert self.search(auth_client(lead), project, volunteer.full_name) == {
+            "Filed by them",
+            "They attended",
+        }
+
+    def test_an_entry_matching_several_attendees_appears_once(
+        self, auth_client, lead, volunteer, finance_lead, project
+    ):
+        lead.full_name, volunteer.full_name = "Asha Rao", "Asha Mehta"
+        lead.save()
+        volunteer.save()
+        log = DailyLogFactory(project=project, title="Both Ashas")
+        log.attendees.add(lead, volunteer)
+        response = auth_client(finance_lead).get(
+            reverse("log-list"), {"project": project.slug, "q": "asha"}
+        )
+        assert response.data["count"] == 1
+
+    def test_search_does_not_reach_hidden_entries(self, auth_client, volunteer, lead, project):
+        DailyLogFactory(project=project, author=lead, title="Secret plan", status=LogStatus.DRAFT)
+        DailyLogFactory(project=project, title="Secret removed", is_deleted=True)
+        assert self.search(auth_client(volunteer), project, "secret") == set()
+
+
 class TestLogWrites:
     @pytest.mark.parametrize(
         ("actor", "expected"),

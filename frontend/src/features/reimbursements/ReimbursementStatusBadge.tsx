@@ -25,7 +25,7 @@ const STATUS_STYLES: Record<ReimbursementStatus, { icon: IconComponent; classNam
     icon: CheckCircle2,
     className: 'bg-nirmaan-green/10 text-nirmaan-green-ink ring-nirmaan-green/20',
   },
-  REJECTED: { icon: XCircle, className: 'bg-brand-50 text-brand-700 ring-brand-200' },
+  REJECTED: { icon: XCircle, className: 'bg-danger-50 text-danger-700 ring-danger-200' },
 }
 
 export function ReimbursementStatusBadge({
@@ -39,7 +39,7 @@ export function ReimbursementStatusBadge({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset',
+        'inline-flex shrink-0 items-center gap-1.5 rounded px-2 py-0.5 text-sm font-medium whitespace-nowrap ring-1 ring-inset',
         styles,
         className,
       )}

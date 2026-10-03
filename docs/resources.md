@@ -70,3 +70,8 @@ worth knowing:
   blank rather than handed a folder that was never in the column. Matching on the row's title would
   look exact and break the moment somebody names their own folder the same thing. Nothing is lost
   either way — the rows stay on the shelf, which is where the URLs live now.
+
+**Search is client-side.** The shelf arrives whole and unpaginated, so the SPA filters the array
+(title, description, URL, kind, who added it) rather than adding a `?q=` to the API. If the shelf is
+ever paginated, the filter has to move to the server, as it did for the timeline and the
+reimbursement queue.

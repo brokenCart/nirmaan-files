@@ -101,13 +101,13 @@ export function ReviewControls({
   }
 
   return (
-    <div className="space-y-3 rounded-lg bg-paper-deep/40 p-4 ring-1 ring-line">
+    <div className="space-y-3 rounded-md bg-paper p-4 ring-1 ring-line ring-inset">
       <Field
-        label={rejecting ? 'Why are you turning this down' : 'Note (optional)'}
+        label={rejecting ? 'Reason for rejecting' : 'Note (optional)'}
         hint={
           rejecting
-            ? 'The volunteer sees this. Say what would make the claim acceptable.'
-            : 'Anything the volunteer should know — when it will be paid, for instance.'
+            ? 'The member will see this. Say what they need to fix.'
+            : 'For example, when it will be paid.'
         }
       >
         <Textarea
@@ -117,7 +117,7 @@ export function ReviewControls({
           autoFocus
           placeholder={
             rejecting
-              ? 'No receipt attached — resubmit with a photo of it.'
+              ? 'No receipt attached. Please resubmit with a photo.'
               : 'Paid in cash on the 3rd.'
           }
         />

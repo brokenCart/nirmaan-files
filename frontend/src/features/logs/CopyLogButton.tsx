@@ -37,11 +37,7 @@ export function CopyLogButton({ log }: { log: DailyLog }) {
   }
 
   return (
-    <Button
-      variant="ghost"
-      onClick={() => void copy()}
-      aria-label={`Copy “${log.title}” as text`}
-    >
+    <Button variant="ghost" onClick={() => void copy()} aria-label={`Copy “${log.title}” as text`}>
       {state === 'copied' ? (
         <Check className="size-4" aria-hidden />
       ) : (

@@ -4,10 +4,18 @@ import { Navigate, useLocation } from 'react-router-dom'
 
 import { ApiError } from '@/api/client'
 import { useAuth } from '@/auth/AuthContext'
-import { NirmaanLogo, Ornament } from '@/components/Logo'
-import { Card, ErrorNote, Spinner } from '@/components/ui'
+import { NirmaanLogo } from '@/components/Logo'
+import { ErrorNote, Spinner } from '@/components/ui'
 
 const CAMPUS_DOMAIN = 'pilani.bits-pilani.ac.in'
+
+// The logo's four panels, named for the verticals they stand for.
+const VERTICALS = [
+  { name: 'Education', className: 'bg-nirmaan-blue text-white' },
+  { name: 'Livelihood', className: 'bg-nirmaan-gold text-ink' },
+  { name: 'Women’s empowerment', className: 'bg-nirmaan-red text-white' },
+  { name: 'Agriculture', className: 'bg-nirmaan-green text-ink' },
+]
 
 export function LoginPage() {
   const { user, loading, signIn } = useAuth()
@@ -22,65 +30,69 @@ export function LoginPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-10">
-      <Card className="relative overflow-hidden p-8">
-        {/* Dashed gold frame, the way the print collateral boxes its content. */}
-        <div
-          className="pointer-events-none absolute inset-2.5 rounded-lg border border-dashed border-gold-500/40"
-          aria-hidden
-        />
+    <div className="grid min-h-dvh bg-surface lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      {/* The four verticals as a colour field: the one image the app has. */}
+      <div
+        className="grid grid-cols-2 grid-rows-[5.5rem_5.5rem] sm:grid-rows-[9rem_9rem] lg:sticky lg:top-0 lg:h-dvh lg:grid-rows-2"
+        aria-hidden
+      >
+        {VERTICALS.map((vertical) => (
+          <div key={vertical.name} className={`flex items-end p-4 sm:p-6 ${vertical.className}`}>
+            <span className="text-base leading-tight font-bold sm:text-xl lg:text-2xl">
+              {vertical.name}
+            </span>
+          </div>
+        ))}
+      </div>
 
-        <div className="relative flex flex-col items-center text-center">
-          <NirmaanLogo imgClassName="h-14" className="items-center" />
+      <div className="flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16">
+        <div className="w-full max-w-sm">
+          <NirmaanLogo imgClassName="h-24 sm:h-28" className="-ml-3" />
 
-          <Ornament className="mt-5 w-full" />
-
-          <h1 className="mt-4 font-display text-2xl font-semibold text-brand-600">
+          <h1 className="mt-6 text-4xl leading-[1.05] font-bold tracking-[-0.02em] text-navy sm:text-5xl">
             Nirmaan Files
           </h1>
-          <p className="mt-2 text-sm text-ink-soft">
-            Sign in with your <strong className="text-ink">@{CAMPUS_DOMAIN}</strong> account to see
-            your projects.
+          <p className="mt-4 text-ink-soft">
+            Visit logs, meeting notes, project pages and expense claims. Sign in with your{' '}
+            <strong className="font-semibold text-ink">@{CAMPUS_DOMAIN}</strong> account.
           </p>
 
-          <div className="mt-6 flex justify-center">
+          <div className="mt-8">
             <GoogleLogin
               // A hint for the account chooser only — the server independently
               // verifies the token and enforces the domain.
               hosted_domain={CAMPUS_DOMAIN}
-              shape="pill"
+              shape="rectangular"
+              size="large"
               onSuccess={async (response) => {
                 setError(null)
                 if (!response.credential) {
-                  setError('Google did not return a credential. Please try again.')
+                  setError('Google sign-in didn’t complete. Try again.')
                   return
                 }
                 try {
                   await signIn(response.credential)
                 } catch (caught) {
                   setError(
-                    caught instanceof ApiError
-                      ? caught.detail
-                      : 'Could not sign in. Please try again.',
+                    caught instanceof ApiError ? caught.detail : 'Couldn’t sign in. Try again.',
                   )
                 }
               }}
-              onError={() => setError('Google sign-in was cancelled or failed.')}
+              onError={() => setError('Google sign-in was cancelled.')}
             />
           </div>
 
           {error && (
-            <div className="mt-4 w-full text-left">
+            <div className="mt-4">
               <ErrorNote message={error} />
             </div>
           )}
 
-          <p className="mt-6 text-xs leading-relaxed text-ink-mute">
-            New here? Signing in creates your account, but a project lead still needs to add you to
-            a project before you can see anything.
+          <p className="mt-8 border-t border-line pt-4 text-sm text-ink-mute">
+            New here? Sign in, then ask a project lead to add you to their project.
           </p>
         </div>
-      </Card>
+      </div>
     </div>
   )
 }

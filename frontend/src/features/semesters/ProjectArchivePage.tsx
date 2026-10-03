@@ -1,17 +1,17 @@
-import { BarChart3, CalendarRange, ScrollText } from 'lucide-react'
+import { BarChart3, ScrollText } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 
 import type { ArchiveTerm } from '@/api/types'
-import { Ornament } from '@/components/Logo'
-import { Button, Card, EmptyState, ErrorNote, Spinner } from '@/components/ui'
+import { ProjectHeader } from '@/components/ProjectHeader'
+import { Button, EmptyState, ErrorNote, SectionIntro, Spinner } from '@/components/ui'
 import { useCurrentSemester, useProject, useProjectArchive } from '@/features/projects/queries'
 import { formatDate } from '@/lib/utils'
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <div className="font-display text-2xl font-semibold text-ink tabular-nums">{value}</div>
-      <div className="text-xs tracking-wide text-ink-mute uppercase">{label}</div>
+      <div className="text-3xl leading-none font-bold text-ink tabular-nums">{value}</div>
+      <div className="mt-1 text-sm text-ink-mute">{label}</div>
     </div>
   )
 }
@@ -29,54 +29,54 @@ function TermCard({
   const leadNames = term.leads.map((lead) => lead.full_name || lead.email)
 
   return (
-    <Card>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-brand-600">
-            {semester.name}
-            {isCurrent && (
-              <span className="rounded-full bg-nirmaan-green/10 px-2 py-0.5 text-xs font-semibold text-nirmaan-green-ink ring-1 ring-nirmaan-green/20 ring-inset">
-                Current
-              </span>
-            )}
-          </h2>
-          <p className="mt-1 text-xs text-ink-mute">
-            {formatDate(semester.starts_on)} – {formatDate(semester.ends_on)}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Link to={`/projects/${slug}?semester=${semester.slug}`}>
-            <Button variant="secondary">
-              <ScrollText className="size-4" aria-hidden />
-              Timeline
-            </Button>
-          </Link>
-          <Link to={`/projects/${slug}/attendance?semester=${semester.slug}`}>
-            <Button variant="secondary">
-              <BarChart3 className="size-4" aria-hidden />
-              Attendance
-            </Button>
-          </Link>
-        </div>
+    <div className="grid gap-x-8 gap-y-4 p-5 sm:grid-cols-[13rem_minmax(0,1fr)] sm:p-6">
+      <div>
+        <h3 className="flex flex-wrap items-center gap-2 text-2xl font-semibold text-ink">
+          {semester.name}
+          {isCurrent && (
+            <span className="rounded bg-gold-50 px-2 py-0.5 font-sans text-sm font-medium text-gold-600 ring-1 ring-gold-100 ring-inset">
+              Current
+            </span>
+          )}
+        </h3>
+        <p className="mt-1 text-sm text-ink-mute">
+          {formatDate(semester.starts_on)} to {formatDate(semester.ends_on)}
+        </p>
       </div>
 
-      <Ornament className="mt-2 mb-5" />
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-wrap gap-8">
+            <Stat label="Visits" value={term.visits} />
+            <Stat label="Meetings" value={term.meetings} />
+            <Stat label="Members" value={term.member_count} />
+          </div>
 
-      <div className="flex flex-wrap gap-8">
-        <Stat label="Visits" value={term.visits} />
-        <Stat label="Meetings" value={term.meetings} />
-        <Stat label="Members" value={term.member_count} />
+          <div className="flex flex-wrap gap-2">
+            <Link to={`/projects/${slug}?semester=${semester.slug}`}>
+              <Button variant="secondary">
+                <ScrollText className="size-4" aria-hidden />
+                Timeline
+              </Button>
+            </Link>
+            <Link to={`/projects/${slug}/attendance?semester=${semester.slug}`}>
+              <Button variant="secondary">
+                <BarChart3 className="size-4" aria-hidden />
+                Attendance
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm text-ink-soft">
+          {leadNames.length > 0 ? (
+            <>Led by {leadNames.join(', ')}</>
+          ) : (
+            <span className="text-ink-mute">No lead this semester.</span>
+          )}
+        </p>
       </div>
-
-      <p className="mt-4 border-t border-line pt-3 text-xs text-ink-mute">
-        {leadNames.length > 0 ? (
-          <>Led by {leadNames.join(', ')}</>
-        ) : (
-          <>No lead recorded for this semester.</>
-        )}
-      </p>
-    </Card>
+    </div>
   )
 }
 
@@ -100,43 +100,41 @@ export function ProjectArchivePage() {
   if (!project.data) return <ErrorNote message="Project not found." />
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link to={`/projects/${slug}`} className="text-sm text-ink-mute hover:text-brand-600">
-          ← {project.data.name} timeline
-        </Link>
-        <h1 className="mt-1 flex items-center gap-3 font-display text-2xl font-semibold text-ink">
-          <CalendarRange className="size-6 text-brand-600" aria-hidden />
-          Archive
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-          Every semester this project has a record in. Visits, meetings and the roster restart each
-          term, so each row stands on its own. Past semesters are read-only.
-        </p>
-      </div>
+    <div>
+      <ProjectHeader project={project.data} />
 
-      {archive.isPending ? (
-        <Spinner label="Loading semesters…" />
-      ) : archive.error ? (
-        <ErrorNote message={archive.error.message} />
-      ) : (archive.data?.length ?? 0) === 0 ? (
-        <EmptyState
-          title="Nothing archived yet"
-          description="Once this project has entries or a roster, each semester will appear here."
+      <div className="space-y-6">
+        <SectionIntro
+          title="Archive"
+          description="Every semester of this project. Past semesters are read-only."
         />
-      ) : (
-        <ol className="space-y-4">
-          {archive.data?.map((term) => (
-            <li key={term.semester.id}>
-              <TermCard
-                term={term}
-                slug={slug}
-                isCurrent={term.semester.id === currentSemester.data?.id}
-              />
-            </li>
-          ))}
-        </ol>
-      )}
+
+        {archive.isPending ? (
+          <Spinner label="Loading semesters…" />
+        ) : archive.error ? (
+          <ErrorNote message={archive.error.message} />
+        ) : (archive.data?.length ?? 0) === 0 ? (
+          <EmptyState
+            title="No semesters yet"
+            description="Semesters show up here once the project has members or entries."
+          />
+        ) : (
+          <ol className="overflow-hidden rounded-[10px] border border-line bg-surface">
+            {archive.data?.map((term) => (
+              <li
+                key={term.semester.id}
+                className="border-b border-line last:border-0 even:bg-stripe"
+              >
+                <TermCard
+                  term={term}
+                  slug={slug}
+                  isCurrent={term.semester.id === currentSemester.data?.id}
+                />
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
     </div>
   )
 }

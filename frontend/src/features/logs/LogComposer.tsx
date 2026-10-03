@@ -20,7 +20,7 @@ const schema = z.object({
   kind: z.enum(['MOV', 'MOM']),
   title: z.string().min(3, 'Give the entry a title.').max(200),
   body: z.string().min(1, 'Write what happened.'),
-  occurred_on: z.string().min(1, 'Pick the date it happened.'),
+  occurred_on: z.string().min(1, 'Pick a date.'),
   // Strings, because that is what a checkbox `value` yields; converted to ids
   // on submit.
   attendee_ids: z.array(z.string()).optional(),
@@ -116,8 +116,8 @@ export function LogComposer({
     <form onSubmit={onSubmit} className="space-y-4">
       <Field label="Entry type">
         <Select {...register('kind')}>
-          <option value="MOV">MOV — Moment of Visit</option>
-          <option value="MOM">MOM — Minutes of Meeting</option>
+          <option value="MOV">MOV (Moment of Visit)</option>
+          <option value="MOM">MOM (Minutes of Meeting)</option>
         </Select>
       </Field>
 
@@ -128,11 +128,7 @@ export function LogComposer({
       <Field
         label="Date"
         error={errors.occurred_on?.message}
-        hint={
-          semester
-            ? `Within ${semester.name} — the entry is filed against the term its date falls in.`
-            : undefined
-        }
+        hint={semester ? `Must fall within ${semester.name}.` : undefined}
       >
         {/* Bounded to the open term: a date outside it lands the entry in a
             closed semester, which the server refuses. Better to make the
@@ -147,20 +143,18 @@ export function LogComposer({
 
       <Fieldset
         label="Who was there"
-        hint={`Visit and meeting counts come from this. ${selected.length} selected.`}
+        hint={`Used for attendance counts. ${selected.length} selected.`}
       >
-        <div className="max-h-56 space-y-0.5 overflow-y-auto rounded-lg bg-paper/60 p-1.5 ring-1 ring-line-strong">
+        <div className="max-h-56 space-y-0.5 overflow-y-auto rounded-md bg-surface p-1.5 ring-1 ring-line-strong ring-inset">
           {members.length === 0 ? (
-            <p className="px-2 py-1.5 text-sm text-ink-mute">
-              Nobody is on the roster for this term yet.
-            </p>
+            <p className="px-2 py-1.5 text-sm text-ink-mute">No members this semester yet.</p>
           ) : (
             members.map((member) => {
               const id = String(member.user.id)
               return (
                 <label
                   key={member.id}
-                  className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-ink hover:bg-gold-50"
+                  className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-ink hover:bg-brand-50"
                 >
                   <Checkbox
                     value={id}

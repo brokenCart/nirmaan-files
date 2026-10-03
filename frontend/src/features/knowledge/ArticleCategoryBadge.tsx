@@ -19,14 +19,14 @@ const CATEGORY_STYLES: Record<ArticleCategory, { icon: IconComponent; className:
   CONTEXT: { icon: BookOpen, className: 'bg-gold-50 text-gold-600 ring-gold-100' },
   PROCESS: {
     icon: ListChecks,
-    className: 'bg-nirmaan-sky/10 text-nirmaan-blue ring-nirmaan-sky/25',
+    className: 'bg-brand-50 text-brand-700 ring-brand-200',
   },
   PARTNER: {
     icon: Users,
     className: 'bg-nirmaan-green/10 text-nirmaan-green-ink ring-nirmaan-green/20',
   },
-  LESSON: { icon: Lightbulb, className: 'bg-brand-50 text-brand-600 ring-brand-200' },
-  OTHER: { icon: FileText, className: 'bg-paper-deep text-ink-mute ring-line-strong' },
+  LESSON: { icon: Lightbulb, className: 'bg-paper-deep text-ink-soft ring-line-strong' },
+  OTHER: { icon: FileText, className: 'bg-surface text-ink-mute ring-line-strong' },
 }
 
 export function ArticleCategoryBadge({
@@ -40,7 +40,7 @@ export function ArticleCategoryBadge({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset',
+        'inline-flex shrink-0 items-center gap-1.5 rounded px-2 py-0.5 text-sm font-medium whitespace-nowrap ring-1 ring-inset',
         styles,
         className,
       )}

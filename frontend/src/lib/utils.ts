@@ -62,3 +62,16 @@ export function formatRupees(amount: string): string {
     return amount
   }
 }
+
+/**
+ * A date-only string split for the timeline's date gutter: the day set large,
+ * month and year beneath it. Pinned to local midnight like `formatDate`.
+ */
+export function dateParts(iso: string): { day: string; month: string; year: string } {
+  const date = new Date(`${iso}T00:00:00`)
+  return {
+    day: String(date.getDate()),
+    month: date.toLocaleDateString('en-IN', { month: 'short' }),
+    year: String(date.getFullYear()),
+  }
+}

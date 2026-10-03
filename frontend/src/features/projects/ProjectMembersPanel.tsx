@@ -75,9 +75,7 @@ export function ProjectMembersPanel({
     if (!needle) return ordered
     return ordered.filter((member) => {
       const role = member.role ? ROLE_LABELS[member.role] : ''
-      return `${member.user.full_name} ${member.user.email} ${role}`
-        .toLowerCase()
-        .includes(needle)
+      return `${member.user.full_name} ${member.user.email} ${role}`.toLowerCase().includes(needle)
     })
   }, [ordered, deferredQuery])
 
@@ -90,10 +88,8 @@ export function ProjectMembersPanel({
   return (
     <Card className={cn('p-4', className)}>
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="font-display text-base font-semibold tracking-[-0.02em] text-ink">
-          Members
-        </h2>
-        <span className="text-xs text-ink-mute tabular-nums">
+        <h2 className="text-xl font-semibold text-ink">Members</h2>
+        <span className="text-sm text-ink-mute tabular-nums">
           {filtering ? `${matches.length} of ${members.length}` : members.length}
         </span>
       </div>
@@ -120,14 +116,14 @@ export function ProjectMembersPanel({
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search members"
           aria-label="Search members"
-          className="w-full rounded-lg border-0 bg-paper/60 py-2 pr-9 pl-9 text-sm text-ink ring-1 ring-line-strong placeholder:text-ink-mute focus:bg-surface focus:ring-2 focus:ring-brand-600 [&::-webkit-search-cancel-button]:appearance-none"
+          className="w-full rounded-md border-0 bg-surface py-2 pr-9 pl-9 text-sm text-ink ring-1 ring-line-strong ring-inset placeholder:text-ink-mute focus:ring-2 focus:ring-brand-600 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
         />
         {query && (
           <button
             type="button"
             onClick={() => setQuery('')}
             aria-label="Clear search"
-            className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-1 text-ink-mute transition-colors hover:bg-gold-50 hover:text-brand-700"
+            className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-1 text-ink-mute transition-colors hover:bg-brand-50 hover:text-brand-700"
           >
             <X className="size-3.5" aria-hidden />
           </button>
@@ -137,7 +133,7 @@ export function ProjectMembersPanel({
       {members.length === 0 ? (
         // Distinct from a search that found nothing: an empty roster is the
         // normal state of a term nobody has built yet, not a failed lookup.
-        <p className="mt-4 text-sm text-ink-mute">Nobody is on the roster for this term yet.</p>
+        <p className="mt-4 text-sm text-ink-mute">No members this semester yet.</p>
       ) : matches.length === 0 ? (
         <p className="mt-4 text-sm text-ink-mute">No members match “{deferredQuery.trim()}”.</p>
       ) : (
@@ -158,7 +154,7 @@ export function ProjectMembersPanel({
                   would otherwise overflow the rail rather than wrap.
                 */}
                 <span
-                  className="min-w-0 flex-1 text-sm break-words text-ink-soft"
+                  className="min-w-0 flex-1 text-sm break-words text-ink"
                   title={member.user.full_name || member.user.email}
                 >
                   {member.user.full_name || member.user.email}
@@ -168,8 +164,8 @@ export function ProjectMembersPanel({
                   <button
                     type="button"
                     onClick={() => setConfirmingId(member.id)}
-                    aria-label={`Remove ${member.user.full_name || member.user.email} from the roster`}
-                    className="shrink-0 rounded-full p-1 text-ink-mute transition-colors hover:bg-gold-50 hover:text-nirmaan-red"
+                    aria-label={`Remove ${member.user.full_name || member.user.email} from this semester`}
+                    className="shrink-0 rounded-full p-1 text-ink-mute transition-colors hover:bg-danger-50 hover:text-danger-600"
                   >
                     <Trash2 className="size-3.5" aria-hidden />
                   </button>
@@ -177,15 +173,15 @@ export function ProjectMembersPanel({
               </div>
 
               {confirmingId === member.id && (
-                <div className="mt-2 space-y-2 rounded-lg bg-paper-deep/40 p-2">
-                  <p className="text-xs text-ink-soft">
+                <div className="mt-2 space-y-2 rounded-md bg-danger-50 p-2.5">
+                  <p className="text-sm text-ink-soft">
                     Remove from {manageableTerm?.name ?? 'this term'}?
                     {/* The server makes the same call from `google_sub`, and
                         refuses while another roster, an entry they filed or an
                         attendance mark still points at the account — so this
-                        says "unclaimed", not "will definitely be deleted". */}
+                        says "may be deleted", not "will be deleted". */}
                     {!member.user.has_signed_in &&
-                      ' They have never signed in, so the unclaimed account goes too.'}
+                      ' They’ve never signed in, so their unused account may be deleted too.'}
                   </p>
                   <div className="flex gap-2">
                     <Button

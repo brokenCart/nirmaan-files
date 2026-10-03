@@ -1,14 +1,13 @@
-import { Users } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import type { EffectiveRole } from '@/api/types'
 import { useAuth } from '@/auth/AuthContext'
-import { Ornament } from '@/components/Logo'
-import { Card, EmptyState, ErrorNote, RoleBadge, Spinner } from '@/components/ui'
+import { EmptyState, ErrorNote, RoleBadge, Spinner } from '@/components/ui'
 
 import { useProjects } from './queries'
 
-// The logo's four panel colours, cycled so each project card carries one.
+// The logo's four panel colours, cycled so each project row carries one.
 const SPINES = ['bg-nirmaan-blue', 'bg-nirmaan-gold', 'bg-nirmaan-red', 'bg-nirmaan-green']
 
 export function ProjectListPage() {
@@ -26,8 +25,8 @@ export function ProjectListPage() {
         title="No projects yet"
         description={
           user?.is_exec
-            ? 'Create a project from the Django admin to get started.'
-            : 'You are signed in, but not part of any project yet. Ask a project lead to add you.'
+            ? 'Create one in the Django admin.'
+            : 'Ask a project lead to add you to their project.'
         }
       />
     )
@@ -35,49 +34,61 @@ export function ProjectListPage() {
 
   return (
     <div>
-      <div className="mb-6 text-center">
-        <h1 className="font-display text-2xl font-semibold text-ink">Your projects</h1>
-        <Ornament className="mt-2" />
+      <div className="mb-8">
+        <h1 className="text-4xl leading-[1.05] font-bold tracking-[-0.02em] text-ink sm:text-5xl">
+          Your projects
+        </h1>
+        <p className="mt-3 text-ink-soft">
+          {user?.is_exec
+            ? 'All Nirmaan projects.'
+            : 'Projects you’re on now or have been on before.'}
+        </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <ul className="overflow-hidden rounded-[10px] border border-line bg-surface">
         {projects.map((project, index) => (
-          <Link
-            key={project.id}
-            to={`/projects/${project.slug}`}
-            className="rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-          >
-            <Card className="relative h-full overflow-hidden pl-6 transition-shadow hover:shadow-[0_1px_2px_rgba(47,29,22,0.06),0_16px_32px_-18px_rgba(47,29,22,0.45)]">
-              <span
-                className={`absolute inset-y-0 left-0 w-1.5 ${SPINES[index % SPINES.length]}`}
-                aria-hidden
-              />
+          <li key={project.id} className="border-b border-line last:border-0 even:bg-stripe">
+            <Link
+              to={`/projects/${project.slug}`}
+              className="group grid grid-cols-[0.375rem_minmax(0,1fr)_auto] items-stretch gap-x-4 pr-4 transition-colors hover:bg-brand-100 focus-visible:outline-offset-[-2px] sm:gap-x-6 sm:pr-6"
+            >
+              <span className={SPINES[index % SPINES.length]} aria-hidden />
 
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="font-display text-lg font-semibold text-ink">{project.name}</h2>
-                {project.my_role ? (
-                  <RoleBadge role={project.my_role as EffectiveRole} />
-                ) : (
-                  // Visible but no role this term: the project is here because
-                  // of a past membership, and it is read-only.
-                  <span className="inline-flex shrink-0 rounded-full bg-paper-deep px-2.5 py-0.5 text-xs font-semibold text-ink-mute ring-1 ring-line-strong ring-inset">
-                    Archive only
-                  </span>
+              <div className="min-w-0 py-5">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <h2 className="text-2xl font-bold text-ink group-hover:text-brand-700">
+                    {project.name}
+                  </h2>
+                  {project.my_role ? (
+                    <RoleBadge role={project.my_role as EffectiveRole} />
+                  ) : (
+                    // Visible but no role this term: the project is here because
+                    // of a past membership, and it is read-only.
+                    <span className="inline-flex rounded px-2 py-0.5 text-sm font-medium text-ink-mute ring-1 ring-line-strong ring-inset">
+                      Read only
+                    </span>
+                  )}
+                </div>
+                {project.description && (
+                  <p className="mt-1.5 line-clamp-2 max-w-2xl text-sm text-ink-soft">
+                    {project.description}
+                  </p>
                 )}
               </div>
 
-              {project.description && (
-                <p className="mt-2 line-clamp-2 text-sm text-ink-soft">{project.description}</p>
-              )}
-
-              <p className="mt-4 flex items-center gap-1.5 text-xs text-ink-mute">
-                <Users className="size-3.5" aria-hidden />
-                {project.member_count} {project.member_count === 1 ? 'member' : 'members'}
-              </p>
-            </Card>
-          </Link>
+              <div className="flex items-center gap-3 text-sm text-ink-mute">
+                <span className="hidden tabular-nums sm:inline">
+                  {project.member_count} {project.member_count === 1 ? 'member' : 'members'}
+                </span>
+                <ChevronRight
+                  className="size-5 text-line-strong transition-colors group-hover:text-brand-600"
+                  aria-hidden
+                />
+              </div>
+            </Link>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   )
 }

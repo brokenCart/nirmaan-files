@@ -35,6 +35,12 @@ past term and `?semester=all` reads across every term. That default applies to *
 detail routes must reach an archived entry by its own URL, or every 403 the frozen-archive rule is
 meant to return arrives as a 404 instead.
 
+`?q=` searches the feed: title, body, author and attendees, by name or email, case-insensitive.
+It narrows whatever term the feed is already showing rather than widening to every term, so a
+search reads the same scope as the list it replaces. Attendees match through a primary-key
+subquery, not a join, so an entry with two matching attendees is counted once and pagination
+stays correct. Drafts and deleted entries stay out because the filter runs on `visible_to`.
+
 ### Attendance
 
 `apps/logs/stats.py` turns `DailyLog.attendees` into per-member counts, served by

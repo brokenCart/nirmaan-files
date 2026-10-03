@@ -1,11 +1,20 @@
 import { Download } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError, downloadFile } from '@/api/client'
 import type { EffectiveRole } from '@/api/types'
-import { Ornament } from '@/components/Logo'
-import { Button, Card, EmptyState, ErrorNote, RoleBadge, Spinner } from '@/components/ui'
+import { ProjectHeader } from '@/components/ProjectHeader'
+import {
+  Button,
+  Card,
+  EmptyState,
+  ErrorNote,
+  RoleBadge,
+  SectionIntro,
+  Segmented,
+  Spinner,
+} from '@/components/ui'
 import {
   useAttendance,
   useCurrentSemester,
@@ -52,7 +61,9 @@ export function ProjectAttendancePage() {
       const name = viewedTerm ? `${slug}-${viewedTerm}-attendance.xlsx` : `${slug}-attendance.xlsx`
       await downloadFile(`/api/projects/${slug}/attendance/export/${query}`, name)
     } catch (error) {
-      setExportError(error instanceof ApiError ? error.detail : 'Could not build the export.')
+      setExportError(
+        error instanceof ApiError ? error.detail : 'Couldn’t create the Excel file. Try again.',
+      )
     } finally {
       setExporting(false)
     }
@@ -63,128 +74,124 @@ export function ProjectAttendancePage() {
   if (!project.data) return <ErrorNote message="Project not found." />
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link to={`/projects/${slug}`} className="text-sm text-ink-mute hover:text-brand-600">
-            ← {project.data.name} timeline
-          </Link>
-          <h1 className="mt-1 font-display text-2xl font-semibold text-ink">
-            Attendance{termName && <span className="text-ink-mute"> · {termName}</span>}
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-            How many entries each member was present at, counted within this semester — totals
-            restart each term. Published entries only; drafts and removed entries do not appear
-            here.
-          </p>
-        </div>
+    <div>
+      <ProjectHeader project={project.data} />
 
-        <Button onClick={() => void exportWorkbook()} disabled={exporting || rows.length === 0}>
-          <Download className="size-4" aria-hidden />
-          {exporting ? 'Preparing…' : 'Export to Excel'}
-        </Button>
-      </div>
-
-      {semesters.data && semesters.data.results.length > 1 && (
-        <SemesterSwitcher
-          semesters={semesters.data.results}
-          value={viewedTerm}
-          current={currentSemester.data}
-          onChange={(next) => setSearchParams(next ? { semester: next } : {}, { replace: true })}
-          archiveHref={`/projects/${slug}/archive`}
+      <div className="space-y-6">
+        <SectionIntro
+          title={termName ? `Attendance in ${termName}` : 'Attendance'}
+          description="Visits and meetings each member attended this semester. Drafts aren’t counted."
+          actions={
+            <Button
+              variant="secondary"
+              onClick={() => void exportWorkbook()}
+              disabled={exporting || rows.length === 0}
+            >
+              <Download className="size-4" aria-hidden />
+              {exporting ? 'Preparing…' : 'Export to Excel'}
+            </Button>
+          }
         />
-      )}
 
-      {exportError && <ErrorNote message={exportError} />}
+        {semesters.data && semesters.data.results.length > 1 && (
+          <SemesterSwitcher
+            semesters={semesters.data.results}
+            value={viewedTerm}
+            current={currentSemester.data}
+            onChange={(next) => setSearchParams(next ? { semester: next } : {}, { replace: true })}
+            archiveHref={`/projects/${slug}/archive`}
+          />
+        )}
 
-      {attendance.isPending ? (
-        <Spinner label="Counting attendance…" />
-      ) : attendance.error ? (
-        <ErrorNote message={attendance.error.message} />
-      ) : rows.length === 0 ? (
-        <EmptyState
-          title="No roster for this semester"
-          description="Rosters are per term. Add people to this project and their attendance will appear here."
-        />
-      ) : (
-        <>
-          <Card>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-display text-lg font-semibold text-brand-600">
-                {MEASURE_LABELS[measure]} per member
-              </h2>
+        {exportError && <ErrorNote message={exportError} />}
 
-              <div
-                className="flex gap-1 rounded-full border border-line bg-paper/60 p-1"
-                role="group"
-                aria-label="Choose what the chart shows"
-              >
-                {MEASURES.map((option) => (
-                  <Button
-                    key={option}
-                    variant={measure === option ? 'primary' : 'ghost'}
-                    aria-pressed={measure === option}
-                    onClick={() => setMeasure(option)}
-                  >
-                    {MEASURE_LABELS[option]}
-                  </Button>
-                ))}
+        {attendance.isPending ? (
+          <Spinner label="Counting attendance…" />
+        ) : attendance.error ? (
+          <ErrorNote message={attendance.error.message} />
+        ) : rows.length === 0 ? (
+          <EmptyState
+            title="No members this semester"
+            description="Add members on the Timeline tab to track their attendance."
+          />
+        ) : (
+          <>
+            <Card>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-xl font-semibold text-ink">
+                  {MEASURE_LABELS[measure]} per member
+                </h3>
+
+                <Segmented
+                  options={MEASURES}
+                  value={measure}
+                  onChange={setMeasure}
+                  label="Choose what the chart shows"
+                  renderLabel={(option) => MEASURE_LABELS[option]}
+                />
               </div>
-            </div>
 
-            <Ornament className="mt-2 mb-5" />
-            <AttendanceChart rows={rows} measure={measure} />
-          </Card>
+              <div className="mt-6" />
+              <AttendanceChart rows={rows} measure={measure} />
+            </Card>
 
-          <Card className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <caption className="sr-only">
-                Visits, meetings and total entries attended by each member of {project.data.name}
-              </caption>
-              <thead>
-                <tr className="border-b border-line text-left text-xs tracking-wide text-ink-soft uppercase">
-                  <th scope="col" className="py-2 pr-4 font-semibold">
-                    Member
-                  </th>
-                  <th scope="col" className="py-2 pr-4 font-semibold">
-                    Role
-                  </th>
-                  {MEASURES.map((column) => (
-                    <th key={column} scope="col" className="py-2 pl-4 text-right font-semibold">
-                      {MEASURE_LABELS[column]}
+            <Card className="overflow-x-auto p-0 sm:p-0">
+              <table className="w-full text-sm">
+                <caption className="sr-only">
+                  Visits, meetings and total entries attended by each member of {project.data.name}
+                </caption>
+                <thead>
+                  <tr className="border-b border-line bg-paper/60 text-left text-sm text-ink-soft">
+                    <th scope="col" className="py-2.5 pr-4 pl-5 font-medium">
+                      Member
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.user.id} className="border-b border-line/60 last:border-0">
-                    <th scope="row" className="py-2.5 pr-4 text-left font-normal">
-                      <span className="block text-ink">{row.user.full_name || '—'}</span>
-                      <span className="block text-xs text-ink-mute">{row.user.email}</span>
+                    <th scope="col" className="py-2.5 pr-4 font-medium">
+                      Role
                     </th>
-                    <td className="py-2.5 pr-4">
-                      <RoleBadge role={row.role as EffectiveRole} />
-                    </td>
                     {MEASURES.map((column) => (
-                      <td
+                      <th
                         key={column}
-                        className={
-                          column === measure
-                            ? 'py-2.5 pl-4 text-right font-semibold text-ink tabular-nums'
-                            : 'py-2.5 pl-4 text-right text-ink-soft tabular-nums'
-                        }
+                        scope="col"
+                        className="py-2.5 pr-5 pl-4 text-right font-medium"
                       >
-                        {valueOf(row, column)}
-                      </td>
+                        {MEASURE_LABELS[column]}
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
-        </>
-      )}
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr
+                      key={row.user.id}
+                      className="border-b border-line/60 last:border-0 even:bg-stripe"
+                    >
+                      <th scope="row" className="py-3 pr-4 pl-5 text-left font-normal">
+                        <span className="block text-ink">{row.user.full_name || '—'}</span>
+                        <span className="block text-sm text-ink-mute">{row.user.email}</span>
+                      </th>
+                      <td className="py-3 pr-4">
+                        <RoleBadge role={row.role as EffectiveRole} />
+                      </td>
+                      {MEASURES.map((column) => (
+                        <td
+                          key={column}
+                          className={
+                            column === measure
+                              ? 'py-3 pr-5 pl-4 text-right font-semibold text-ink tabular-nums'
+                              : 'py-3 pr-5 pl-4 text-right text-ink-soft tabular-nums'
+                          }
+                        >
+                          {valueOf(row, column)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          </>
+        )}
+      </div>
     </div>
   )
 }

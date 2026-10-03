@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -34,6 +34,12 @@ QUEUE_PARAMS = [
         description="`true` narrows the list to the caller's own requests.",
         required=False,
         type=bool,
+    ),
+    OpenApiParameter(
+        name="q",
+        description="Free-text match over title, details and who filed it.",
+        required=False,
+        type=str,
     ),
 ]
 
@@ -95,7 +101,7 @@ class ReimbursementViewSet(viewsets.ModelViewSet):
     def _scoped_queryset(self):
         """Everything the caller may read, narrowed by the filters they share.
 
-        The pieces both the list and the summary apply. ``status`` is
+        The pieces both the list and the summary apply — the search included. ``status`` is
         deliberately not among them — a summary is a count *per* status, so
         honouring it there would leave every other bucket reading zero.
         """
@@ -110,6 +116,16 @@ class ReimbursementViewSet(viewsets.ModelViewSet):
             # for a bus fare needs to see their own line among the queue they
             # are working through.
             qs = qs.filter(submitted_by=self.request.user)
+        if search := params.get("q", "").strip():
+            # Here rather than in `get_queryset`, so the summary narrows with
+            # the list: tab counts and totals describe what the search found.
+            # A plain ILIKE, as on the timeline and the knowledge base.
+            qs = qs.filter(
+                Q(title__icontains=search)
+                | Q(description__icontains=search)
+                | Q(submitted_by__full_name__icontains=search)
+                | Q(submitted_by__email__icontains=search)
+            )
         return qs
 
     def _in_requested_term(self, qs):

@@ -1,56 +1,74 @@
 @import 'tailwindcss';
 
 /*
- * Palette follows Nirmaan's festive print collateral: warm cream paper, deep
- * maroon ink, marigold gold accents. The four `--color-nirmaan-*` hues are the
- * logo's own panel colours and are used for categorical badges so the app and
- * the mark agree.
+ * A field register: blue-ruled paper, navy ballpoint ink, white sheets laid on
+ * it. Nirmaan blue carries every action; marigold is the one warm note and is
+ * spent only on "this is where you are" — the current term, notices.
+ * Red means an error or a destructive action and nothing else.
+ *
+ * Token *names* predate this palette (`paper`, `brand`, `gold`) and are kept so
+ * the forms re-skin without being touched; the values are what changed.
  */
 @theme {
   /*
-   * Geist for UI text — its lining figures line up in the timeline's date
-   * column. Bricolage Grotesque for display: an optically-sized grotesque with
-   * enough of a print voice to carry the poster feel the palette sets up.
+   * Atkinson Hyperlegible Next, from the Braille Institute, is the only family.
+   * It was drawn for legibility: I, l and 1 differ, as do 0 and O, and the
+   * open shapes hold up at small sizes on cheap phone screens. Headings are
+   * the same face, set bold. `--font-display` is kept so the `font-display`
+   * utility still names "a heading" in markup.
    */
-  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Bricolage Grotesque', 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Atkinson Hyperlegible Next', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Atkinson Hyperlegible Next', ui-sans-serif, system-ui, sans-serif;
 
-  --color-paper: #fdf6e9;
-  --color-paper-deep: #f6e8d2;
-  --color-surface: #fffdf8;
-  --color-line: #ecdcc2;
-  --color-line-strong: #d8bf95;
-
-  --color-ink: #2f1d16;
-  --color-ink-soft: #6b5445;
-  /*
-   * Contrast-checked against the darkest surface it lands on (`paper-deep`),
-   * not just `paper`. The old #97806b read at 3.1:1 there and 3.5:1 on paper —
-   * under WCAG AA for body text, and this token carries the small text:
-   * timestamps, hints, captions, placeholders. It stays a step lighter than
-   * `ink-soft`, so the three-tier hierarchy is intact — roughly 15:1 / 6.6:1 /
-   * 4.6:1 on paper.
-   */
-  --color-ink-mute: #796655;
-
-  --color-brand-50: #fdf2f4;
-  --color-brand-100: #f9dfe4;
-  --color-brand-200: #f0bdc7;
-  --color-brand-500: #b02a45;
-  --color-brand-600: #8e1f38;
-  --color-brand-700: #6d162a;
-
-  --color-gold-50: #fdf5e3;
-  --color-gold-100: #f9e7c2;
-  --color-gold-500: #d99a2b;
-  /* Badge text on `gold-50`; #b47a16 sat at 3.4:1 there. `gold-500` is left
-     alone because it is only ever decorative — the ornament's diamond. */
-  --color-gold-600: #986713;
+  --color-paper: #eef1f6;
+  --color-paper-deep: #e2e7f0;
+  --color-surface: #ffffff;
+  --color-line: #dde2ec;
+  --color-line-strong: #c3cada;
 
   /*
-   * The logo's four panel colours. These are brand values and feed the
-   * `nirmaan-rule` gradient under the header, so they are reproduced exactly
-   * and must not be tuned for contrast.
+   * Text is the logo's navy wordmark, deepened for reading. Roughly 14:1 /
+   * 9:1 / 6.5:1 on `paper`, so even the quietest text clears AA comfortably.
+   */
+  --color-ink: #13254d;
+  --color-ink-soft: #33415f;
+  --color-ink-mute: #4a5673;
+
+  /* The wordmark itself, for the project header band; and the `.org` sky. */
+  --color-navy: #1d3a72;
+  --color-navy-deep: #152b57;
+  --color-sky: #29a3dc;
+
+  /*
+   * The alternate row in a list: a wash of the logo's sky blue (the `.org`
+   * and the arc). Cleaner than a step of the page's grey-blue, which sat too
+   * close to the background and read as dull; light enough that every text
+   * and badge colour keeps its contrast on it.
+   */
+  --color-stripe: #edf7fd;
+
+  /* Nirmaan blue, as a scale. 600 is the logo's own panel colour. */
+  --color-brand-50: #eef3fb;
+  --color-brand-100: #dbe6f6;
+  --color-brand-200: #b5cbec;
+  --color-brand-500: #2a62b8;
+  --color-brand-600: #1b4f9c;
+  --color-brand-700: #143c78;
+
+  /* Marigold. 600 is the text-safe shade (5.6:1 on `gold-50`). */
+  --color-gold-50: #fef6e4;
+  --color-gold-100: #fbe6b6;
+  --color-gold-500: #f4a71d;
+  --color-gold-600: #8a5a05;
+
+  --color-danger-50: #fdeef0;
+  --color-danger-200: #f4c2c9;
+  --color-danger-600: #c0233a;
+  --color-danger-700: #9b1b2e;
+
+  /*
+   * The logo's panel colours. Brand values, reproduced exactly; they feed the
+   * four-colour rule under the header and must not be tuned for contrast.
    */
   --color-nirmaan-blue: #1b4f9c;
   --color-nirmaan-sky: #29a3dc;
@@ -58,52 +76,46 @@
   --color-nirmaan-red: #d6293e;
   --color-nirmaan-green: #4aa93a;
 
-  /*
-   * Text-safe counterpart for the one panel colour that cannot carry text: the
-   * green read at 2.7:1 on its own 10%-tint badge. Blue (6.7:1) and red
-   * (4.9:1) clear AA as they are and have no `-ink` variant. Kept separate so
-   * the badge's fill and ring stay the true brand green while the label is
-   * legible.
-   */
+  /* Text-safe green: the brand green reads at 2.7:1 on its own tint. */
   --color-nirmaan-green-ink: #357829;
 }
 
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
-    /*
-     * Overscrolling past the top drags the whole document down, and the sticky
-     * header goes with it — leaving a strip of page background above the bar.
-     * Refusing the bounce is the fix; the header's ::before covers the browsers
-     * that bounce anyway.
-     */
+    /* The sticky header would otherwise be dragged down by an overscroll. */
     overscroll-behavior-y: none;
   }
 
   body {
     @apply bg-paper text-ink antialiased;
-    /* Two faint marigold washes so the cream reads as paper, not flat grey. */
-    background-image:
-      radial-gradient(60rem 32rem at 12% -10%, rgba(244, 167, 29, 0.13), transparent 65%),
-      radial-gradient(48rem 30rem at 95% 4%, rgba(176, 42, 69, 0.09), transparent 60%);
-    background-attachment: fixed;
+    font-size: 16px;
+    line-height: 1.6;
   }
 
   h1,
   h2,
   h3 {
     @apply font-display;
-    /* Bricolage carries an `opsz` axis; let it respond to the heading size. */
-    font-optical-sizing: auto;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
   }
 
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-600;
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
 }
 
-/* The logo's four panel colours as a hairline rule — used under the header. */
+/* The logo's four panel colours as a rule — under the header, on the login. */
 @utility nirmaan-rule {
   background-image: linear-gradient(
     90deg,

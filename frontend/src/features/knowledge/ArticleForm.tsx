@@ -11,7 +11,7 @@ import { useCreateArticle, useUpdateArticle } from '@/features/projects/queries'
 const schema = z.object({
   category: z.enum(['CONTEXT', 'PROCESS', 'PARTNER', 'LESSON', 'OTHER']),
   title: z.string().trim().min(1, 'Give the page a name.').max(200),
-  body: z.string().trim().min(1, 'An empty page is not knowledge. Write something.'),
+  body: z.string().trim().min(1, 'Write something before saving.'),
   note: z.string().max(200),
 })
 
@@ -105,11 +105,7 @@ export function ArticleForm({
         <Input {...register('title')} placeholder="How the Saturday session runs" />
       </Field>
 
-      <Field
-        label="The page"
-        error={errors.body?.message}
-        hint="Write it for whoever joins after you have left. Markdown is supported."
-      >
+      <Field label="Content" error={errors.body?.message} hint="Markdown is supported.">
         <Textarea {...register('body')} className="min-h-64" />
       </Field>
 
@@ -117,7 +113,7 @@ export function ArticleForm({
         <Field
           label="What changed"
           error={errors.note?.message}
-          hint="Optional, and worth a line — the next reader sees this next to your name."
+          hint="Optional. Shown next to your name in the history."
         >
           <Input {...register('note')} placeholder="Corrected the bus timing" />
         </Field>

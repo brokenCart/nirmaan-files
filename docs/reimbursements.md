@@ -92,6 +92,11 @@ honour a filter *on* one. Its response is an inline object rather than a seriali
 derives `ReimbursementSummary` from the generated `operations` type instead of hand-writing a
 `Record`.
 
+`?q=` searches title, details and the filer's name or email, case-insensitive. Unlike `?status=`
+the summary **does** honour it: it is applied in `_scoped_queryset`, which both routes share, so
+the tab counts and totals describe what the search found. It never widens visibility — a
+volunteer's search runs over their own rows only.
+
 **Scope: no attachments.** Receipt images are the same unresolved Drive-quota problem that defers
 photos on the timeline (see [*Deferred: photos and video*](deferred-media.md)), so when it is settled proof arrives as a
 child table — `ReimbursementAttachment`, FK to the request, one row per file — rather than as a

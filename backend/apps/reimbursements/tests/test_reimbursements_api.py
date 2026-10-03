@@ -186,6 +186,44 @@ class TestQueueFilters:
         assert titles(response) == {"Mine"}
 
 
+class TestSearch:
+    def test_matches_title_details_and_filer(
+        self, auth_client, finance_lead, volunteer, lead, project
+    ):
+        volunteer.full_name = "Meera Joshi"
+        volunteer.save()
+        ReimbursementFactory(project=project, submitted_by=lead, title="Bus fare to the centre")
+        ReimbursementFactory(
+            project=project, submitted_by=lead, title="Printing", description="Took the BUS back."
+        )
+        ReimbursementFactory(project=project, submitted_by=volunteer, title="Chart paper")
+        ReimbursementFactory(project=project, submitted_by=lead, title="Markers")
+
+        client = auth_client(finance_lead)
+        assert titles(client.get(LIST_URL, {"q": "bus"})) == {"Bus fare to the centre", "Printing"}
+        assert titles(client.get(LIST_URL, {"q": "meera"})) == {"Chart paper"}
+
+    def test_search_stays_inside_a_volunteers_own_rows(self, auth_client, volunteer, lead, project):
+        ReimbursementFactory(project=project, submitted_by=volunteer, title="My bus fare")
+        ReimbursementFactory(project=project, submitted_by=lead, title="Lead's bus fare")
+
+        response = auth_client(volunteer).get(LIST_URL, {"q": "bus"})
+        assert titles(response) == {"My bus fare"}
+
+    def test_summary_counts_only_what_the_search_found(
+        self, auth_client, finance_lead, volunteer, project
+    ):
+        ReimbursementFactory(
+            project=project, submitted_by=volunteer, title="Bus", amount=Decimal("100.00")
+        )
+        ReimbursementFactory(
+            project=project, submitted_by=volunteer, title="Paper", amount=Decimal("40.00")
+        )
+
+        response = auth_client(finance_lead).get(SUMMARY_URL, {"project": project.slug, "q": "bus"})
+        assert response.data["PENDING"] == {"count": 1, "total": "100.00"}
+
+
 class TestSummary:
     def test_counts_every_status_including_the_empty_ones(
         self, auth_client, finance_lead, volunteer, project

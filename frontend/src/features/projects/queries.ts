@@ -103,6 +103,8 @@ export type LogFilters = {
   until?: string
   /** A semester slug, or `all` to read across every term. Defaults to the open one. */
   semester?: string
+  /** Free text over title, body, author and attendees. */
+  q?: string
   page?: number
 } & Record<string, string | number | undefined>
 
@@ -123,6 +125,8 @@ export type ReimbursementFilters = {
   semester?: string
   /** `true` narrows a finance lead's view to their own requests. */
   mine?: string
+  /** Free text over title, details and who filed it. */
+  q?: string
   page?: number
 } & Record<string, string | number | undefined>
 

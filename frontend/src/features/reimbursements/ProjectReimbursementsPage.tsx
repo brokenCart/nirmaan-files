@@ -1,6 +1,6 @@
 import { Pencil, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useDeferredValue, useState } from 'react'
+import { useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '@/api/client'
 import type { Reimbursement, ReimbursementStatus } from '@/api/types'
@@ -13,8 +13,18 @@ import {
   canReviewReimbursement,
 } from '@/api/types'
 import { useAuth } from '@/auth/AuthContext'
-import { Ornament } from '@/components/Logo'
-import { Button, Card, EmptyState, ErrorNote, Pagination, Spinner } from '@/components/ui'
+import { ProjectHeader } from '@/components/ProjectHeader'
+import {
+  Button,
+  Card,
+  EmptyState,
+  ErrorNote,
+  Notice,
+  Pagination,
+  SearchField,
+  SectionIntro,
+  Spinner,
+} from '@/components/ui'
 import {
   REIMBURSEMENTS_PAGE_SIZE,
   useCurrentSemester,
@@ -58,6 +68,9 @@ export function ProjectReimbursementsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  // Typing stays responsive; the request follows the deferred value.
+  const deferredSearch = useDeferredValue(search.trim())
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<number | null>(null)
@@ -72,6 +85,8 @@ export function ProjectReimbursementsPage() {
   const filters = {
     status: statusFilter === 'ALL' ? undefined : statusFilter,
     semester: viewedTerm,
+    // The summary takes this too, so the tab counts describe the search.
+    q: deferredSearch || undefined,
     page,
   }
   const reimbursements = useReimbursements(slug, filters)
@@ -107,6 +122,11 @@ export function ProjectReimbursementsPage() {
     setPage(1)
   }
 
+  function changeSearch(next: string) {
+    setSearch(next)
+    setPage(1)
+  }
+
   function startAdding() {
     setAdding(true)
     // One editor open at a time, so it is never ambiguous which form a Save
@@ -137,149 +157,177 @@ export function ProjectReimbursementsPage() {
   const rows = reimbursements.data?.results ?? []
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link to={`/projects/${slug}`} className="text-sm text-ink-mute hover:text-brand-600">
-            ← {project.data.name} timeline
-          </Link>
-          <h1 className="mt-1 font-display text-2xl font-semibold text-ink">Reimbursements</h1>
-          <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-            {seesWholeQueue
-              ? 'Money claimed back by this project’s volunteers. The finance lead approves or turns down each request.'
-              : 'What you have claimed back from this project, and where each request has got to. Only you and the project’s leads can see these.'}
-          </p>
-        </div>
+    <div>
+      <ProjectHeader project={project.data} />
 
-        {!adding && canAdd && (
-          <Button onClick={startAdding}>
-            <Plus className="size-4" aria-hidden />
-            New request
-          </Button>
-        )}
-      </div>
-
-      {semesters.data && semesters.data.results.length > 1 && (
-        <SemesterSwitcher
-          semesters={semesters.data.results}
-          value={viewedTerm}
-          current={currentSemester.data}
-          onChange={changeTerm}
-        />
-      )}
-
-      {viewingArchive ? (
-        <Card className="border-line-strong bg-paper-deep/40">
-          <p className="text-sm text-ink-soft">
-            You are reading a closed semester. Its requests are part of the project&rsquo;s
-            record — they cannot be filed, edited or reviewed now.
-          </p>
-        </Card>
-      ) : (
-        <>
-          {!role && (
-            <Card className="border-line-strong bg-paper-deep/40">
-              <p className="text-sm text-ink-soft">
-                You are not on this project&rsquo;s roster this semester. You can still see what
-                you claimed while you were, but not file anything new.
-              </p>
-            </Card>
-          )}
-
-          {/* The one screen where LEAD and FINANCE_LEAD differ, so the absent
-              Approve button gets an explanation rather than reading as a bug. */}
-          {role === 'LEAD' && (
-            <Card className="border-line-strong bg-paper-deep/40">
-              <p className="text-sm text-ink-soft">
-                You can see everything claimed against this project. Approving and rejecting is
-                the finance lead&rsquo;s — ask the Executive Committee if there isn&rsquo;t one
-                this semester.
-              </p>
-            </Card>
-          )}
-        </>
-      )}
-
-      {adding && (
-        <Card className="border-gold-500/40">
-          <h2 className="font-display text-lg font-semibold text-brand-600">New request</h2>
-          <Ornament className="mt-2 mb-5" />
-          <ReimbursementForm project={project.data} onDone={() => setAdding(false)} />
-        </Card>
-      )}
-
-      {/* Counts come from `/summary/` rather than the page in hand: the list is
-          paginated, so "3 awaiting review" must not become "2" on page two. */}
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by status">
-        {STATUS_FILTERS.map((value) => {
-          const bucket = value === 'ALL' ? undefined : summary.data?.[value]
-          const count =
-            value === 'ALL'
-              ? Object.values(summary.data ?? {}).reduce((sum, row) => sum + row.count, 0)
-              : bucket?.count
-
-          return (
-            <Button
-              key={value}
-              variant={statusFilter === value ? 'primary' : 'secondary'}
-              aria-pressed={statusFilter === value}
-              onClick={() => changeFilter(value)}
-            >
-              {value === 'ALL' ? 'All' : REIMBURSEMENT_STATUS_LABELS[value]}
-              {count !== undefined && (
-                <span className="text-xs tabular-nums opacity-70">{count}</span>
-              )}
-              {/* The total, on the tabs where it means something. "All" gets a
-                  count only: approved, rejected and pending money summed
-                  together is not a figure anyone has a use for. */}
-              {bucket !== undefined && bucket.count > 0 && (
-                <span className="text-xs tabular-nums opacity-70">
-                  · {formatRupees(bucket.total)}
-                </span>
-              )}
-            </Button>
-          )
-        })}
-      </div>
-
-      {reimbursements.isPending ? (
-        <Spinner label="Loading requests…" />
-      ) : reimbursements.error ? (
-        <ErrorNote message={reimbursements.error.message} />
-      ) : rows.length === 0 ? (
-        <EmptyState
-          title={statusFilter === 'ALL' ? 'No requests yet' : 'Nothing here'}
+      <div className="space-y-6">
+        <SectionIntro
+          title="Reimbursements"
           description={
-            statusFilter !== 'ALL'
-              ? `No requests in this term are ${REIMBURSEMENT_STATUS_LABELS[statusFilter].toLowerCase()}.`
-              : canAdd
-                ? 'Spent your own money on the project? File it here and the finance lead will pick it up.'
-                : 'Nothing has been claimed against this project this semester.'
+            seesWholeQueue
+              ? 'Expense claims from this project’s members. The finance lead approves or rejects them.'
+              : 'Your expense claims for this project. Only you and the project leads can see them.'
+          }
+          actions={
+            !adding &&
+            canAdd && (
+              <Button onClick={startAdding}>
+                <Plus className="size-4" aria-hidden />
+                New request
+              </Button>
+            )
           }
         />
-      ) : (
-        <ul className="space-y-3">
-          {rows.map((reimbursement) => {
-            const editing = editingId === reimbursement.id
-            const confirming = confirmingDeleteId === reimbursement.id
-            const mine = reimbursement.submitted_by.id === user?.id
-            const canReview = canReviewReimbursement(
-              reimbursement,
-              role,
-              isExec,
-              user?.id,
-              currentSemester.data,
-            )
 
-            return (
-              <li key={reimbursement.id}>
-                <Card className={cn(editing && 'border-gold-500/40')}>
+        {viewingArchive ? (
+          <Notice>
+            This semester is closed. Its requests can&rsquo;t be filed, edited or reviewed.
+          </Notice>
+        ) : (
+          <>
+            {!role && (
+              <Notice>
+                You&rsquo;re not a member this semester. You can see your past requests but
+                can&rsquo;t file new ones.
+              </Notice>
+            )}
+
+            {/* The one screen where LEAD and FINANCE_LEAD differ, so the absent
+              Approve button gets an explanation rather than reading as a bug. */}
+            {role === 'LEAD' && (
+              <Notice>
+                Only the finance lead can approve or reject requests. If there isn&rsquo;t one this
+                semester, contact the Executive Committee.
+              </Notice>
+            )}
+          </>
+        )}
+
+        {adding && (
+          <Card className="border-brand-200">
+            <h3 className="mb-5 text-xl font-semibold text-ink">New request</h3>
+            <ReimbursementForm project={project.data} onDone={() => setAdding(false)} />
+          </Card>
+        )}
+
+        {/* Counts come from `/summary/` rather than the page in hand: the list is
+          paginated, so "3 awaiting review" must not become "2" on page two. */}
+        <div className="flex flex-wrap items-center gap-3">
+          <SearchField
+            value={search}
+            onChange={changeSearch}
+            label="Search requests"
+            placeholder="Search requests or people"
+            className="w-full sm:w-72"
+          />
+
+          <div
+            className="flex w-full gap-0.5 overflow-x-auto rounded-lg bg-paper-deep p-0.5 sm:w-fit"
+            role="group"
+            aria-label="Filter by status"
+          >
+            {STATUS_FILTERS.map((value) => {
+              const bucket = value === 'ALL' ? undefined : summary.data?.[value]
+              const count =
+                value === 'ALL'
+                  ? Object.values(summary.data ?? {}).reduce((sum, row) => sum + row.count, 0)
+                  : bucket?.count
+
+              return (
+                <button
+                  type="button"
+                  key={value}
+                  aria-pressed={statusFilter === value}
+                  onClick={() => changeFilter(value)}
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1.5 rounded-md px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors',
+                    statusFilter === value
+                      ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(23,32,54,0.12)]'
+                      : 'text-ink-soft hover:text-ink',
+                  )}
+                >
+                  {value === 'ALL' ? 'All' : REIMBURSEMENT_STATUS_LABELS[value]}
+                  {count !== undefined && (
+                    <span className="text-sm text-ink-mute tabular-nums">{count}</span>
+                  )}
+                  {/* The total, on the tabs where it means something. "All" gets a
+                  count only: approved, rejected and pending money summed
+                  together is not a figure anyone has a use for. */}
+                  {bucket !== undefined && bucket.count > 0 && (
+                    <span className="text-sm text-ink-mute tabular-nums">
+                      {formatRupees(bucket.total)}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {semesters.data && semesters.data.results.length > 1 && (
+            <div className="sm:ml-auto">
+              <SemesterSwitcher
+                semesters={semesters.data.results}
+                value={viewedTerm}
+                current={currentSemester.data}
+                onChange={changeTerm}
+              />
+            </div>
+          )}
+        </div>
+
+        {reimbursements.isPending ? (
+          <Spinner label="Loading requests…" />
+        ) : reimbursements.error ? (
+          <ErrorNote message={reimbursements.error.message} />
+        ) : rows.length === 0 ? (
+          <EmptyState
+            title={
+              deferredSearch
+                ? 'No requests match'
+                : statusFilter === 'ALL'
+                  ? 'No requests yet'
+                  : 'Nothing here'
+            }
+            description={
+              deferredSearch
+                ? 'Try a different search, status or semester.'
+                : statusFilter !== 'ALL'
+                  ? `No requests in this term are ${REIMBURSEMENT_STATUS_LABELS[statusFilter].toLowerCase()}.`
+                  : canAdd
+                    ? 'Paid for something for the project? File a request to get the money back.'
+                    : 'No requests this semester.'
+            }
+          />
+        ) : (
+          <ul
+            className={cn(
+              'overflow-hidden rounded-[10px] border border-line bg-surface',
+              reimbursements.isPlaceholderData && 'opacity-60',
+            )}
+          >
+            {rows.map((reimbursement) => {
+              const editing = editingId === reimbursement.id
+              const confirming = confirmingDeleteId === reimbursement.id
+              const mine = reimbursement.submitted_by.id === user?.id
+              const canReview = canReviewReimbursement(
+                reimbursement,
+                role,
+                isExec,
+                user?.id,
+                currentSemester.data,
+              )
+
+              return (
+                <li
+                  key={reimbursement.id}
+                  className={cn(
+                    'border-b border-line p-5 last:border-0 even:bg-stripe',
+                    editing && 'bg-gold-50 even:bg-gold-50',
+                  )}
+                >
                   {editing ? (
                     <>
-                      <h2 className="font-display text-lg font-semibold text-brand-600">
-                        Edit request
-                      </h2>
-                      <Ornament className="mt-2 mb-5" />
+                      <h3 className="mb-5 text-xl font-semibold text-ink">Edit request</h3>
                       <ReimbursementForm
                         project={project.data}
                         reimbursement={reimbursement}
@@ -288,29 +336,76 @@ export function ProjectReimbursementsPage() {
                     </>
                   ) : (
                     <>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <ReimbursementStatusBadge status={reimbursement.status} />
-                        <h2 className="min-w-0 font-display text-lg font-semibold break-words text-ink">
-                          {reimbursement.title}
-                        </h2>
-                        {/* Tabular figures so a column of amounts lines up on
-                            the decimal, which is what makes a queue scannable. */}
-                        <span className="font-display text-lg font-semibold text-brand-700 tabular-nums">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <ReimbursementStatusBadge status={reimbursement.status} />
+                          <h3 className="mt-2 text-xl font-semibold break-words text-ink">
+                            {reimbursement.title}
+                          </h3>
+                        </div>
+                        {/* Right-aligned tabular figures, so a column of
+                            amounts lines up down the sheet — which is what
+                            makes a queue scannable. */}
+                        <span className="shrink-0 text-2xl leading-none font-bold text-ink tabular-nums">
                           {formatRupees(reimbursement.amount)}
                         </span>
+                      </div>
 
+                      <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-ink-soft">
+                        {reimbursement.description}
+                      </p>
+
+                      <p className="mt-2 text-sm text-ink-mute">
+                        {mine
+                          ? 'Filed by you'
+                          : `Filed by ${reimbursement.submitted_by.full_name || reimbursement.submitted_by.email}`}{' '}
+                        on {formatDateTime(reimbursement.created_at)}
+                      </p>
+
+                      {/* The decision, once there is one. Shown to everyone who
+                          can see the row — the volunteer's whole reason for
+                          opening this screen is to read it. */}
+                      {reimbursement.reviewed_by && reimbursement.reviewed_at && (
+                        <div className="mt-3 rounded-md border-l-[3px] border-line-strong bg-paper/70 px-3 py-2.5">
+                          <p className="text-sm text-ink-mute">
+                            {REIMBURSEMENT_STATUS_LABELS[reimbursement.status]} by{' '}
+                            {reimbursement.reviewed_by.full_name || reimbursement.reviewed_by.email}{' '}
+                            on {formatDateTime(reimbursement.reviewed_at)}
+                          </p>
+                          {reimbursement.review_note && (
+                            <p className="mt-1.5 text-sm leading-relaxed whitespace-pre-wrap text-ink-soft">
+                              {reimbursement.review_note}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {canReview && (
+                        <div className="mt-4">
+                          <ReviewControls reimbursement={reimbursement} projectSlug={slug} />
+                        </div>
+                      )}
+
+                      {/* A finance lead's own claim: they see the queue, and
+                          this is the one row in it they cannot decide. Saying
+                          so beats an unexplained gap where the buttons are. */}
+                      {!canReview && mine && role === 'FINANCE_LEAD' && !viewingArchive && (
+                        <p className="mt-3 text-sm text-ink-mute">
+                          You can&rsquo;t review your own request. Ask another finance lead or the
+                          Executive Committee.
+                        </p>
+                      )}
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
                         {!confirming && (
-                          <div className="ml-auto flex gap-1">
+                          <div className="-ml-2 flex gap-1">
                             {canEditReimbursement(
                               reimbursement,
                               role,
                               user?.id,
                               currentSemester.data,
                             ) && (
-                              <Button
-                                variant="ghost"
-                                onClick={() => startEditing(reimbursement)}
-                              >
+                              <Button variant="ghost" onClick={() => startEditing(reimbursement)}>
                                 <Pencil className="size-4" aria-hidden />
                                 Edit
                               </Button>
@@ -334,10 +429,10 @@ export function ProjectReimbursementsPage() {
                         )}
 
                         {confirming && (
-                          <div className="ml-auto flex items-center gap-2">
-                            <span className="text-xs text-ink-soft">
-                              {mine ? 'Withdraw' : 'Remove'} this {formatRupees(reimbursement.amount)}{' '}
-                              request?
+                          <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                            <span className="text-sm text-ink-soft">
+                              {mine ? 'Withdraw' : 'Remove'} this{' '}
+                              {formatRupees(reimbursement.amount)} request?
                             </span>
                             <Button
                               variant="danger"
@@ -372,75 +467,26 @@ export function ProjectReimbursementsPage() {
                           />
                         </div>
                       )}
-
-                      <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-ink-soft">
-                        {reimbursement.description}
-                      </p>
-
-                      <p className="mt-3 text-xs text-ink-mute">
-                        {mine
-                          ? 'Filed by you'
-                          : `Filed by ${reimbursement.submitted_by.full_name || reimbursement.submitted_by.email}`}{' '}
-                        · {formatDateTime(reimbursement.created_at)}
-                      </p>
-
-                      {/* The decision, once there is one. Shown to everyone who
-                          can see the row — the volunteer's whole reason for
-                          opening this screen is to read it. */}
-                      {reimbursement.reviewed_by && reimbursement.reviewed_at && (
-                        <div className="mt-3 rounded-lg bg-paper-deep/40 p-3 ring-1 ring-line">
-                          <p className="text-xs text-ink-mute">
-                            {REIMBURSEMENT_STATUS_LABELS[reimbursement.status]} by{' '}
-                            {reimbursement.reviewed_by.full_name ||
-                              reimbursement.reviewed_by.email}{' '}
-                            · {formatDateTime(reimbursement.reviewed_at)}
-                          </p>
-                          {reimbursement.review_note && (
-                            <p className="mt-1.5 text-sm leading-relaxed whitespace-pre-wrap text-ink-soft">
-                              {reimbursement.review_note}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {canReview && (
-                        <div className="mt-4">
-                          <ReviewControls
-                            reimbursement={reimbursement}
-                            projectSlug={slug}
-                          />
-                        </div>
-                      )}
-
-                      {/* A finance lead's own claim: they see the queue, and
-                          this is the one row in it they cannot decide. Saying
-                          so beats an unexplained gap where the buttons are. */}
-                      {!canReview && mine && role === 'FINANCE_LEAD' && !viewingArchive && (
-                        <p className="mt-3 text-xs text-ink-mute">
-                          You cannot review your own request — ask another finance lead or the
-                          Executive Committee.
-                        </p>
-                      )}
                     </>
                   )}
-                </Card>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+                </li>
+              )
+            })}
+          </ul>
+        )}
 
-      <Pagination
-        page={page}
-        totalPages={totalPages}
-        onChange={(next) => {
-          setPage(next)
-          window.scrollTo({ top: 0, behavior: 'smooth' })
-        }}
-        label="Reimbursement pages"
-        prevLabel="Newer"
-        nextLabel="Older"
-      />
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onChange={(next) => {
+            setPage(next)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          label="Reimbursement pages"
+          prevLabel="Newer"
+          nextLabel="Older"
+        />
+      </div>
     </div>
   )
 }

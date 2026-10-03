@@ -83,7 +83,7 @@ export function ResourceForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <Field label="What is it" error={errors.kind?.message}>
+      <Field label="Type" error={errors.kind?.message}>
         <Select {...register('kind')}>
           {RESOURCE_KINDS.map((kind) => (
             <option key={kind} value={kind}>
@@ -100,7 +100,7 @@ export function ResourceForm({
       <Field
         label="Link"
         error={errors.url?.message ?? urlError}
-        hint="Anyone opening it needs access in Drive — this stores the address, not the file."
+        hint="People still need Drive access to open it."
       >
         <Input
           type="url"
@@ -111,12 +111,8 @@ export function ResourceForm({
         />
       </Field>
 
-      <Field label="What it is for" error={errors.description?.message}>
-        <Textarea
-          {...register('description')}
-          className="min-h-20"
-          placeholder="Optional — a line so the next batch knows what they are opening."
-        />
+      <Field label="Description" error={errors.description?.message}>
+        <Textarea {...register('description')} className="min-h-20" placeholder="Optional" />
       </Field>
 
       {/* Anything not already shown on the link input: a 403 from a stale

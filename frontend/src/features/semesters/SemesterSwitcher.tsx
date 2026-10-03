@@ -34,10 +34,11 @@ export function SemesterSwitcher({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <label className="flex items-center gap-2 text-sm text-ink-mute">
+      <label className="flex items-center gap-2 text-sm text-ink-soft">
         <CalendarRange className="size-4" aria-hidden />
         <span className="sr-only sm:not-sr-only">Semester</span>
         <Select
+          className="w-auto min-w-56 py-1.5"
           value={value === ALL_TERMS ? ALL_TERMS : selected}
           onChange={(event) => {
             const next = event.target.value
@@ -57,9 +58,9 @@ export function SemesterSwitcher({
       </label>
 
       {archived && (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-paper-deep px-2.5 py-1 text-xs font-medium text-ink-soft">
+        <span className="inline-flex items-center gap-1.5 rounded bg-gold-50 px-2 py-1 text-sm font-medium text-gold-600 ring-1 ring-gold-100 ring-inset">
           <Archive className="size-3.5" aria-hidden />
-          Archived — read only
+          Read only
         </span>
       )}
 

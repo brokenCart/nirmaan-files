@@ -1,9 +1,8 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react'
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
   ReactNode,
-  SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from 'react'
 
@@ -14,10 +13,11 @@ import { cn } from '@/lib/utils'
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 const BUTTON_STYLES: Record<ButtonVariant, string> = {
-  primary: 'bg-brand-600 text-paper shadow-sm hover:bg-brand-700 disabled:bg-brand-600/50',
-  secondary: 'bg-surface text-ink-soft ring-1 ring-line-strong hover:bg-gold-50 hover:text-ink',
-  ghost: 'text-ink-soft hover:bg-gold-50 hover:text-brand-700',
-  danger: 'bg-nirmaan-red text-white hover:bg-brand-700',
+  primary: 'bg-brand-600 text-white hover:bg-brand-700 disabled:bg-brand-600/50',
+  secondary:
+    'bg-surface text-ink ring-1 ring-line-strong ring-inset hover:bg-brand-50 hover:ring-brand-200',
+  ghost: 'text-ink-soft hover:bg-brand-50 hover:text-brand-700',
+  danger: 'bg-danger-600 text-white hover:bg-danger-700',
 }
 
 export function Button({
@@ -28,7 +28,7 @@ export function Button({
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm leading-5 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60',
         BUTTON_STYLES[variant],
         className,
       )}
@@ -39,29 +39,24 @@ export function Button({
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <div
-      className={cn(
-        'rounded-xl border border-line bg-surface p-5 shadow-[0_1px_2px_rgba(47,29,22,0.05),0_8px_24px_-16px_rgba(47,29,22,0.35)]',
-        className,
-      )}
-    >
+    <div className={cn('rounded-[10px] border border-line bg-surface p-5', className)}>
       {children}
     </div>
   )
 }
 
 const ROLE_STYLES: Record<EffectiveRole, string> = {
-  EXEC: 'bg-nirmaan-blue/10 text-nirmaan-blue ring-nirmaan-blue/20',
+  EXEC: 'bg-ink text-white ring-ink',
   LEAD: 'bg-brand-50 text-brand-700 ring-brand-200',
   FINANCE_LEAD: 'bg-gold-50 text-gold-600 ring-gold-100',
-  VOLUNTEER: 'bg-nirmaan-green/10 text-nirmaan-green-ink ring-nirmaan-green/20',
+  VOLUNTEER: 'bg-surface text-ink-soft ring-line-strong',
 }
 
 export function RoleBadge({ role, className }: { role: EffectiveRole; className?: string }) {
   return (
     <span
       className={cn(
-        'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset',
+        'inline-flex rounded px-2 py-0.5 text-sm font-medium whitespace-nowrap ring-1 ring-inset',
         ROLE_STYLES[role],
         className,
       )}
@@ -75,10 +70,10 @@ export function KindBadge({ kind }: { kind: 'MOV' | 'MOM' }) {
   return (
     <span
       className={cn(
-        'inline-flex rounded px-1.5 py-0.5 text-xs font-bold tracking-widest ring-1 ring-inset',
+        'inline-flex rounded px-1.5 py-0.5 text-sm font-semibold tracking-wide ring-1 ring-inset',
         kind === 'MOV'
-          ? 'bg-nirmaan-sky/10 text-nirmaan-blue ring-nirmaan-sky/25'
-          : 'bg-brand-50 text-brand-600 ring-brand-200',
+          ? 'bg-brand-600 text-white ring-brand-600'
+          : 'bg-surface text-brand-700 ring-brand-200',
       )}
       title={kind === 'MOV' ? 'Moment of Visit' : 'Minutes of Meeting'}
     >
@@ -100,12 +95,10 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold tracking-wide text-ink-soft uppercase">
-        {label}
-      </span>
+      <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>
       {children}
-      {hint && !error && <span className="mt-1 block text-xs text-ink-mute">{hint}</span>}
-      {error && <span className="mt-1 block text-xs text-nirmaan-red">{error}</span>}
+      {hint && !error && <span className="mt-1 block text-sm text-ink-mute">{hint}</span>}
+      {error && <span className="mt-1 block text-sm text-danger-600">{error}</span>}
     </label>
   )
 }
@@ -128,12 +121,10 @@ export function Fieldset({
 }) {
   return (
     <fieldset className="block">
-      <legend className="mb-1.5 block text-xs font-semibold tracking-wide text-ink-soft uppercase">
-        {label}
-      </legend>
+      <legend className="mb-1.5 block text-sm font-medium text-ink">{label}</legend>
       {children}
-      {hint && !error && <span className="mt-1 block text-xs text-ink-mute">{hint}</span>}
-      {error && <span className="mt-1 block text-xs text-nirmaan-red">{error}</span>}
+      {hint && !error && <span className="mt-1 block text-sm text-ink-mute">{hint}</span>}
+      {error && <span className="mt-1 block text-sm text-danger-600">{error}</span>}
     </fieldset>
   )
 }
@@ -149,7 +140,7 @@ export function Checkbox({ className, ...props }: InputHTMLAttributes<HTMLInputE
 }
 
 const CONTROL =
-  'w-full rounded-lg border-0 bg-paper/60 px-3 py-2 text-sm text-ink ring-1 ring-line-strong placeholder:text-ink-mute focus:bg-surface focus:ring-2 focus:ring-brand-600'
+  'w-full rounded-md border-0 bg-surface px-3 py-2 text-sm text-ink ring-1 ring-line-strong ring-inset placeholder:text-ink-mute focus:ring-2 focus:ring-brand-600 focus:outline-none'
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(CONTROL, className)} {...props} />
@@ -159,15 +150,14 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   return <textarea className={cn(CONTROL, 'min-h-32', className)} {...props} />
 }
 
-export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn(CONTROL, className)} {...props} />
-}
+// Custom and searchable; same interface as a native `<select>`.
+export { Select } from './Select'
 
 export function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-xl border-2 border-dashed border-line-strong bg-surface/60 p-10 text-center">
-      <p className="font-display text-lg font-semibold text-ink">{title}</p>
-      <p className="mt-1 text-sm text-ink-soft">{description}</p>
+    <div className="rounded-[10px] border border-dashed border-line-strong px-6 py-12 text-center">
+      <p className="font-display text-xl font-semibold text-ink">{title}</p>
+      <p className="mx-auto mt-1.5 max-w-md text-sm text-ink-soft">{description}</p>
     </div>
   )
 }
@@ -208,7 +198,7 @@ export function Pagination({
         {prevLabel}
       </Button>
 
-      <span aria-live="polite" className="text-xs text-ink-mute tabular-nums">
+      <span aria-live="polite" className="text-sm text-ink-mute tabular-nums">
         Page {page} of {totalPages}
       </span>
 
@@ -236,9 +226,140 @@ export function ErrorNote({ message }: { message: string }) {
   return (
     <div
       role="alert"
-      className="rounded-lg bg-brand-50 p-3 text-sm text-brand-700 ring-1 ring-brand-200"
+      className="rounded-md bg-danger-50 p-3 text-sm text-danger-700 ring-1 ring-danger-200 ring-inset"
     >
       {message}
     </div>
+  )
+}
+
+/**
+ * A standing note about what the reader can and cannot do here — an archived
+ * term, no role this semester. Marigold rule on the left so it reads as a
+ * margin note on the register rather than as an error.
+ */
+export function Notice({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-md border-l-[3px] border-gold-500 bg-gold-50 px-4 py-3 text-sm text-ink-soft">
+      {children}
+    </div>
+  )
+}
+
+/**
+ * One-of-many choice as a row of buttons — the timeline's kind filter, the
+ * chart's measure, the knowledge topics. `aria-pressed` carries the state.
+ */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  label,
+  renderLabel,
+  className,
+}: {
+  options: readonly T[]
+  value: T
+  onChange: (next: T) => void
+  label: string
+  renderLabel: (option: T) => ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className={cn(
+        'flex w-full gap-0.5 overflow-x-auto rounded-lg bg-paper-deep p-0.5 sm:w-fit',
+        className,
+      )}
+    >
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          aria-pressed={value === option}
+          onClick={() => onChange(option)}
+          className={cn(
+            'flex-1 shrink-0 rounded-md px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors sm:flex-none',
+            value === option
+              ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(23,32,54,0.12)]'
+              : 'text-ink-soft hover:text-ink',
+          )}
+        >
+          {renderLabel(option)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * The heading block at the top of a project section, under the tabs.
+ * `actions` sits on the right on wide screens and wraps below on a phone.
+ */
+export function SectionIntro({
+  title,
+  description,
+  actions,
+}: {
+  title: string
+  description?: ReactNode
+  actions?: ReactNode
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+      <div className="min-w-0">
+        <h2 className="text-2xl font-semibold text-ink">{title}</h2>
+        {description && <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">{description}</p>}
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </div>
+  )
+}
+
+/**
+ * A search box with a leading icon and a clear button. Controlled: callers own
+ * the value, and usually defer it before it reaches a query.
+ */
+export function SearchField({
+  value,
+  onChange,
+  label,
+  placeholder,
+  className,
+}: {
+  value: string
+  onChange: (next: string) => void
+  /** Screen-reader name; the placeholder is not a label. */
+  label: string
+  placeholder: string
+  className?: string
+}) {
+  return (
+    <label className={cn('relative block', className)}>
+      <span className="sr-only">{label}</span>
+      <Search
+        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-mute"
+        aria-hidden
+      />
+      <input
+        type="search"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className={cn(CONTROL, 'pr-9 pl-9 [&::-webkit-search-cancel-button]:appearance-none')}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange('')}
+          aria-label="Clear search"
+          className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-1 text-ink-mute transition-colors hover:bg-brand-50 hover:text-brand-700"
+        >
+          <X className="size-4" aria-hidden />
+        </button>
+      )}
+    </label>
   )
 }
