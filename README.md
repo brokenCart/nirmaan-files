@@ -11,11 +11,11 @@ Five things are tracked per project:
 
 | Module | Status |
 | --- | --- |
-| **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting) | ✅ shipped |
+| **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting), with photos and videos | ✅ shipped |
 | **Knowledge base** — past context and how-things-work | ✅ shipped |
 | **Volunteer visit tracking** — who showed up, when | ✅ shipped |
 | **Resource links** — Drive folders and other pointers | ✅ shipped |
-| **Reimbursements** — volunteers claim money back, the finance lead signs it off | ✅ shipped |
+| **Reimbursements** — volunteers claim money back with receipt images, the finance lead signs it off | ✅ shipped |
 
 Opening a new semester still has **no screen** — the API supports it, but exec does it through the
 Django admin at `/admin/` for now. Roster changes do have one: see *Adding members* below.
@@ -24,8 +24,6 @@ Django admin at `/admin/` for now. Roster changes do have one: see *Adding membe
 
 Every entry is a MOV or a MOM on one project's timeline, and both kinds carry an **attendee list** —
 that list is what visit and meeting counts are derived from, so mark who was actually there.
-Entries are text-only for now; photos and video are deferred
-([`docs/deferred-media.md`](docs/deferred-media.md) explains why).
 
 Who may do what:
 
@@ -38,7 +36,27 @@ Who may do what:
   disagree with rather than reword it under someone else's name. Deletes are soft, so nothing
   actually leaves the database.
 
-A closed semester is frozen: nobody edits its entries, and only exec retains the removal lever.
+A closed semester is frozen: nobody edits its entries, and only exec retains the removal lever. A
+filed entry also cannot be moved to a date in another semester, by anyone.
+
+### Photos and videos
+
+An entry can carry up to **10 photos** (JPEG, PNG or WebP, 10 MB each) and **3 videos** (MP4, MOV or
+WebM, 500 MB each). Attaching or removing one is editing the entry, so only its author can do it,
+while the semester is open.
+
+Files are stored in Google Drive, in a folder per project and semester that the app creates on first
+use. Inside the app they are as private as their entry, so a draft's media reaches only its author.
+**Drive does not know about drafts**: a file is uploaded when the entry is saved, and anyone with
+access to that Drive folder can open it. The entry form says so. Removing a photo or video hides it
+in the app and leaves the file in Drive.
+
+Videos upload in the background after you save, with a progress panel on every screen, so you can
+keep working. **Keep the tab open until they finish**: closing it stops the upload, and the video
+has to be added again. Uploads that survive a closed tab would need a background job system, which
+is a TODO in [`docs/open-questions.md`](docs/open-questions.md).
+
+Setting up storage is covered under [*Google Drive*](#google-drive) below.
 
 ## Knowledge base
 
@@ -176,14 +194,17 @@ Requests are **per semester**, like the timeline and unlike the resource shelf: 
 and the budget it comes out of restarts each August. A closed term is frozen, and a former member
 keeps read-only access to what they once claimed — "was I ever paid" outlives a roster.
 
-Receipts cannot be attached yet, so say where yours is in the details. Photographs are deferred for
-the same reason photos on the timeline are
-([`docs/deferred-media.md`](docs/deferred-media.md) explains why, and what the shape will be).
+A request can carry up to **10 receipt images** (JPEG, PNG or WebP, 10 MB each). They follow the same
+rule as the claim: only the submitter can add or remove them, and they freeze at the decision, so
+proof cannot be swapped after approval. Whoever can see the request can see its receipts. In Drive
+they sit in a separate `Receipts` folder, so when sharing, share a semester's photo folder and never
+the whole project folder.
 
 ## Stack
 
 Django 6 + Django REST Framework on Python 3.14, PostgreSQL 17, React 19 + TypeScript on Vite,
-Tailwind 4. Sign-in is Google, restricted to `@pilani.bits-pilani.ac.in`.
+Tailwind 4. Sign-in is Google, restricted to `@pilani.bits-pilani.ac.in`. Photos, videos and receipts
+are stored in Google Drive.
 
 ## Running it
 
@@ -219,6 +240,12 @@ Create an **OAuth 2.0 Web client** in the
 
 To develop without Google credentials at all, set `AUTH_FAKE_GOOGLE_TOKENS=true` and post a plain
 JSON claims blob where a signed token would go. This exists only in the dev settings module.
+
+### Google Drive
+
+Optional. With `DRIVE_ROOT_FOLDER_ID` and `DRIVE_CREDENTIALS_JSON` empty, development saves uploads
+to `backend/media/drive/`, and production runs normally with the upload controls hidden. To store
+them in Drive, follow the setup steps in [`docs/log-images.md`](docs/log-images.md).
 
 ### Demo data
 
@@ -261,7 +288,7 @@ read the relevant one before changing that area:
 | The resource shelf | [`docs/resources.md`](docs/resources.md) |
 | Knowledge base pages | [`docs/knowledge-base.md`](docs/knowledge-base.md) |
 | Reimbursements | [`docs/reimbursements.md`](docs/reimbursements.md) |
-| File upload, and why there is none | [`docs/deferred-media.md`](docs/deferred-media.md) |
+| Photos, receipts, videos and Drive storage | [`docs/log-images.md`](docs/log-images.md) |
 | What is deliberately unsettled | [`docs/open-questions.md`](docs/open-questions.md) |
 
 `CLAUDE.md` is a one-line `@AGENTS.md` import and holds no content of its own: Claude Code reads

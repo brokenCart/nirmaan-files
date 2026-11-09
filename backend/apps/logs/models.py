@@ -56,7 +56,7 @@ class DailyLog(models.Model):
     union of two. ``kind`` carries the distinction and every field applies to
     both. Split the models only if the two genuinely diverge.
 
-    Photos hang off an entry as :class:`LogImage` rows; video is still deferred.
+    Media hangs off an entry as :class:`LogImage` and :class:`LogVideo` rows.
     """
 
     project = models.ForeignKey(

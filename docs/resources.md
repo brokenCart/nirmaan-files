@@ -23,7 +23,7 @@ someone dropped from the roster mid-term stops changing it.
 
 **The resource edit rule is deliberately wider than a log's**: whoever added the link, current
 staff, or exec. The full comparison across all four content types is the table in
-[AGENTS.md](../AGENTS.md#the-three-content-types-have-deliberately-different-ownership), which is
+[AGENTS.md](../AGENTS.md#the-content-types-have-deliberately-different-ownership), which is
 the one copy — do not restate it here.
 
 The reason for the width is specific to this module. An entry is one person's account of what

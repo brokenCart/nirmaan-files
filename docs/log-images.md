@@ -43,8 +43,7 @@ filed, so its photos never end up in the wrong folder.
 Receipts sit in their own tree because a claim is private to its submitter and project staff. **Share
 a term's photo folder if someone needs it, never the whole project folder**, which includes receipts.
 
-This replaces the single-folder-per-project plan in the old deferred design. The project's `FOLDER`
-resource is not involved, because a resource has no semester.
+The project's `FOLDER` resource is not involved, because a resource has no semester.
 
 ### Serving
 
