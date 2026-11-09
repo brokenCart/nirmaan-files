@@ -209,8 +209,27 @@ class DailyLogViewSet(viewsets.ModelViewSet):
         self._assert_can_create(project, serializer.validated_data["occurred_on"])
         serializer.save(author=self.request.user)
 
+    def _assert_stays_in_term(self, instance: DailyLog, occurred_on) -> None:
+        """Refuse a date change that would carry an entry out of its semester.
+
+        Exec included, unlike filing a new entry: the frozen-archive rule says a
+        closed term stops changing, and an entry's photos are already stored in
+        its current term's folder.
+        """
+        if occurred_on == instance.occurred_on:
+            return
+        landing = Semester.for_date(occurred_on)
+        if landing is not None and landing.pk != instance.semester_id:
+            raise PermissionDenied(
+                f"That date falls in {landing}. An entry cannot be moved to another semester."
+            )
+
     def perform_update(self, serializer):
         self._assert_can_edit(serializer.instance)
+        self._assert_stays_in_term(
+            serializer.instance,
+            serializer.validated_data.get("occurred_on", serializer.instance.occurred_on),
+        )
         serializer.save()
 
     def perform_destroy(self, instance):

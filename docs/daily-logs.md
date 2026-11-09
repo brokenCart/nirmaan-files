@@ -24,6 +24,7 @@ timeline is institutional memory, which is what makes "remove it rather than rew
 included, and only exec can remove one — the moderation lever has to survive, since something that
 should never have been published must still be removable a year on. Backdating a *new* entry into
 a closed term is refused for the same reason, or the rule would be one date field away from moot.
+Moving a filed entry to a date in another semester is refused too, for everyone including exec.
 
 `project` is rejected on update: write permission is judged against the project the entry already
 belongs to, so a reassignment would sidestep that check.

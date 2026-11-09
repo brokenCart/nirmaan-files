@@ -327,3 +327,37 @@ class TestArchive:
     def test_a_stranger_gets_a_404(self, auth_client, outsider, project):
         response = auth_client(outsider).get(self.url(project))
         assert response.status_code == 404
+
+
+class TestMovingAnEntryAcrossTerms:
+    def patch(self, client, log, occurred_on):
+        return client.patch(
+            reverse("log-detail", args=[log.pk]),
+            {"occurred_on": occurred_on.isoformat()},
+            format="json",
+        )
+
+    def test_author_cannot_move_an_entry_into_a_closed_term(
+        self, auth_client, volunteer, project, semester, past_semester
+    ):
+        log = DailyLogFactory(project=project, author=volunteer)
+
+        response = self.patch(auth_client(volunteer), log, past_semester.starts_on)
+
+        assert response.status_code == 403
+        log.refresh_from_db()
+        assert log.semester_id == semester.pk
+        assert log.occurred_on != past_semester.starts_on
+
+    def test_exec_author_cannot_either(self, auth_client, exec_user, project, past_semester):
+        log = DailyLogFactory(project=project, author=exec_user)
+        assert self.patch(auth_client(exec_user), log, past_semester.starts_on).status_code == 403
+
+    def test_moving_within_the_term_still_works(self, auth_client, volunteer, project, semester):
+        log = DailyLogFactory(project=project, author=volunteer, occurred_on=semester.starts_on)
+        moved = semester.starts_on + datetime.timedelta(days=1)
+
+        assert self.patch(auth_client(volunteer), log, moved).status_code == 200
+        log.refresh_from_db()
+        assert log.occurred_on == moved
+        assert log.semester_id == semester.pk
