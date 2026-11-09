@@ -4,6 +4,7 @@ import { Link, Outlet } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthContext'
 import { NirmaanLogo } from '@/components/Logo'
 import { Button } from '@/components/ui'
+import { PageBoundary } from '@/routes/PageBoundary'
 
 /** Up to two initials, for the avatar mark beside the user's name. */
 function initialsOf(name: string): string {
@@ -55,7 +56,10 @@ export function AppLayout() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <Outlet />
+        {/* Inside the frame, so the header stays put while a page downloads. */}
+        <PageBoundary>
+          <Outlet />
+        </PageBoundary>
       </main>
     </div>
   )

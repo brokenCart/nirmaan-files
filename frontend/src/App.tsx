@@ -1,16 +1,45 @@
+import { lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
-import { ProjectAttendancePage } from '@/features/attendance/ProjectAttendancePage'
 import { LoginPage } from '@/features/auth/LoginPage'
-import { ArticlePage } from '@/features/knowledge/ArticlePage'
-import { ProjectKnowledgePage } from '@/features/knowledge/ProjectKnowledgePage'
-import { ProjectTimelinePage } from '@/features/logs/ProjectTimelinePage'
 import { ProjectListPage } from '@/features/projects/ProjectListPage'
-import { ProjectReimbursementsPage } from '@/features/reimbursements/ProjectReimbursementsPage'
-import { ProjectResourcesPage } from '@/features/resources/ProjectResourcesPage'
-import { ProjectArchivePage } from '@/features/semesters/ProjectArchivePage'
 import { AppLayout } from '@/routes/AppLayout'
 import { RequireAuth } from '@/routes/RequireAuth'
+
+// One chunk per screen, so nobody downloads the Markdown renderer to read a
+// timeline. The two pages everyone lands on stay in the entry chunk, where they
+// paint without a second request.
+const ProjectTimelinePage = lazy(() =>
+  import('@/features/logs/ProjectTimelinePage').then((m) => ({ default: m.ProjectTimelinePage })),
+)
+const ProjectAttendancePage = lazy(() =>
+  import('@/features/attendance/ProjectAttendancePage').then((m) => ({
+    default: m.ProjectAttendancePage,
+  })),
+)
+const ProjectArchivePage = lazy(() =>
+  import('@/features/semesters/ProjectArchivePage').then((m) => ({
+    default: m.ProjectArchivePage,
+  })),
+)
+const ProjectResourcesPage = lazy(() =>
+  import('@/features/resources/ProjectResourcesPage').then((m) => ({
+    default: m.ProjectResourcesPage,
+  })),
+)
+const ProjectReimbursementsPage = lazy(() =>
+  import('@/features/reimbursements/ProjectReimbursementsPage').then((m) => ({
+    default: m.ProjectReimbursementsPage,
+  })),
+)
+const ProjectKnowledgePage = lazy(() =>
+  import('@/features/knowledge/ProjectKnowledgePage').then((m) => ({
+    default: m.ProjectKnowledgePage,
+  })),
+)
+const ArticlePage = lazy(() =>
+  import('@/features/knowledge/ArticlePage').then((m) => ({ default: m.ArticlePage })),
+)
 
 export function App() {
   return (

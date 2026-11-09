@@ -59,9 +59,9 @@ describe('App routes', () => {
     ['/projects/shiksha/reimbursements', 'reimbursements page'],
     ['/projects/shiksha/knowledge', 'knowledge page'],
     ['/projects/shiksha/knowledge/12', 'article page'],
-  ])('%s shows the %s', (path, page) => {
+  ])('%s shows the %s', async (path, page) => {
     visit(path)
-    expect(screen.getByText(page)).toBeInTheDocument()
+    expect(await screen.findByText(page)).toBeInTheDocument()
   })
 
   it('sends an unknown address home', () => {
