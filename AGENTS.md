@@ -69,6 +69,9 @@ docker compose up --build
 
 `npm run gen:api` reads `http://localhost:8000/api/schema/`, so the backend must be running.
 
+CI (`.github/workflows/ci.yml`) runs these checks on every pull request and push to `main`, and
+fails if `schema.ts` is out of date with the serializers.
+
 ## Where the rest of it is
 
 This file holds only what applies to **every** change. Everything module-specific lives in `docs/`,

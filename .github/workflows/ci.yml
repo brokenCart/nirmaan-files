@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch makes the older run pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      # Postgres rather than SQLite, so unique constraints and case handling
+      # behave as they do in production. Same major version as docker-compose.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: nirmaan_files
+          POSTGRES_USER: nirmaan
+          POSTGRES_PASSWORD: nirmaan
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nirmaan -d nirmaan_files"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - name: Check for model changes with no migration
+        run: uv run python manage.py makemigrations --check --dry-run
+      - run: uv run pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  # `schema.ts` is generated and committed, so a serializer change that forgot
+  # `npm run gen:api` would otherwise pass everything above against stale types.
+  api-types:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Generate the OpenAPI schema
+        working-directory: backend
+        run: |
+          uv sync --locked
+          uv run python manage.py spectacular --file "$RUNNER_TEMP/openapi.yml"
+      - name: Regenerate the API types
+        working-directory: frontend
+        run: |
+          npm ci
+          npx openapi-typescript "$RUNNER_TEMP/openapi.yml" -o src/api/schema.ts
+      - name: Fail if the committed types are stale
+        run: git diff --exit-code -- frontend/src/api/schema.ts
