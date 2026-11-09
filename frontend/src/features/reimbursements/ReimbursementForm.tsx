@@ -76,12 +76,18 @@ export function ReimbursementForm({
       description: values.description.trim(),
     }
 
-    if (reimbursement) {
-      // `project` is deliberately omitted: a request cannot move to another
-      // project's queue, and the server refuses it anyway.
-      await updateReimbursement.mutateAsync({ id: reimbursement.id, ...fields })
-    } else {
-      await createReimbursement.mutateAsync({ project: project.id, ...fields })
+    try {
+      if (reimbursement) {
+        // `project` is deliberately omitted: a request cannot move to another
+        // project's queue, and the server refuses it anyway.
+        await updateReimbursement.mutateAsync({ id: reimbursement.id, ...fields })
+      } else {
+        await createReimbursement.mutateAsync({ project: project.id, ...fields })
+      }
+    } catch {
+      // Already on screen through the mutation's `error`, below. Left to
+      // propagate, `handleSubmit` would rethrow it as an unhandled rejection.
+      return
     }
     onDone()
   })

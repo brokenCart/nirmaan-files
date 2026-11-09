@@ -303,6 +303,13 @@ describe('ProjectReimbursementsPage controls', () => {
     expect(screen.queryByRole('button', { name: /Withdraw/ })).not.toBeInTheDocument()
   })
 
+  it('lets an exec who also volunteers here remove a decided claim', async () => {
+    auth.user = makeUser({ id: 1, is_exec: true })
+    show({ rows: [{ ...theirs, status: 'APPROVED' }] })
+    await controlsReady()
+    expect(await screen.findByRole('button', { name: 'Remove “Bus fare”' })).toBeInTheDocument()
+  })
+
   it('lets a lead remove but not edit someone else’s claim', async () => {
     auth.role = 'LEAD'
     show()

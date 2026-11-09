@@ -53,12 +53,18 @@ export function AddMemberForm({
   })
 
   const onSubmit = handleSubmit(async (values) => {
-    await addMember.mutateAsync({
-      project: project.id,
-      semester: semester.id,
-      user_email: values.user_email.trim(),
-      role: values.role,
-    })
+    try {
+      await addMember.mutateAsync({
+        project: project.id,
+        semester: semester.id,
+        user_email: values.user_email.trim(),
+        role: values.role,
+      })
+    } catch {
+      // Already on screen through the mutation's `error`, below. Left to
+      // propagate, `handleSubmit` would rethrow it as an unhandled rejection.
+      return
+    }
     onDone()
   })
 

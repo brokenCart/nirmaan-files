@@ -413,6 +413,7 @@ export function ProjectReimbursementsPage() {
                             {canDeleteReimbursement(
                               reimbursement,
                               role,
+                              isExec,
                               user?.id,
                               currentSemester.data,
                             ) && (

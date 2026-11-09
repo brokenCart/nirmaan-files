@@ -137,7 +137,7 @@ describe('ArticleForm editing', () => {
     expect(onCancel).toHaveBeenCalledOnce()
   })
 
-  it('shows a title clash on the name field', async () => {
+  it('shows a title clash on the name field, once', async () => {
     stubApi({
       'PATCH /api/articles/600/': { status: 400, body: { title: ['That name is taken.'] } },
     })
@@ -145,22 +145,9 @@ describe('ArticleForm editing', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
-    expect((await screen.findAllByText('That name is taken.'))[0]).toBeInTheDocument()
+    expect(await screen.findAllByText('That name is taken.')).toHaveLength(1)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(onDone).not.toHaveBeenCalled()
-  })
-
-  // Unlike ResourceForm and AddMemberForm, this form also repeats a field error
-  // in the note below. Remove `.fails` once the note skips it.
-  it.fails('shows that clash only once', async () => {
-    stubApi({
-      'PATCH /api/articles/600/': { status: 400, body: { title: ['That name is taken.'] } },
-    })
-    show({ article })
-
-    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
-
-    await screen.findAllByText('That name is taken.')
-    expect(screen.getAllByText('That name is taken.')).toHaveLength(1)
   })
 
   it('shows any other refusal in the note', async () => {

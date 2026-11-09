@@ -238,15 +238,21 @@ export function canRemoveMember(
  * Exec keeps the lever over closed terms — something that should never have
  * been published stays removable a year on — but everyone else stops at the
  * term boundary.
+ *
+ * `isExec` is passed separately for the reason {@link canManageRoster} takes it
+ * separately: `roleIn` reports a project membership in preference to the
+ * committee marker.
  */
 export function canDeleteLog(
   log: DailyLog,
   role: EffectiveRole | null | undefined,
+  isExec: boolean,
   userId: number | undefined,
   currentSemester: Semester | null | undefined,
 ): boolean {
+  if (isExec) return true
   if (!role) return false
-  if (!isInOpenTerm(log, currentSemester)) return role === 'EXEC'
+  if (!isInOpenTerm(log, currentSemester)) return false
   return isProjectStaff(role) || log.author.id === userId
 }
 
@@ -524,14 +530,19 @@ export function availableDecisions(request: Reimbursement): ReviewDecision[] {
  * The submitter withdraws their own; staff — lead or finance lead — clear the
  * queue. Both stop at the decision: once reviewed, the row is part of the
  * project's financial record and only exec removes it, closed term or not.
+ *
+ * `isExec` is passed separately for the reason {@link canManageRoster} takes it
+ * separately: `roleIn` reports a project membership in preference to the
+ * committee marker.
  */
 export function canDeleteReimbursement(
   request: Reimbursement,
   role: EffectiveRole | null | undefined,
+  isExec: boolean,
   userId: number | undefined,
   currentSemester: Semester | null | undefined,
 ): boolean {
-  if (role === 'EXEC') return true
+  if (isExec) return true
   if (!role) return false
   if (!isReimbursementInOpenTerm(request, currentSemester)) return false
   if (request.status !== 'PENDING') return false

@@ -65,6 +65,12 @@ describe('ProjectTimelinePage', () => {
     expect(screen.queryByRole('button', { name: /^Remove/ })).not.toBeInTheDocument()
   })
 
+  it('lets an exec who also volunteers here remove from a closed term', async () => {
+    auth.user = makeUser({ id: 1, is_exec: true })
+    await showTimeline([makeLog({ author: someoneElse, semester: 9 })])
+    expect(await screen.findByRole('button', { name: /^Remove/ })).toBeInTheDocument()
+  })
+
   it('offers an author nothing once the term has closed', async () => {
     await showTimeline([makeLog({ author: me, semester: 9 })])
     expect(screen.queryByRole('button', { name: /^Edit/ })).not.toBeInTheDocument()

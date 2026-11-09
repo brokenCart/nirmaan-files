@@ -389,7 +389,13 @@ export function ProjectTimelinePage() {
                                     Edit
                                   </Button>
                                 )}
-                                {canDeleteLog(log, role, user?.id, currentSemester.data) && (
+                                {canDeleteLog(
+                                  log,
+                                  role,
+                                  user?.is_exec ?? false,
+                                  user?.id,
+                                  currentSemester.data,
+                                ) && (
                                   <Button
                                     variant="ghost"
                                     aria-label={`Remove “${log.title}” from the timeline`}

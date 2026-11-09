@@ -72,15 +72,19 @@ export function ArticleForm({
       revision_note: values.note.trim(),
     }
 
-    if (article) {
-      // `project` is deliberately omitted: an edit must not move a page to
-      // another project's knowledge base, and the server refuses it anyway.
-      const saved = await updateArticle.mutateAsync({ id: article.id, ...fields })
-      onDone(saved.id)
-    } else {
-      const saved = await createArticle.mutateAsync({ project: project.id, ...fields })
-      onDone(saved.id)
+    let saved: Article
+    try {
+      // `project` is deliberately omitted from an edit: it must not move a page
+      // to another project's knowledge base, and the server refuses it anyway.
+      saved = article
+        ? await updateArticle.mutateAsync({ id: article.id, ...fields })
+        : await createArticle.mutateAsync({ project: project.id, ...fields })
+    } catch {
+      // Already on screen through the mutation's `error`, below. Left to
+      // propagate, `handleSubmit` would rethrow it as an unhandled rejection.
+      return
     }
+    onDone(saved.id)
   })
 
   const serverError = editing ? updateArticle.error : createArticle.error
@@ -119,7 +123,8 @@ export function ArticleForm({
         </Field>
       )}
 
-      {serverError && (
+      {/* Anything not already shown on the name input. */}
+      {serverError && !titleError && (
         <ErrorNote
           message={serverError instanceof ApiError ? serverError.detail : serverError.message}
         />

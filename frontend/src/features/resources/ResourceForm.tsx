@@ -65,12 +65,18 @@ export function ResourceForm({
       description: values.description.trim(),
     }
 
-    if (resource) {
-      // `project` is deliberately omitted: an edit must not move a link to
-      // another project's shelf, and the server refuses it anyway.
-      await updateResource.mutateAsync({ id: resource.id, ...fields })
-    } else {
-      await createResource.mutateAsync({ project: project.id, ...fields })
+    try {
+      if (resource) {
+        // `project` is deliberately omitted: an edit must not move a link to
+        // another project's shelf, and the server refuses it anyway.
+        await updateResource.mutateAsync({ id: resource.id, ...fields })
+      } else {
+        await createResource.mutateAsync({ project: project.id, ...fields })
+      }
+    } catch {
+      // Already on screen through the mutation's `error`, below. Left to
+      // propagate, `handleSubmit` would rethrow it as an unhandled rejection.
+      return
     }
     onDone()
   })

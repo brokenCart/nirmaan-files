@@ -112,26 +112,36 @@ describe('canDeleteLog', () => {
   const theirLog = makeLog({ author: theirs, semester: open.id })
   const archived = makeLog({ author: mine, semester: closed.id })
 
-  it.each(STAFF)('lets %s moderate the open term', (role) =>
-    expect(canDeleteLog(theirLog, role, ME, open)).toBe(true),
+  it.each(['LEAD', 'FINANCE_LEAD'] as const)('lets %s moderate the open term', (role) =>
+    expect(canDeleteLog(theirLog, role, false, ME, open)).toBe(true),
   )
 
   it('lets a volunteer withdraw their own entry', () => {
     const own = makeLog({ author: mine, semester: open.id })
-    expect(canDeleteLog(own, 'VOLUNTEER', ME, open)).toBe(true)
+    expect(canDeleteLog(own, 'VOLUNTEER', false, ME, open)).toBe(true)
   })
 
   it('refuses a volunteer on someone else’s entry', () =>
-    expect(canDeleteLog(theirLog, 'VOLUNTEER', ME, open)).toBe(false))
+    expect(canDeleteLog(theirLog, 'VOLUNTEER', false, ME, open)).toBe(false))
 
-  it('refuses a former member', () => expect(canDeleteLog(theirLog, null, ME, open)).toBe(false))
+  it('refuses a former member', () =>
+    expect(canDeleteLog(theirLog, null, false, ME, open)).toBe(false))
 
   it('keeps exec’s lever over a closed term', () =>
-    expect(canDeleteLog(archived, 'EXEC', ME, open)).toBe(true))
+    expect(canDeleteLog(archived, 'EXEC', true, ME, open)).toBe(true))
+
+  // `roleIn` prefers a membership, so this is how an exec who also volunteers
+  // on the project arrives. The server decides on `is_exec` alone.
+  it.each([
+    ['the open term', theirLog],
+    ['a closed term', archived],
+  ])('honours exec reported as a volunteer on %s', (_term, log) =>
+    expect(canDeleteLog(log, 'VOLUNTEER', true, ME, open)).toBe(true),
+  )
 
   it.each(['LEAD', 'FINANCE_LEAD', 'VOLUNTEER'] as const)(
     'stops %s at the term boundary, author or not',
-    (role) => expect(canDeleteLog(archived, role, ME, open)).toBe(false),
+    (role) => expect(canDeleteLog(archived, role, false, ME, open)).toBe(false),
   )
 })
 
@@ -285,23 +295,27 @@ describe('canDeleteReimbursement', () => {
   })
 
   it.each(['LEAD', 'FINANCE_LEAD'] as const)('lets %s clear a pending claim', (role) =>
-    expect(canDeleteReimbursement(claim, role, ME, open)).toBe(true),
+    expect(canDeleteReimbursement(claim, role, false, ME, open)).toBe(true),
   )
 
   it('lets a volunteer withdraw only their own', () => {
     const own = makeReimbursement({ submitted_by: mine, semester: open.id })
-    expect(canDeleteReimbursement(own, 'VOLUNTEER', ME, open)).toBe(true)
-    expect(canDeleteReimbursement(claim, 'VOLUNTEER', ME, open)).toBe(false)
+    expect(canDeleteReimbursement(own, 'VOLUNTEER', false, ME, open)).toBe(true)
+    expect(canDeleteReimbursement(claim, 'VOLUNTEER', false, ME, open)).toBe(false)
   })
 
   it('reserves a decided claim for exec', () => {
-    expect(canDeleteReimbursement(decided, 'LEAD', ME, open)).toBe(false)
-    expect(canDeleteReimbursement(decided, 'VOLUNTEER', ME, open)).toBe(false)
-    expect(canDeleteReimbursement(decided, 'EXEC', ME, open)).toBe(true)
+    expect(canDeleteReimbursement(decided, 'LEAD', false, ME, open)).toBe(false)
+    expect(canDeleteReimbursement(decided, 'VOLUNTEER', false, ME, open)).toBe(false)
+    expect(canDeleteReimbursement(decided, 'EXEC', true, ME, open)).toBe(true)
   })
 
-  it('stops staff at a closed term', () => {
+  it('honours exec reported as a volunteer on a decided claim', () =>
+    expect(canDeleteReimbursement(decided, 'VOLUNTEER', true, ME, open)).toBe(true))
+
+  it('stops staff at a closed term but not exec', () => {
     const archived = makeReimbursement({ submitted_by: theirs, semester: closed.id })
-    expect(canDeleteReimbursement(archived, 'LEAD', ME, open)).toBe(false)
+    expect(canDeleteReimbursement(archived, 'LEAD', false, ME, open)).toBe(false)
+    expect(canDeleteReimbursement(archived, 'VOLUNTEER', true, ME, open)).toBe(true)
   })
 })

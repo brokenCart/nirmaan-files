@@ -20,10 +20,8 @@ describe('formatRupees', () => {
   it('always shows paise', () => expect(formatRupees('480')).toBe('₹480.00'))
   it('groups in lakhs', () => expect(formatRupees('100000.5')).toBe('₹1,00,000.50'))
 
-  // The docstring promises the raw string back, but `Number('oops')` is NaN and
-  // `Intl` formats NaN instead of throwing. Remove `.fails` once that is fixed.
-  it.fails('returns a value it cannot format unchanged', () =>
-    expect(formatRupees('oops')).toBe('oops'),
+  it.each(['oops', 'Infinity'])('returns %s unchanged', (amount) =>
+    expect(formatRupees(amount)).toBe(amount),
   )
 })
 

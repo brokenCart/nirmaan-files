@@ -47,20 +47,19 @@ export function formatDateTime(iso: string): string {
  * `apps.reimbursements.models.Reimbursement` for why there is no currency
  * column to read it from.
  *
- * Falls back to the raw string if the value is not something `Intl` can format,
- * so a row written straight into the database renders as itself rather than as
- * `NaN`.
+ * Falls back to the raw string if the value is not a finite number, so a row
+ * written straight into the database renders as itself rather than as `₹NaN`.
+ * That needs an explicit check: `Intl` formats `NaN` happily instead of throwing.
  */
 export function formatRupees(amount: string): string {
-  try {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2,
-    }).format(Number(amount))
-  } catch {
-    return amount
-  }
+  const value = Number(amount)
+  if (!Number.isFinite(value)) return amount
+
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+  }).format(value)
 }
 
 /**

@@ -29,11 +29,12 @@ const DECISIONS: Record<
 /**
  * The finance lead's approve/reject control for one request.
  *
- * Approving is one click; rejecting opens a note field first, because the
- * server requires a reason and a 400 arriving after the click would be a rule
- * the UI knew about and chose not to mention. The note is optional on an
- * approval and offered anyway — "paid in cash on the 3rd" is worth recording,
- * and the volunteer reads it either way.
+ * Both decisions take two steps: pick one, then confirm it beside a note field.
+ * Rejecting cannot be confirmed until there is a note, because the server
+ * requires a reason and a 400 arriving after the click would be a rule the UI
+ * knew about and chose not to mention. The note is optional on an approval and
+ * offered anyway — "paid in cash on the 3rd" is worth recording, and the
+ * volunteer reads it either way.
  *
  * Rendered for an already-decided request too, where it offers **only the
  * opposite decision** — see {@link availableDecisions}. A reviewer can still

@@ -108,12 +108,18 @@ export function LogComposer({
       attendee_ids: values.attendee_ids?.map(Number) ?? [],
     }
 
-    if (log) {
-      // `project` is deliberately omitted: an edit must not move an entry to
-      // another project's timeline.
-      await updateLog.mutateAsync({ id: log.id, ...fields })
-    } else {
-      await createLog.mutateAsync({ project: project.id, ...fields })
+    try {
+      if (log) {
+        // `project` is deliberately omitted: an edit must not move an entry to
+        // another project's timeline.
+        await updateLog.mutateAsync({ id: log.id, ...fields })
+      } else {
+        await createLog.mutateAsync({ project: project.id, ...fields })
+      }
+    } catch {
+      // Already on screen through the mutation's `error`, below. Left to
+      // propagate, `handleSubmit` would rethrow it as an unhandled rejection.
+      return
     }
     onDone()
   })
