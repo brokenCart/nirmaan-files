@@ -60,6 +60,7 @@ uv run ruff check . && uv run ruff format .
 npm run dev
 npm run build          # tsc -b && vite build
 npm run lint           # oxlint
+npm test               # vitest, once; `npm run test:watch` to keep it running
 npm run gen:api        # regenerate src/api/schema.ts from the running backend
 
 # Everything at once
@@ -187,6 +188,10 @@ serializer and run `npm run gen:api`. A renamed field then breaks the build inst
   semester boundaries; a module's own rules live in its own test package (see
   `apps/reimbursements/tests/`, which holds the review workflow while `test_permissions.py` holds
   only the two boundaries).
+- Frontend tests sit beside the code as `*.test.ts(x)`. Stub the network with `stubApi` from
+  `src/test/render.tsx` rather than mocking the query hooks, so a test asserts what would reach the
+  server, and build rows with `src/test/factories.ts`, which is typed against the generated schema.
+  They run in a timezone behind UTC on purpose, to expose date-only strings drifting a day.
 - `AUTH_FAKE_GOOGLE_TOKENS` accepts a plain JSON claims blob instead of a signed token. It exists
   in the dev and test settings only and must never reach `prod.py`.
 - TypeScript is pinned to the latest 5.x release because `openapi-typescript` still declares a
