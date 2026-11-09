@@ -5,7 +5,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from apps.drive.models import StoredImage
+from apps.drive.models import StoredFile
 from apps.projects.models import Role
 
 #: Roles that see a project's whole queue rather than only their own requests.
@@ -235,7 +235,7 @@ class Reimbursement(models.Model):
         return [receipt for receipt in self.receipts.all() if not receipt.is_deleted]
 
 
-class ReimbursementReceipt(StoredImage):
+class ReimbursementReceipt(StoredFile):
     """A photo of a receipt, as proof for a claim."""
 
     content_url_name = "reimbursement-receipt-content"

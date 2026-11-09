@@ -1,6 +1,6 @@
-# Photos and receipts
+# Photos, receipts and videos
 
-How images on MOVs, MOMs and reimbursements are stored and served, and how to connect real Google
+How media on MOVs, MOMs and reimbursements is stored and served, and how to connect real Google
 Drive storage.
 
 Read alongside [AGENTS.md](../AGENTS.md), which carries the rules that apply to every
@@ -60,6 +60,31 @@ Anyone holding a URL can use it until it expires. Deletion is still checked per 
 Thumbnails use Drive's own `thumbnailLink`, sized to 640px. Drive has none for a short while after
 upload, and the original is served until it does.
 
+**Drive is outside these rules.** Privacy is enforced by the app, not by Drive. A file reaches Drive
+when its entry is saved, draft or not, and anyone with access to the folder can open it there.
+`LogComposer` warns about this above the pickers, so a private draft is not mistaken for private
+media.
+
+### Videos
+
+MOVs and MOMs can carry up to **3 videos**, MP4, MOV or WebM, up to **500 MB** each. Reimbursements
+cannot. The edit rule is the entry's, and each video lands in the entry's term folder.
+
+The browser sends a video **in 8 MB chunks to our backend**, which relays each to a resumable Drive
+session (`apps/drive/video.py`). Google documents browser uploads only for sessions the browser
+started, so handing a server-started session over would be untested ground. Relaying also keeps the
+session URL, which is a credential, out of the browser, and the backend learns the file id itself
+rather than trusting one the client sends. Each chunk's reply reports how far the upload has really
+got, and the client carries on from there, which is what makes retries safe.
+
+**"Background" means within the tab.** `videoUploads.ts` is a module-level queue, so uploads continue
+after the form closes and between screens, and `VideoUploadPanel` shows progress and warns before
+the tab closes. Closing the tab stops the upload, and it has to be restarted from the entry.
+
+A video is hidden until its last chunk lands. Playback streams through the backend with `Range`
+support so seeking works. It holds a server connection for as long as someone is watching, so video
+is the part of this app to watch if the server struggles. Any reverse proxy must accept 8 MB bodies.
+
 ### Connecting Google Drive
 
 With `DRIVE_ROOT_FOLDER_ID` empty, development stores files in `backend/media/drive/`, and production
@@ -92,4 +117,4 @@ that account's storage, and uploads stop if the account is ever suspended or del
    `application_default_credentials.json` is `DRIVE_CREDENTIALS_JSON`.
 3. Create a folder in that account's Drive. The last part of its URL is `DRIVE_ROOT_FOLDER_ID`.
 
-Any reverse proxy in front of the app must accept request bodies over 10 MB.
+Any reverse proxy in front of the app must accept request bodies over 10 MB, for images.

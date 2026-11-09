@@ -29,3 +29,11 @@ raw API call — which is what makes the question above sharp rather than theore
 record independent of a filed MOV — so a trip nobody writes up did not happen as far as the table
 is concerned. Both were considered and left out; revisit only if someone asks for volunteer-hour
 certificates, which is the use case that would need them.
+
+**TODO: a background job system.** The app has no worker or task queue, so anything slow happens
+inside a request or a browser tab. The clearest cost is video: an upload stops if the tab closes (see
+[*Videos*](log-images.md)). A queue such as Celery, or one backed by Postgres, would let the backend
+finish sending a video to Drive after the browser has handed it over, and could also clear out
+abandoned `UPLOADING` rows. It would not remove the need for the tab on its own: the browser still
+has to get the file to the server first, and the server would need disk space to hold it until the
+job runs. Other candidates are the semester-opening nag above and retrying failed Drive calls.

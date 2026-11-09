@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useController, useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -12,6 +13,7 @@ import {
   Field,
   Fieldset,
   Input,
+  Notice,
   Select,
   Textarea,
 } from '@/components/ui'
@@ -19,12 +21,17 @@ import {
   useAddLogImage,
   useCreateLog,
   useRemoveLogImage,
+  useRemoveLogVideo,
   useUpdateLog,
 } from '@/features/projects/queries'
-import { PhotoField } from '@/features/photos/PhotoAttachments'
+import { PhotoField, VideoField } from '@/features/photos/PhotoAttachments'
 import { usePhotoDraft } from '@/features/photos/usePhotoDraft'
+import { enqueueVideo } from '@/features/videos/videoUploads'
 
 const PHOTO_WORDS = { noun: 'photo', holder: 'entry' } as const
+const VIDEO_WORDS = { noun: 'video', holder: 'entry' } as const
+// Mirrors `apps/drive/video.py`.
+const VIDEO_LIMITS = { maxCount: 3, maxMb: 500 }
 
 const schema = z.object({
   kind: z.enum(['MOV', 'MOM']),
@@ -69,6 +76,8 @@ export function LogComposer({
   const updateLog = useUpdateLog(project.slug)
   const addImage = useAddLogImage()
   const removeImage = useRemoveLogImage()
+  const removeVideo = useRemoveLogVideo()
+  const queryClient = useQueryClient()
 
   // Set once a new entry exists but a photo failed, so saving again retries the
   // photos instead of filing a second copy of the entry.
@@ -81,6 +90,20 @@ export function LogComposer({
     words: PHOTO_WORDS,
     add: (logId, file) => addImage.mutateAsync({ logId, file }),
     remove: (logId, imageId) => removeImage.mutateAsync({ logId, imageId }),
+  })
+
+  const videos = usePhotoDraft({
+    saved: log?.videos ?? [],
+    words: VIDEO_WORDS,
+    limits: VIDEO_LIMITS,
+    // Queued rather than awaited: the form closes while these go up.
+    add: async (logId, file) =>
+      enqueueVideo({
+        logId,
+        file,
+        onComplete: () => void queryClient.invalidateQueries({ queryKey: ['logs'] }),
+      }),
+    remove: (logId, videoId) => removeVideo.mutateAsync({ logId, videoId }),
   })
 
   const {
@@ -147,7 +170,7 @@ export function LogComposer({
       // propagate, `handleSubmit` would rethrow it as an unhandled rejection.
       return
     }
-    if (await photos.save(saved.id)) onDone()
+    if ((await photos.save(saved.id)) && (await videos.save(saved.id))) onDone()
   })
 
   const serverError = editing ? updateLog.error : createLog.error
@@ -229,7 +252,20 @@ export function LogComposer({
         <Textarea {...register('body')} placeholder="Markdown is supported." />
       </Field>
 
+      {project.image_uploads_enabled && (
+        <Notice>
+          Photos and videos are uploaded to Google Drive when you save, even on a private draft.
+          Anyone with access to the Drive folder can open them there.
+        </Notice>
+      )}
+
       <PhotoField draft={photos} label="Photos" showPicker={project.image_uploads_enabled} />
+      <VideoField
+        draft={videos}
+        showPicker={project.image_uploads_enabled}
+        maxCount={VIDEO_LIMITS.maxCount}
+        maxMb={VIDEO_LIMITS.maxMb}
+      />
 
       <Field label="Status">
         <Select {...register('status')}>
@@ -244,6 +280,7 @@ export function LogComposer({
         />
       )}
       {photos.uploadError && <ErrorNote message={photos.uploadError} />}
+      {videos.uploadError && <ErrorNote message={videos.uploadError} />}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={isSubmitting}>

@@ -1,7 +1,7 @@
 """Receiving, storing and serving images attached to a record.
 
 Shared by entry photos and reimbursement receipts, so there is one upload path.
-Each caller brings its own :class:`~apps.drive.models.StoredImage` model and its
+Each caller brings its own :class:`~apps.drive.models.StoredFile` model and its
 own rule for who may attach.
 """
 
@@ -57,7 +57,7 @@ def content_url(url_name: str, pk: int, *, thumbnail: bool = False) -> str:
     return f"{reverse(url_name, args=[pk])}?{query}"
 
 
-def _is_valid_signature(url_name: str, pk: int, expires: str, signature: str) -> bool:
+def is_valid_signature(url_name: str, pk: int, expires: str, signature: str) -> bool:
     if not expires.isdecimal() or int(expires) < time.time():
         return False
     return constant_time_compare(signature, _signature(url_name, pk, int(expires)))
@@ -138,9 +138,7 @@ def serve_image(request, pk: int, images):
     removed, so a removal takes effect at once.
     """
     url_name = images.model.content_url_name
-    if not _is_valid_signature(
-        url_name, pk, request.GET.get("exp", ""), request.GET.get("sig", "")
-    ):
+    if not is_valid_signature(url_name, pk, request.GET.get("exp", ""), request.GET.get("sig", "")):
         return HttpResponseForbidden()
     image = images.filter(pk=pk).first()
     if image is None:

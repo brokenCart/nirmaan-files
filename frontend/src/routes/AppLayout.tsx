@@ -4,6 +4,7 @@ import { Link, Outlet } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthContext'
 import { NirmaanLogo } from '@/components/Logo'
 import { Button } from '@/components/ui'
+import { VideoUploadPanel } from '@/features/videos/VideoUploadPanel'
 import { PageBoundary } from '@/routes/PageBoundary'
 
 /** Up to two initials, for the avatar mark beside the user's name. */
@@ -61,6 +62,9 @@ export function AppLayout() {
           <Outlet />
         </PageBoundary>
       </main>
+
+      {/* Outside the routed page, so uploads stay visible on every screen. */}
+      <VideoUploadPanel />
     </div>
   )
 }

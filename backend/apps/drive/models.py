@@ -2,14 +2,14 @@ from django.db import models
 from django.db.models import Q
 
 
-class StoredImage(models.Model):
-    """An image attached to a record. The bytes live in Drive; see `apps.drive.storage`.
+class StoredFile(models.Model):
+    """A file attached to a record. The bytes live in Drive; see `apps.drive.storage`.
 
     Soft-deleted like the records they belong to: removing one hides it in the
     app and leaves the file in Drive.
     """
 
-    #: The route that serves this model's images. Part of what gets signed.
+    #: The route that serves this model's files. Part of what gets signed.
     content_url_name: str
 
     drive_file_id = models.CharField(max_length=512, unique=True)

@@ -39,6 +39,20 @@ class Thumbnail:
     content_type: str
 
 
+@dataclass(frozen=True)
+class ResumableProgress:
+    received: int
+    file_id: str | None = None
+
+
+@dataclass(frozen=True)
+class RangedStream:
+    chunks: Iterator[bytes]
+    status: int
+    content_length: int | None = None
+    content_range: str | None = None
+
+
 class Storage(Protocol):
     root_folder_id: str
 
@@ -54,6 +68,16 @@ class Storage(Protocol):
 
     def thumbnail(self, file_id: str, size: int) -> Thumbnail | None:
         """A smaller copy of the image, or None to fall back to the full file."""
+
+    def start_resumable(self, name: str, content_type: str, size: int, parent_id: str) -> str:
+        """Open an upload session. The returned handle is private to the backend."""
+
+    def send_chunk(self, session: str, content: bytes, offset: int, total: int) -> str | None:
+        """Add one chunk. Returns the file id once the last chunk has landed."""
+
+    def query_resumable(self, session: str, total: int) -> ResumableProgress: ...
+
+    def open_range(self, file_id: str, byte_range: str | None) -> RangedStream: ...
 
 
 class GoogleDriveStorage:
@@ -162,6 +186,61 @@ class GoogleDriveStorage:
             return None
         return Thumbnail(response.content, content_type)
 
+    def start_resumable(self, name: str, content_type: str, size: int, parent_id: str) -> str:
+        response = self._call(
+            "POST",
+            self.UPLOAD_URL,
+            params={"uploadType": "resumable", "supportsAllDrives": "true", "fields": "id"},
+            headers={"X-Upload-Content-Type": content_type, "X-Upload-Content-Length": str(size)},
+            json={"name": name, "parents": [parent_id]},
+        )
+        return response.headers["Location"]
+
+    @staticmethod
+    def _received_from(response: requests.Response) -> int:
+        # A 308 carries `Range: bytes=0-N`, or no header if nothing has landed.
+        match = re.fullmatch(r"bytes=0-(\d+)", response.headers.get("Range", ""))
+        return int(match.group(1)) + 1 if match else 0
+
+    def send_chunk(self, session: str, content: bytes, offset: int, total: int) -> str | None:
+        response = self._call(
+            "PUT",
+            session,
+            headers={"Content-Range": f"bytes {offset}-{offset + len(content) - 1}/{total}"},
+            data=content,
+            allow_redirects=False,
+        )
+        if response.status_code == 308:
+            return None
+        return response.json()["id"]
+
+    def query_resumable(self, session: str, total: int) -> ResumableProgress:
+        response = self._call(
+            "PUT",
+            session,
+            headers={"Content-Range": f"bytes */{total}"},
+            allow_redirects=False,
+        )
+        if response.status_code == 308:
+            return ResumableProgress(self._received_from(response))
+        return ResumableProgress(total, response.json()["id"])
+
+    def open_range(self, file_id: str, byte_range: str | None) -> RangedStream:
+        response = self._call(
+            "GET",
+            f"{self.FILES_URL}/{file_id}",
+            params={"alt": "media", "supportsAllDrives": "true"},
+            headers={"Range": byte_range} if byte_range else {},
+            stream=True,
+        )
+        length = response.headers.get("Content-Length")
+        return RangedStream(
+            response.iter_content(chunk_size=self.CHUNK_SIZE),
+            response.status_code,
+            int(length) if length else None,
+            response.headers.get("Content-Range"),
+        )
+
 
 class LocalStorage:
     """Files on local disk, under ``DRIVE_LOCAL_ROOT``.
@@ -201,6 +280,42 @@ class LocalStorage:
 
     def thumbnail(self, file_id: str, size: int) -> Thumbnail | None:
         return None
+
+    def start_resumable(self, name: str, content_type: str, size: int, parent_id: str) -> str:
+        file_id = f"{parent_id}/{uuid.uuid4().hex}-{self._segment(name)}".lstrip("/")
+        path = self._root / f"{file_id}.part"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"")
+        return file_id
+
+    def send_chunk(self, session: str, content: bytes, offset: int, total: int) -> str | None:
+        path = self._root / f"{session}.part"
+        with path.open("ab") as part:
+            part.write(content)
+        if offset + len(content) < total:
+            return None
+        path.rename(self._root / session)
+        return session
+
+    def query_resumable(self, session: str, total: int) -> ResumableProgress:
+        path = self._root / f"{session}.part"
+        if path.exists():
+            return ResumableProgress(path.stat().st_size)
+        return ResumableProgress(total, session)
+
+    def open_range(self, file_id: str, byte_range: str | None) -> RangedStream:
+        try:
+            content = (self._root / file_id).read_bytes()
+        except OSError as error:
+            raise StorageError("That file is missing from storage.") from error
+        total = len(content)
+        if not byte_range or byte_range == "bytes=-":
+            return RangedStream(iter([content]), 200, total)
+        start_text, end_text = byte_range.removeprefix("bytes=").split("-")
+        start = int(start_text) if start_text else max(0, total - int(end_text))
+        end = min(int(end_text), total - 1) if start_text and end_text else total - 1
+        part = content[start : end + 1]
+        return RangedStream(iter([part]), 206, len(part), f"bytes {start}-{end}/{total}")
 
 
 @cache

@@ -7,6 +7,7 @@ import { ProjectTimelinePage } from '@/features/logs/ProjectTimelinePage'
 import {
   makeLog,
   makeLogImage,
+  makeLogVideo,
   makeMembership,
   makeProject,
   makeSemester,
@@ -60,6 +61,15 @@ describe('ProjectTimelinePage', () => {
     const photo = await screen.findByRole('img', { name: 'Photo 1 from Saturday session' })
     expect(photo).toHaveAttribute('src', image.thumbnail_url)
     expect(photo.closest('a')).toHaveAttribute('href', image.url)
+  })
+
+  it('shows an entry’s videos without downloading them up front', async () => {
+    const video = makeLogVideo()
+    await showTimeline([makeLog({ title: 'Saturday session', videos: [video] })])
+
+    const player = await screen.findByLabelText('Video 1 from Saturday session')
+    expect(player).toHaveAttribute('src', video.url)
+    expect(player).toHaveAttribute('preload', 'none')
   })
 
   it('offers the author Edit and Delete', async () => {

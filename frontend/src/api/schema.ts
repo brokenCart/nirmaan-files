@@ -539,6 +539,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/logs/{id}/videos/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Open an upload for one video. The chunks follow separately. */
+        post: operations["logs_videos_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/logs/{id}/videos/{video_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Remove one video from the entry, under the same edit rule. */
+        delete: operations["logs_videos_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/logs/{id}/videos/{video_id}/chunk/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Add one chunk. The response says how far the upload has really got. */
+        post: operations["logs_videos_chunk_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/memberships/": {
         parameters: {
             query?: never;
@@ -1564,6 +1615,13 @@ export interface components {
          * @enum {string}
          */
         CategoryEnum: "CONTEXT" | "PROCESS" | "PARTNER" | "LESSON" | "OTHER";
+        /**
+         * @description * `video/mp4` - video/mp4
+         *     * `video/quicktime` - video/quicktime
+         *     * `video/webm` - video/webm
+         * @enum {string}
+         */
+        ContentTypeEnum: "video/mp4" | "video/quicktime" | "video/webm";
         DailyLog: {
             readonly id: number;
             project: number;
@@ -1586,6 +1644,7 @@ export interface components {
             hours?: number;
             readonly attendees: components["schemas"]["User"][];
             readonly images: components["schemas"]["LogImage"][];
+            readonly videos: components["schemas"]["LogVideo"][];
             readonly author: components["schemas"]["User"];
             status?: components["schemas"]["DailyLogStatusEnum"];
             /** Format: date-time */
@@ -1640,6 +1699,15 @@ export interface components {
             readonly size_bytes: number;
             readonly url: string;
             readonly thumbnail_url: string;
+        };
+        /** @description Subclass with a ``Meta`` naming the model. */
+        LogVideo: {
+            readonly id: number;
+            readonly original_name: string;
+            readonly content_type: string;
+            readonly size_bytes: number;
+            readonly url: string;
+            readonly poster_url: string;
         };
         Membership: {
             readonly id: number;
@@ -2060,6 +2128,22 @@ export interface components {
             readonly is_exec: boolean;
             /** @description False for a placeholder a lead added by email that nobody has claimed yet. */
             readonly has_signed_in: boolean;
+        };
+        VideoChunkRequest: {
+            offset: number;
+            /** Format: binary */
+            chunk: string;
+        };
+        VideoUploadStartRequest: {
+            name: string;
+            size: number;
+            content_type: components["schemas"]["ContentTypeEnum"];
+        };
+        VideoUploadState: {
+            readonly id: number;
+            readonly bytes_received: number;
+            readonly chunk_size: number;
+            readonly is_complete: boolean;
         };
     };
     responses: never;
@@ -2522,6 +2606,83 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    logs_videos_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this daily log. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VideoUploadStartRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["VideoUploadStartRequest"];
+                "multipart/form-data": components["schemas"]["VideoUploadStartRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoUploadState"];
+                };
+            };
+        };
+    };
+    logs_videos_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this daily log. */
+                id: number;
+                video_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    logs_videos_chunk_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this daily log. */
+                id: number;
+                video_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["VideoChunkRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoUploadState"];
+                };
             };
         };
     };

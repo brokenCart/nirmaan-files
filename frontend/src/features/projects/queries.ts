@@ -582,6 +582,17 @@ export function useReviewReimbursement(projectSlug: string) {
   })
 }
 
+export function useRemoveLogVideo() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ logId, videoId }: { logId: number; videoId: number }) =>
+      api.delete<void>(`/api/logs/${logId}/videos/${videoId}/`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['logs'] })
+    },
+  })
+}
+
 export function useAddReceipt(projectSlug: string) {
   const queryClient = useQueryClient()
   return useMutation({

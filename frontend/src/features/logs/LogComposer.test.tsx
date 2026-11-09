@@ -1,11 +1,13 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { LogComposer } from '@/features/logs/LogComposer'
+import { resetVideoUploads } from '@/features/videos/videoUploads'
 import {
   makeLog,
   makeLogImage,
+  makeLogVideo,
   makeMembership,
   makeProject,
   makeSemester,
@@ -309,6 +311,12 @@ describe('LogComposer photos', () => {
     expect(calls.some((call) => call.method === 'DELETE')).toBe(true)
   })
 
+  it('warns that media on a draft still reaches Google Drive', () => {
+    stubApi({})
+    renderComposer()
+    expect(screen.getByText(/even on a private draft/i)).toBeInTheDocument()
+  })
+
   it('leaves the picker out until storage is set up', () => {
     stubApi({})
     renderApp(
@@ -319,5 +327,62 @@ describe('LogComposer photos', () => {
       />,
     )
     expect(screen.queryByLabelText(/^photos/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/even on a private draft/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('LogComposer videos', () => {
+  const video = (name = 'visit.mp4', size = 10) => {
+    const file = new File(['x'], name, { type: 'video/mp4' })
+    Object.defineProperty(file, 'size', { value: size })
+    return file
+  }
+  const picker = () => screen.getByLabelText<HTMLInputElement>(/^videos/i)
+
+  afterEach(() => resetVideoUploads())
+
+  it('closes without waiting for the upload to finish', async () => {
+    stubApi({ 'POST /api/logs/': { status: 201, body: makeLog({ id: 77 }) } })
+    // The video request never answers, so the upload cannot finish.
+    const stubbed = fetch
+    const uploadStarted = vi.fn()
+    vi.stubGlobal('fetch', (input: string, init?: RequestInit) => {
+      if (!input.includes('/videos/')) return stubbed(input, init)
+      uploadStarted()
+      return new Promise(() => {})
+    })
+    const { onDone } = renderComposer()
+    const user = await fillRequiredFields()
+
+    await user.upload(picker(), video())
+    await user.click(screen.getByRole('button', { name: /save entry/i }))
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled())
+    expect(uploadStarted).toHaveBeenCalledOnce()
+  })
+
+  it('refuses a video over the size limit', async () => {
+    stubApi({})
+    renderComposer()
+
+    await userEvent.upload(picker(), video('huge.mp4', 501 * 1024 * 1024))
+
+    expect(screen.getByText(/videos can be up to 500 mb each/i)).toBeInTheDocument()
+  })
+
+  it('removes an existing video when an edit is saved', async () => {
+    const log = makeLog({ id: 77, videos: [makeLogVideo({ id: 6, original_name: 'old.mp4' })] })
+    const calls = stubApi({
+      'PATCH /api/logs/77/': { body: log },
+      'DELETE /api/logs/77/videos/6/': { status: 204 },
+    })
+    const { onDone } = renderComposer(log)
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: /remove old.mp4/i }))
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled())
+    expect(calls.some((call) => call.method === 'DELETE')).toBe(true)
   })
 })

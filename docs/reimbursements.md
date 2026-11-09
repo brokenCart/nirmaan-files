@@ -97,7 +97,7 @@ the tab counts and totals describe what the search found. It never widens visibi
 volunteer's search runs over their own rows only.
 
 **Receipts** are images on a claim, as `ReimbursementReceipt` rows, stored through the same path as
-timeline photos (see [*Photos and receipts*](log-images.md)). Adding or removing one is editing the
+timeline photos (see [*Photos, receipts and videos*](log-images.md)). Adding or removing one is editing the
 claim, so `_assert_can_edit` applies: the submitter only, while `PENDING`, in the open term. Each
 one's URL is issued only with a row the caller can already see, so a volunteer never gets another
 volunteer's receipt. They are stored in a separate `Receipts` tree in Drive, away from the photo

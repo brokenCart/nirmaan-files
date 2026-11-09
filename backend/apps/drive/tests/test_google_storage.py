@@ -116,3 +116,59 @@ def test_thumbnail_requests_the_size_it_wants(drive):
 def test_thumbnail_problems_fall_back_to_none(drive, replies):
     drive._session.request.side_effect = replies
     assert drive.thumbnail("file", 640) is None
+
+
+def test_start_resumable_returns_the_session(drive):
+    drive._session.request.return_value = reply(headers={"Location": "https://upload/s"})
+
+    assert drive.start_resumable("v.mp4", "video/mp4", 99, "folder") == "https://upload/s"
+
+    kwargs = drive._session.request.call_args.kwargs
+    assert kwargs["params"]["supportsAllDrives"] == "true"
+    assert kwargs["headers"]["X-Upload-Content-Length"] == "99"
+
+
+def test_send_chunk_midway_returns_none(drive):
+    drive._session.request.return_value = reply(status=308)
+
+    assert drive.send_chunk("https://upload/s", b"abcd", 8, 100) is None
+
+    kwargs = drive._session.request.call_args.kwargs
+    assert kwargs["headers"]["Content-Range"] == "bytes 8-11/100"
+    assert kwargs["allow_redirects"] is False
+
+
+def test_send_last_chunk_returns_the_file_id(drive):
+    drive._session.request.return_value = reply(status=200, payload={"id": "file-1"})
+    assert drive.send_chunk("https://upload/s", b"abcd", 96, 100) == "file-1"
+
+
+@pytest.mark.parametrize(
+    ("headers", "received"),
+    [({"Range": "bytes=0-41"}, 42), ({}, 0)],
+    ids=["partway", "nothing-yet"],
+)
+def test_query_reports_what_drive_has(drive, headers, received):
+    drive._session.request.return_value = reply(status=308, headers=headers)
+
+    progress = drive.query_resumable("https://upload/s", 100)
+
+    assert progress.received == received
+    assert progress.file_id is None
+    assert drive._session.request.call_args.kwargs["headers"]["Content-Range"] == "bytes */100"
+
+
+def test_query_finds_a_finished_upload(drive):
+    drive._session.request.return_value = reply(status=200, payload={"id": "file-1"})
+    assert drive.query_resumable("https://upload/s", 100).file_id == "file-1"
+
+
+def test_open_range_forwards_the_range(drive):
+    response = reply(status=206, headers={"Content-Length": "4", "Content-Range": "bytes 0-3/9"})
+    response.iter_content.return_value = iter([b"abcd"])
+    drive._session.request.return_value = response
+
+    stream = drive.open_range("file", "bytes=0-3")
+
+    assert drive._session.request.call_args.kwargs["headers"] == {"Range": "bytes=0-3"}
+    assert (stream.status, stream.content_length, stream.content_range) == (206, 4, "bytes 0-3/9")

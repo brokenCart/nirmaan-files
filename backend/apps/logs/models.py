@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from apps.drive.models import StoredImage
+from apps.drive.models import StoredFile
 
 
 def validate_half_hour_step(value: Decimal) -> None:
@@ -135,13 +135,21 @@ class DailyLog(models.Model):
         return super().save(*args, **kwargs)
 
     @property
+    def live_videos(self) -> list[LogVideo]:
+        return [
+            video
+            for video in self.videos.all()
+            if not video.is_deleted and video.status == LogVideoStatus.READY
+        ]
+
+    @property
     def live_images(self) -> list[LogImage]:
         # Filtered in Python so a prefetch of `images` is used. DRF drops the
         # prefetch cache after an update, and this stays right either way.
         return [image for image in self.images.all() if not image.is_deleted]
 
 
-class LogImage(StoredImage):
+class LogImage(StoredFile):
     """A photo attached to an entry."""
 
     content_url_name = "log-image-content"
@@ -150,3 +158,40 @@ class LogImage(StoredImage):
 
     def __str__(self) -> str:
         return f"{self.original_name} on log {self.log_id}"
+
+
+class LogVideoStatus(models.TextChoices):
+    UPLOADING = "UPLOADING", "Uploading"
+    READY = "READY", "Ready"
+
+
+class LogVideo(StoredFile):
+    """A video attached to an entry, sent in chunks while the author carries on.
+
+    Hidden until the last chunk lands. An abandoned upload is an ``UPLOADING``
+    row nothing shows, and Drive discards its unfinished session after a week.
+    """
+
+    content_url_name = "log-video-content"
+
+    log = models.ForeignKey(DailyLog, on_delete=models.CASCADE, related_name="videos")
+    # Null until the upload finishes, which is when Drive assigns the id.
+    drive_file_id = models.CharField(max_length=512, unique=True, null=True, blank=True)
+    status = models.CharField(
+        max_length=12, choices=LogVideoStatus.choices, default=LogVideoStatus.UPLOADING
+    )
+    # A credential for the unfinished upload, so never serialized.
+    upload_session = models.TextField(blank=True)
+    bytes_received = models.BigIntegerField(default=0)
+    needs_sync = models.BooleanField(default=False)
+
+    def __str__(self) -> str:
+        return f"{self.original_name} on log {self.log_id}"
+
+    def finish(self, file_id: str) -> None:
+        self.drive_file_id = file_id
+        self.status = LogVideoStatus.READY
+        self.bytes_received = self.size_bytes
+        self.upload_session = ""
+        self.needs_sync = False
+        self.save()

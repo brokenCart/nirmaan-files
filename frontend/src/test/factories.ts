@@ -10,6 +10,7 @@ import type {
   AttendanceRow,
   DailyLog,
   LogImage,
+  LogVideo,
   Membership,
   Project,
   Reimbursement,
@@ -90,6 +91,7 @@ export function makeLog(overrides: Partial<DailyLog> = {}): DailyLog {
     hours: 1,
     attendees: [],
     images: [],
+    videos: [],
     author: makeUser(),
     status: 'PUBLISHED',
     created_at: TIMESTAMP,
@@ -106,6 +108,18 @@ export function makeLogImage(overrides: Partial<LogImage> = {}): LogImage {
     size_bytes: 1024,
     url: '/api/log-images/350/content/?exp=1&sig=a',
     thumbnail_url: '/api/log-images/350/content/?exp=1&sig=a&variant=thumbnail',
+    ...overrides,
+  }
+}
+
+export function makeLogVideo(overrides: Partial<LogVideo> = {}): LogVideo {
+  return {
+    id: 360,
+    original_name: 'visit.mp4',
+    content_type: 'video/mp4',
+    size_bytes: 1024,
+    url: '/api/log-videos/360/content/?exp=1&sig=a',
+    poster_url: '/api/log-videos/360/content/?exp=1&sig=a&variant=thumbnail',
     ...overrides,
   }
 }

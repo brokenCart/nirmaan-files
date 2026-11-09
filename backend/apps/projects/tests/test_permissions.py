@@ -1039,3 +1039,27 @@ class TestReceiptBoundaries:
             project=project, submitted_by=volunteer, semester=past_semester
         )
         assert self.post(auth_client(volunteer), claim).status_code == 403
+
+
+class TestLogVideoBoundaries:
+    """Attaching a video is editing the entry, so both boundaries apply to it."""
+
+    def post(self, client, log):
+        body = {"name": "v.mp4", "size": 100, "content_type": "video/mp4"}
+        return client.post(reverse("log-start-video", args=[log.pk]), body, format="json")
+
+    def test_another_projects_member_gets_a_404(self, auth_client, outsider, project, lead):
+        log = DailyLogFactory(project=project, author=lead)
+        assert self.post(auth_client(outsider), log).status_code == 404
+
+    def test_last_terms_author_cannot_add_to_their_own_entry(self, auth_client, past_lead, project):
+        log = DailyLogFactory(project=project, author=past_lead)
+        assert self.post(auth_client(past_lead), log).status_code == 403
+
+    def test_a_closed_terms_entry_is_frozen_for_its_author(
+        self, auth_client, volunteer, project, past_semester
+    ):
+        log = DailyLogFactory(
+            project=project, author=volunteer, occurred_on=past_semester.starts_on
+        )
+        assert self.post(auth_client(volunteer), log).status_code == 403

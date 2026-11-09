@@ -13,6 +13,10 @@ export type Membership = components['schemas']['Membership']
 export type DailyLog = components['schemas']['DailyLog']
 /** A photo on an entry. Its URLs are signed and expire within two hours. */
 export type LogImage = components['schemas']['LogImage']
+/** A finished video on an entry. Its URLs are signed and expire within two hours. */
+export type LogVideo = components['schemas']['LogVideo']
+/** How far a background video upload has got, as the server knows it. */
+export type VideoUploadState = components['schemas']['VideoUploadState']
 /** One academic term. Counting and rosters restart at each one. */
 export type Semester = components['schemas']['Semester']
 /** One semester's line in a project's archive. */

@@ -1,5 +1,8 @@
+import datetime
+
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.views.decorators.http import require_GET
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
@@ -15,10 +18,19 @@ from apps.drive.images import (
     attach_image,
     serve_image,
 )
+from apps.drive.video import (
+    MAX_VIDEOS_PER_OWNER,
+    VideoChunkSerializer,
+    VideoUploadStartSerializer,
+    VideoUploadStateSerializer,
+    receive_chunk,
+    serve_video,
+    start_upload,
+)
 from apps.projects.models import Project, Role, Semester
 from apps.projects.permissions import IsProjectMember, current_semester, role_in_project
 
-from .models import DailyLog, LogImage
+from .models import DailyLog, LogImage, LogVideo, LogVideoStatus
 from .pagination import DailyLogPagination
 from .serializers import DailyLogSerializer, LogImageSerializer
 
@@ -92,7 +104,7 @@ class DailyLogViewSet(viewsets.ModelViewSet):
         qs = (
             DailyLog.objects.visible_to(self.request)
             .select_related("project", "author", "semester")
-            .prefetch_related("attendees", "images")
+            .prefetch_related("attendees", "images", "videos")
         )
         params = self.request.query_params
         if project_slug := params.get("project"):
@@ -275,9 +287,76 @@ class DailyLogViewSet(viewsets.ModelViewSet):
         image.save(update_fields=["is_deleted"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(request=VideoUploadStartSerializer, responses={201: VideoUploadStateSerializer})
+    @action(detail=True, methods=["post"], url_path="videos")
+    def start_video(self, request, pk=None):
+        """Open an upload for one video. The chunks follow separately."""
+        log = self.get_object()
+        self._assert_can_edit(log)
+        # Recent unfinished uploads count, or several at once would all pass.
+        # Old ones do not, so an abandoned upload cannot use up the limit.
+        day_ago = timezone.now() - datetime.timedelta(days=1)
+        video = start_upload(
+            LogVideo,
+            request.data,
+            existing=log.videos.filter(is_deleted=False)
+            .filter(Q(status=LogVideoStatus.READY) | Q(created_at__gte=day_ago))
+            .count(),
+            limit_message=f"An entry can hold {MAX_VIDEOS_PER_OWNER} videos.",
+            project=log.project,
+            semester=log.semester,
+            label=f"{log.occurred_on} {log.kind} {log.title[:60]}",
+            owner={"log": log},
+        )
+        return Response(VideoUploadStateSerializer(video).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        request={"multipart/form-data": VideoChunkSerializer},
+        responses={200: VideoUploadStateSerializer},
+        parameters=[OpenApiParameter("video_id", int, OpenApiParameter.PATH)],
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path=r"videos/(?P<video_id>\d+)/chunk",
+        parser_classes=[MultiPartParser],
+    )
+    def video_chunk(self, request, pk=None, video_id=None):
+        """Add one chunk. The response says how far the upload has really got."""
+        log = self.get_object()
+        self._assert_can_edit(log)
+        video = receive_chunk(log.videos.all(), video_id, request.data)
+        return Response(VideoUploadStateSerializer(video).data)
+
+    @extend_schema(
+        request=None,
+        responses={204: None},
+        parameters=[OpenApiParameter("video_id", int, OpenApiParameter.PATH)],
+    )
+    @action(detail=True, methods=["delete"], url_path=r"videos/(?P<video_id>\d+)")
+    def remove_video(self, request, pk=None, video_id=None):
+        """Remove one video from the entry, under the same edit rule."""
+        log = self.get_object()
+        self._assert_can_edit(log)
+        video = get_object_or_404(log.videos.all(), pk=video_id, is_deleted=False)
+        video.is_deleted = True
+        video.save(update_fields=["is_deleted"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 @require_GET
 def log_image_content(request, pk: int):
     return serve_image(
         request, pk, LogImage.objects.filter(is_deleted=False, log__is_deleted=False)
+    )
+
+
+@require_GET
+def log_video_content(request, pk: int):
+    return serve_video(
+        request,
+        pk,
+        LogVideo.objects.filter(
+            is_deleted=False, status=LogVideoStatus.READY, log__is_deleted=False
+        ),
     )

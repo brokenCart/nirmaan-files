@@ -4,7 +4,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
 from apps.knowledge.views import ArticleViewSet
-from apps.logs.views import DailyLogViewSet, log_image_content
+from apps.logs.views import DailyLogViewSet, log_image_content, log_video_content
 from apps.projects.views import MembershipViewSet, ProjectViewSet, SemesterViewSet
 from apps.reimbursements.views import ReimbursementViewSet, receipt_content
 from apps.resources.views import ResourceViewSet
@@ -22,6 +22,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/log-images/<int:pk>/content/", log_image_content, name="log-image-content"),
+    path("api/log-videos/<int:pk>/content/", log_video_content, name="log-video-content"),
     path(
         "api/reimbursement-receipts/<int:pk>/content/",
         receipt_content,

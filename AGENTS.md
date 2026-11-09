@@ -20,7 +20,7 @@ throughout the codebase — never a software project.
 
 Five modules are tracked per project, all shipped:
 
-1. **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting), with optional photos,
+1. **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting), with optional photos and videos,
    per-semester counting and a project archive (`apps/logs`, with storage in `apps/drive`)
 2. **Knowledge base** — collaborative Markdown pages with complete revision history
    (`apps/knowledge`)
@@ -87,8 +87,7 @@ skipping it means rediscovering a decision by breaking it.
 | The resource shelf | [`docs/resources.md`](docs/resources.md) | Carries no semester; DRF silently drops the model's URL validator |
 | Knowledge base pages and revisions | [`docs/knowledge-base.md`](docs/knowledge-base.md) | Any current member edits any page; every save snapshots |
 | Reimbursement requests and review | [`docs/reimbursements.md`](docs/reimbursements.md) | A volunteer sees only their own rows; `FINANCE_LEAD` ≠ `LEAD` here |
-| Photos, receipts, Drive storage | [`docs/log-images.md`](docs/log-images.md) | Bytes pass through our server on purpose, so drafts and claims stay private |
-| Video | [`docs/deferred-media.md`](docs/deferred-media.md) | Would not fit the image path, which proxies through our server |
+| Photos, receipts, videos, Drive storage | [`docs/log-images.md`](docs/log-images.md) | Bytes pass through our server on purpose, so drafts and claims stay private |
 | Whether something is settled | [`docs/open-questions.md`](docs/open-questions.md) | Several gaps are deliberate rather than unfinished |
 
 Adding a module means adding a file here and a row above, not another section in this file.

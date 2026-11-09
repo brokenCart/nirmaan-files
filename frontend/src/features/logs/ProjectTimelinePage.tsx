@@ -32,7 +32,7 @@ import {
 } from '@/features/projects/queries'
 import { SemesterSwitcher } from '@/features/semesters/SemesterSwitcher'
 import { ALL_TERMS, isArchivedTerm } from '@/features/semesters/terms'
-import { PhotoGallery } from '@/features/photos/PhotoAttachments'
+import { PhotoGallery, VideoGallery } from '@/features/photos/PhotoAttachments'
 import { cn, dateParts } from '@/lib/utils'
 
 import { CopyLogButton } from './CopyLogButton'
@@ -342,6 +342,7 @@ export function ProjectTimelinePage() {
                             </p>
 
                             <PhotoGallery images={log.images} title={log.title} />
+                            <VideoGallery videos={log.videos} title={log.title} />
 
                             {log.attendees.length > 0 && (
                               // The names are content, not chrome — visit and
