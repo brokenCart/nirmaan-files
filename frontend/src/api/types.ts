@@ -11,6 +11,8 @@ export type User = components['schemas']['User']
 export type Project = components['schemas']['Project']
 export type Membership = components['schemas']['Membership']
 export type DailyLog = components['schemas']['DailyLog']
+/** A photo on an entry. Its URLs are signed and expire within two hours. */
+export type LogImage = components['schemas']['LogImage']
 /** One academic term. Counting and rosters restart at each one. */
 export type Semester = components['schemas']['Semester']
 /** One semester's line in a project's archive. */
@@ -362,6 +364,10 @@ export function canDeleteArticle(
 
 /** A reimbursement request, with whatever decision has been made on it. */
 export type Reimbursement = components['schemas']['Reimbursement']
+/** A photo of a receipt. Its URLs are signed and expire within two hours. */
+export type ReimbursementReceipt = components['schemas']['ReimbursementReceipt']
+/** Either kind of attached image; both have the same shape. */
+export type StoredImage = LogImage | ReimbursementReceipt
 /** Body accepted by `POST /api/reimbursements/`. */
 export type ReimbursementInput = components['schemas']['ReimbursementRequest']
 /** Body accepted by `PATCH /api/reimbursements/{id}/`. */

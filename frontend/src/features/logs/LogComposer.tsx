@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useController, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
@@ -14,7 +15,16 @@ import {
   Select,
   Textarea,
 } from '@/components/ui'
-import { useCreateLog, useUpdateLog } from '@/features/projects/queries'
+import {
+  useAddLogImage,
+  useCreateLog,
+  useRemoveLogImage,
+  useUpdateLog,
+} from '@/features/projects/queries'
+import { PhotoField } from '@/features/photos/PhotoAttachments'
+import { usePhotoDraft } from '@/features/photos/usePhotoDraft'
+
+const PHOTO_WORDS = { noun: 'photo', holder: 'entry' } as const
 
 const schema = z.object({
   kind: z.enum(['MOV', 'MOM']),
@@ -57,7 +67,21 @@ export function LogComposer({
 }) {
   const createLog = useCreateLog(project.slug)
   const updateLog = useUpdateLog(project.slug)
-  const editing = log !== undefined
+  const addImage = useAddLogImage()
+  const removeImage = useRemoveLogImage()
+
+  // Set once a new entry exists but a photo failed, so saving again retries the
+  // photos instead of filing a second copy of the entry.
+  const [created, setCreated] = useState<DailyLog>()
+  const target = log ?? created
+  const editing = target !== undefined
+
+  const photos = usePhotoDraft({
+    saved: log?.images ?? [],
+    words: PHOTO_WORDS,
+    add: (logId, file) => addImage.mutateAsync({ logId, file }),
+    remove: (logId, imageId) => removeImage.mutateAsync({ logId, imageId }),
+  })
 
   const {
     control,
@@ -108,20 +132,22 @@ export function LogComposer({
       attendee_ids: values.attendee_ids?.map(Number) ?? [],
     }
 
+    let saved: DailyLog
     try {
-      if (log) {
+      if (target) {
         // `project` is deliberately omitted: an edit must not move an entry to
         // another project's timeline.
-        await updateLog.mutateAsync({ id: log.id, ...fields })
+        saved = await updateLog.mutateAsync({ id: target.id, ...fields })
       } else {
-        await createLog.mutateAsync({ project: project.id, ...fields })
+        saved = await createLog.mutateAsync({ project: project.id, ...fields })
+        setCreated(saved)
       }
     } catch {
       // Already on screen through the mutation's `error`, below. Left to
       // propagate, `handleSubmit` would rethrow it as an unhandled rejection.
       return
     }
-    onDone()
+    if (await photos.save(saved.id)) onDone()
   })
 
   const serverError = editing ? updateLog.error : createLog.error
@@ -203,6 +229,8 @@ export function LogComposer({
         <Textarea {...register('body')} placeholder="Markdown is supported." />
       </Field>
 
+      <PhotoField draft={photos} label="Photos" showPicker={project.image_uploads_enabled} />
+
       <Field label="Status">
         <Select {...register('status')}>
           <option value="PUBLISHED">Publish to the project timeline</option>
@@ -215,6 +243,7 @@ export function LogComposer({
           message={serverError instanceof ApiError ? serverError.detail : serverError.message}
         />
       )}
+      {photos.uploadError && <ErrorNote message={photos.uploadError} />}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={isSubmitting}>

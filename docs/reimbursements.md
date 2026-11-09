@@ -45,9 +45,8 @@ Two more things worth knowing:
 
 - **Content freezes at the decision.** Only the submitter edits, only while `PENDING`, only in the
   open term, and no role overrides any of it. An approval is an approval of *specific content*, so a
-  claim whose text can change after it is signed is a signature on a blank page. This matters far
-  more once receipts land than it does today with two text fields, which is exactly why it is
-  enforced now.
+  claim whose text can change after it is signed is a signature on a blank page. Receipts follow
+  the same rule, so proof cannot be swapped after approval.
 - **A rejection must carry a note**, enforced in `ReimbursementReviewSerializer.validate`. An
   approval need not — the money arriving is the message. A claim turned down with no reason gets
   refiled unchanged.
@@ -97,10 +96,9 @@ the summary **does** honour it: it is applied in `_scoped_queryset`, which both 
 the tab counts and totals describe what the search found. It never widens visibility — a
 volunteer's search runs over their own rows only.
 
-**Scope: no attachments.** Receipt images are the same unresolved Drive-quota problem that defers
-photos on the timeline (see [*Deferred: photos and video*](deferred-media.md)), so when it is settled proof arrives as a
-child table — `ReimbursementAttachment`, FK to the request, one row per file — rather than as a
-field, because a claim carries several receipts and a child table can gain Drive ids without
-touching this one. The freeze-on-review rule above is what makes that safe (it is the *amount* that
-rule most exists to protect), and `submitted_by` is the account a Drive grant would be issued
-against.
+**Receipts** are images on a claim, as `ReimbursementReceipt` rows, stored through the same path as
+timeline photos (see [*Photos and receipts*](log-images.md)). Adding or removing one is editing the
+claim, so `_assert_can_edit` applies: the submitter only, while `PENDING`, in the open term. Each
+one's URL is issued only with a row the caller can already see, so a volunteer never gets another
+volunteer's receipt. They are stored in a separate `Receipts` tree in Drive, away from the photo
+folders people may share.

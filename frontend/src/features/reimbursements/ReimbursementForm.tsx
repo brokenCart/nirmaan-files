@@ -1,11 +1,21 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { ApiError } from '@/api/client'
 import type { Project, Reimbursement } from '@/api/types'
 import { Button, ErrorNote, Field, Input, Textarea } from '@/components/ui'
-import { useCreateReimbursement, useUpdateReimbursement } from '@/features/projects/queries'
+import { PhotoField } from '@/features/photos/PhotoAttachments'
+import { usePhotoDraft } from '@/features/photos/usePhotoDraft'
+import {
+  useAddReceipt,
+  useCreateReimbursement,
+  useRemoveReceipt,
+  useUpdateReimbursement,
+} from '@/features/projects/queries'
+
+const RECEIPT_WORDS = { noun: 'receipt', holder: 'request' } as const
 
 const schema = z.object({
   title: z.string().trim().min(1, 'Add a title.').max(200),
@@ -35,11 +45,6 @@ type FormValues = z.infer<typeof schema>
  * There is no status control here and no term picker. The decision belongs to
  * the review endpoint, and the term is stamped from the clock when the request
  * is filed.
- *
- * Until proof documents land (see `apps.reimbursements.models.Reimbursement`),
- * the receipt itself is still described rather than attached — which is what
- * the details placeholder asks for, rather than leaving the submitter to guess
- * how much a reviewer needs.
  */
 export function ReimbursementForm({
   project,
@@ -52,7 +57,21 @@ export function ReimbursementForm({
 }) {
   const createReimbursement = useCreateReimbursement(project.slug)
   const updateReimbursement = useUpdateReimbursement(project.slug)
-  const editing = reimbursement !== undefined
+  const addReceipt = useAddReceipt(project.slug)
+  const removeReceipt = useRemoveReceipt(project.slug)
+
+  // Set once a new request exists but a receipt failed, so saving again retries
+  // the receipts instead of filing the claim twice.
+  const [created, setCreated] = useState<Reimbursement>()
+  const target = reimbursement ?? created
+  const editing = target !== undefined
+
+  const receipts = usePhotoDraft({
+    saved: reimbursement?.receipts ?? [],
+    words: RECEIPT_WORDS,
+    add: (id, file) => addReceipt.mutateAsync({ id, file }),
+    remove: (id, receiptId) => removeReceipt.mutateAsync({ id, receiptId }),
+  })
 
   const {
     register,
@@ -76,20 +95,22 @@ export function ReimbursementForm({
       description: values.description.trim(),
     }
 
+    let saved: Reimbursement
     try {
-      if (reimbursement) {
+      if (target) {
         // `project` is deliberately omitted: a request cannot move to another
         // project's queue, and the server refuses it anyway.
-        await updateReimbursement.mutateAsync({ id: reimbursement.id, ...fields })
+        saved = await updateReimbursement.mutateAsync({ id: target.id, ...fields })
       } else {
-        await createReimbursement.mutateAsync({ project: project.id, ...fields })
+        saved = await createReimbursement.mutateAsync({ project: project.id, ...fields })
+        setCreated(saved)
       }
     } catch {
       // Already on screen through the mutation's `error`, below. Left to
       // propagate, `handleSubmit` would rethrow it as an unhandled rejection.
       return
     }
-    onDone()
+    if (await receipts.save(saved.id)) onDone()
   })
 
   const serverError = editing ? updateReimbursement.error : createReimbursement.error
@@ -128,20 +149,28 @@ export function ReimbursementForm({
       <Field
         label="Details"
         error={errors.description?.message}
-        hint="Include what you paid for and where the receipt is."
+        hint={
+          project.image_uploads_enabled
+            ? 'Include what you paid for.'
+            : 'Include what you paid for and where the receipt is.'
+        }
       >
         <Textarea
           {...register('description')}
           className="min-h-24"
-          placeholder="Four volunteers, return tickets to the centre and back. Receipts with me."
+          placeholder="Four volunteers, return tickets to the centre and back."
         />
       </Field>
+
+      <PhotoField draft={receipts} label="Receipts" showPicker={project.image_uploads_enabled} />
 
       {serverError && (
         <ErrorNote
           message={serverError instanceof ApiError ? serverError.detail : serverError.message}
         />
       )}
+
+      {receipts.uploadError && <ErrorNote message={receipts.uploadError} />}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={isSubmitting}>

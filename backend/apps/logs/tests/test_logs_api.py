@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.conftest import DailyLogFactory, ProjectFactory
-from apps.logs.models import DailyLog, LogKind, LogStatus
+from apps.logs.models import DailyLog, LogImage, LogKind, LogStatus
 
 pytestmark = pytest.mark.django_db
 
@@ -33,6 +33,22 @@ def log_payload(project, **overrides):
 
 
 class TestTimelineVisibility:
+    def test_entries_list_their_images_without_extra_queries_per_entry(
+        self, auth_client, volunteer, project, django_assert_max_num_queries
+    ):
+        for index in range(3):
+            log = DailyLogFactory(project=project)
+            LogImage.objects.create(
+                log=log,
+                drive_file_id=f"file-{index}",
+                original_name="a.jpg",
+                content_type="image/jpeg",
+                size_bytes=1,
+            )
+        with django_assert_max_num_queries(12):
+            response = auth_client(volunteer).get(reverse("log-list"))
+        assert [len(row["images"]) for row in response.data["results"]] == [1, 1, 1]
+
     def test_logs_are_scoped_to_the_users_projects(
         self, auth_client, volunteer, project, other_project
     ):

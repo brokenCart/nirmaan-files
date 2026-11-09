@@ -133,14 +133,16 @@ async function fetchWithAuth(path: string, options: RequestOptions = {}): Promis
   }
 
   const headers: Record<string, string> = {}
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  // A FormData body sets its own multipart Content-Type, boundary included.
+  const isForm = body instanceof FormData
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`
 
   const response = await fetch(url.toString(), {
     method,
     headers,
     credentials: 'include',
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined || isForm ? (body as FormData | undefined) : JSON.stringify(body),
   })
 
   if (response.status === 401 && retryOnUnauthorized) {

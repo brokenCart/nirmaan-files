@@ -4,9 +4,9 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
 from apps.knowledge.views import ArticleViewSet
-from apps.logs.views import DailyLogViewSet
+from apps.logs.views import DailyLogViewSet, log_image_content
 from apps.projects.views import MembershipViewSet, ProjectViewSet, SemesterViewSet
-from apps.reimbursements.views import ReimbursementViewSet
+from apps.reimbursements.views import ReimbursementViewSet, receipt_content
 from apps.resources.views import ResourceViewSet
 
 router = DefaultRouter()
@@ -21,6 +21,12 @@ router.register("reimbursements", ReimbursementViewSet, basename="reimbursement"
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("apps.accounts.urls")),
+    path("api/log-images/<int:pk>/content/", log_image_content, name="log-image-content"),
+    path(
+        "api/reimbursement-receipts/<int:pk>/content/",
+        receipt_content,
+        name="reimbursement-receipt-content",
+    ),
     path("api/", include(router.urls)),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(

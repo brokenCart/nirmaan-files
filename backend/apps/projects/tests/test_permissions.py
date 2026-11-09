@@ -6,10 +6,13 @@ project must not reach another project's rows.
 """
 
 import datetime
+import io
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from apps.accounts.models import User
 from apps.conftest import (
@@ -978,3 +981,61 @@ class TestReimbursementRoles:
             },
         )
         assert response.status_code == 403
+
+
+class TestLogImageBoundaries:
+    """Attaching a photo is editing the entry, so both boundaries apply to it."""
+
+    def post(self, client, log):
+        buffer = io.BytesIO()
+        Image.new("RGB", (4, 4)).save(buffer, format="PNG")
+        upload = SimpleUploadedFile("photo.png", buffer.getvalue())
+        return client.post(
+            reverse("log-add-image", args=[log.pk]), {"image": upload}, format="multipart"
+        )
+
+    def test_another_projects_member_gets_a_404(self, auth_client, outsider, project, lead):
+        log = DailyLogFactory(project=project, author=lead)
+        assert self.post(auth_client(outsider), log).status_code == 404
+
+    def test_last_terms_author_cannot_add_to_their_own_entry(self, auth_client, past_lead, project):
+        log = DailyLogFactory(project=project, author=past_lead)
+        assert self.post(auth_client(past_lead), log).status_code == 403
+
+    def test_a_closed_terms_entry_is_frozen_for_its_author(
+        self, auth_client, volunteer, project, past_semester
+    ):
+        log = DailyLogFactory(
+            project=project, author=volunteer, occurred_on=past_semester.starts_on
+        )
+        assert self.post(auth_client(volunteer), log).status_code == 403
+
+
+class TestReceiptBoundaries:
+    """A receipt is part of the claim, so both boundaries apply to it."""
+
+    def post(self, client, claim):
+        buffer = io.BytesIO()
+        Image.new("RGB", (4, 4)).save(buffer, format="PNG")
+        upload = SimpleUploadedFile("bill.png", buffer.getvalue())
+        return client.post(
+            reverse("reimbursement-add-receipt", args=[claim.pk]),
+            {"image": upload},
+            format="multipart",
+        )
+
+    def test_another_projects_member_gets_a_404(self, auth_client, outsider, project, volunteer):
+        claim = ReimbursementFactory(project=project, submitted_by=volunteer)
+        assert self.post(auth_client(outsider), claim).status_code == 404
+
+    def test_last_terms_member_cannot_add_to_their_own_claim(self, auth_client, past_lead, project):
+        claim = ReimbursementFactory(project=project, submitted_by=past_lead)
+        assert self.post(auth_client(past_lead), claim).status_code == 403
+
+    def test_a_closed_terms_claim_is_frozen_for_its_submitter(
+        self, auth_client, volunteer, project, past_semester
+    ):
+        claim = ReimbursementFactory(
+            project=project, submitted_by=volunteer, semester=past_semester
+        )
+        assert self.post(auth_client(volunteer), claim).status_code == 403

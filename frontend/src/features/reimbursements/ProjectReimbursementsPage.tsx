@@ -34,6 +34,7 @@ import {
   useReimbursements,
   useSemesters,
 } from '@/features/projects/queries'
+import { PhotoGallery } from '@/features/photos/PhotoAttachments'
 import { SemesterSwitcher } from '@/features/semesters/SemesterSwitcher'
 import { isArchivedTerm } from '@/features/semesters/terms'
 import { cn, formatDateTime, formatRupees } from '@/lib/utils'
@@ -354,6 +355,12 @@ export function ProjectReimbursementsPage() {
                       <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-ink-soft">
                         {reimbursement.description}
                       </p>
+
+                      <PhotoGallery
+                        images={reimbursement.receipts}
+                        title={reimbursement.title}
+                        noun="Receipt"
+                      />
 
                       <p className="mt-2 text-sm text-ink-mute">
                         {mine

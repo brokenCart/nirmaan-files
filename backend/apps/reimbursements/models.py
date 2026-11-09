@@ -5,6 +5,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+from apps.drive.models import StoredImage
 from apps.projects.models import Role
 
 #: Roles that see a project's whole queue rather than only their own requests.
@@ -95,28 +96,14 @@ class Reimbursement(models.Model):
     the request is still ``PENDING``, and only in the open term. That rule is
     doing more work than it looks: an approval is an approval *of specific
     content*, and a claim whose text can change after it is signed off is a
-    signature on a blank page. It matters more once proof documents land (below)
-    than it does today with two text fields, which is exactly why it is here
-    now rather than later.
+    signature on a blank page.
 
     Deletes are soft, like a log's and unlike a resource's. This row is the
     content, not a pointer at content, and a settled claim is a financial
     record — the thing you least want a table to forget.
 
-    **Scope, and the seam for proof documents.** One absence is deliberate and
-    worth stating so it does not read as an oversight:
-
-    - **No attachments.** Photographs of receipts are the same problem
-      ``DailyLog`` defers for photos and video, and for the same unresolved
-      reason: a Google service account has no Drive quota of its own, so
-      uploads only work against a Shared Drive or under OAuth delegation, and
-      which of those Nirmaan has was never settled. When it is, proof arrives as
-      a child table (``ReimbursementAttachment``, FK here, one row per file)
-      rather than a field, because a claim carries several receipts and because
-      a child table can gain Drive ids without touching this one. Everything
-      needed for that to be safe is already here: the freeze-on-review rule
-      above stops proof being swapped after approval, and ``submitted_by`` is
-      the account the Drive grant would be issued against.
+    Receipts are :class:`ReimbursementReceipt` rows. They follow the same
+    freeze, so proof cannot be swapped after approval.
     """
 
     project = models.ForeignKey(
@@ -241,3 +228,21 @@ class Reimbursement(models.Model):
         self.reviewed_by = reviewer
         self.reviewed_at = timezone.now()
         self.save(update_fields=["status", "review_note", "reviewed_by", "reviewed_at"])
+
+    @property
+    def live_receipts(self) -> list[ReimbursementReceipt]:
+        # Filtered in Python for the same reason as `DailyLog.live_images`.
+        return [receipt for receipt in self.receipts.all() if not receipt.is_deleted]
+
+
+class ReimbursementReceipt(StoredImage):
+    """A photo of a receipt, as proof for a claim."""
+
+    content_url_name = "reimbursement-receipt-content"
+
+    reimbursement = models.ForeignKey(
+        Reimbursement, on_delete=models.CASCADE, related_name="receipts"
+    )
+
+    def __str__(self) -> str:
+        return f"{self.original_name} on request {self.reimbursement_id}"

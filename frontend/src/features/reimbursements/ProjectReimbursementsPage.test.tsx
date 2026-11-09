@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EffectiveRole, Reimbursement, ReimbursementSummary, User } from '@/api/types'
 import { ProjectReimbursementsPage } from '@/features/reimbursements/ProjectReimbursementsPage'
 import {
+  makeLogImage,
   makeProject,
   makeReimbursement,
   makeReimbursementSummary,
@@ -81,6 +82,15 @@ beforeEach(() => {
 })
 
 describe('ProjectReimbursementsPage framing', () => {
+  it('shows a claim’s receipts, each linking to the full image', async () => {
+    const receipt = makeLogImage()
+    show({ rows: [{ ...theirs, receipts: [receipt] }] })
+
+    const image = await screen.findByRole('img', { name: 'Receipt 1 from Bus fare' })
+    expect(image).toHaveAttribute('src', receipt.thumbnail_url)
+    expect(image.closest('a')).toHaveAttribute('href', receipt.url)
+  })
+
   it('tells a volunteer these are only their own', async () => {
     show()
     expect(await screen.findByText(/Your expense claims for this project/)).toBeInTheDocument()

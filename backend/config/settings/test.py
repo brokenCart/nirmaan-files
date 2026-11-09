@@ -21,3 +21,7 @@ AUTH_FAKE_GOOGLE_TOKENS = True
 
 # Hashing dominates runtime otherwise, and sign-in is Google-only anyway.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+# `apps/conftest.py` points this at a per-test temporary directory.
+DRIVE_STORAGE_BACKEND = "apps.drive.storage.LocalStorage"
+DRIVE_LOCAL_ROOT = "/nonexistent"

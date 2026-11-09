@@ -4,7 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { DailyLog, EffectiveRole, Membership, User } from '@/api/types'
 import { ProjectTimelinePage } from '@/features/logs/ProjectTimelinePage'
-import { makeLog, makeMembership, makeProject, makeSemester, makeUser } from '@/test/factories'
+import {
+  makeLog,
+  makeLogImage,
+  makeMembership,
+  makeProject,
+  makeSemester,
+  makeUser,
+} from '@/test/factories'
 import { currentLocation, paginated, renderApp, stubApi } from '@/test/render'
 import type { Reply } from '@/test/render'
 
@@ -44,6 +51,15 @@ describe('ProjectTimelinePage', () => {
   it('states the hours alongside who was present', async () => {
     await showTimeline([makeLog({ hours: 1.5, attendees: [me, someoneElse] })])
     expect(screen.getByText(/2 present for 1\.5 hours/)).toBeInTheDocument()
+  })
+
+  it('shows an entry’s photos, each linking to the full image', async () => {
+    const image = makeLogImage()
+    await showTimeline([makeLog({ title: 'Saturday session', images: [image] })])
+
+    const photo = await screen.findByRole('img', { name: 'Photo 1 from Saturday session' })
+    expect(photo).toHaveAttribute('src', image.thumbnail_url)
+    expect(photo.closest('a')).toHaveAttribute('href', image.url)
   })
 
   it('offers the author Edit and Delete', async () => {

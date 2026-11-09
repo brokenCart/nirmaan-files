@@ -1,8 +1,14 @@
 from rest_framework import serializers
 
 from apps.accounts.serializers import UserSerializer
+from apps.drive.images import StoredImageSerializer
 
-from .models import Reimbursement, ReimbursementStatus
+from .models import Reimbursement, ReimbursementReceipt, ReimbursementStatus
+
+
+class ReimbursementReceiptSerializer(StoredImageSerializer):
+    class Meta(StoredImageSerializer.Meta):
+        model = ReimbursementReceipt
 
 
 class ReimbursementSerializer(serializers.ModelSerializer):
@@ -28,6 +34,7 @@ class ReimbursementSerializer(serializers.ModelSerializer):
     # types `reviewed_by` as a `User`, and the SPA's "has anyone signed this
     # off yet" check would be a null test TypeScript believes can never fail.
     reviewed_by = UserSerializer(read_only=True, allow_null=True)
+    receipts = ReimbursementReceiptSerializer(source="live_receipts", many=True, read_only=True)
     project_slug = serializers.SlugRelatedField(source="project", slug_field="slug", read_only=True)
     # Derived from the clock at creation, never sent by the client — see
     # `Reimbursement.save`.
@@ -47,6 +54,7 @@ class ReimbursementSerializer(serializers.ModelSerializer):
             "title",
             "amount",
             "description",
+            "receipts",
             "status",
             "submitted_by",
             "reviewed_by",

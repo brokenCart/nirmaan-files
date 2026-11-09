@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from apps.drive.models import StoredImage
+
 
 def validate_half_hour_step(value: Decimal) -> None:
     """Half-hour steps: a 30-minute call is real, a 1.3-hour one is false precision."""
@@ -54,8 +56,7 @@ class DailyLog(models.Model):
     union of two. ``kind`` carries the distinction and every field applies to
     both. Split the models only if the two genuinely diverge.
 
-    Text-only in v1: photo and video attachments are deferred until the Google
-    Drive storage question is settled.
+    Photos hang off an entry as :class:`LogImage` rows; video is still deferred.
     """
 
     project = models.ForeignKey(
@@ -132,3 +133,20 @@ class DailyLog(models.Model):
 
             self.semester = Semester.for_date(self.occurred_on)
         return super().save(*args, **kwargs)
+
+    @property
+    def live_images(self) -> list[LogImage]:
+        # Filtered in Python so a prefetch of `images` is used. DRF drops the
+        # prefetch cache after an update, and this stays right either way.
+        return [image for image in self.images.all() if not image.is_deleted]
+
+
+class LogImage(StoredImage):
+    """A photo attached to an entry."""
+
+    content_url_name = "log-image-content"
+
+    log = models.ForeignKey(DailyLog, on_delete=models.CASCADE, related_name="images")
+
+    def __str__(self) -> str:
+        return f"{self.original_name} on log {self.log_id}"

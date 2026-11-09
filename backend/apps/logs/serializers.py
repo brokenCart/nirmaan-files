@@ -2,8 +2,14 @@ from rest_framework import serializers
 
 from apps.accounts.models import User
 from apps.accounts.serializers import UserSerializer
+from apps.drive.images import StoredImageSerializer
 
-from .models import DailyLog
+from .models import DailyLog, LogImage
+
+
+class LogImageSerializer(StoredImageSerializer):
+    class Meta(StoredImageSerializer.Meta):
+        model = LogImage
 
 
 class DailyLogSerializer(serializers.ModelSerializer):
@@ -16,6 +22,7 @@ class DailyLogSerializer(serializers.ModelSerializer):
         write_only=True,
     )
     attendees = UserSerializer(many=True, read_only=True)
+    images = LogImageSerializer(source="live_images", many=True, read_only=True)
     project_slug = serializers.SlugRelatedField(source="project", slug_field="slug", read_only=True)
     # Derived from `occurred_on`, never sent by the client — see `DailyLog.save`.
     semester = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -38,6 +45,7 @@ class DailyLogSerializer(serializers.ModelSerializer):
             "hours",
             "attendees",
             "attendee_ids",
+            "images",
             "author",
             "status",
             "created_at",

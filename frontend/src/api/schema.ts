@@ -505,6 +505,40 @@ export interface paths {
         patch: operations["logs_partial_update"];
         trace?: never;
     };
+    "/api/logs/{id}/images/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Attach one photo. Adding to an entry is editing it, so the edit rule applies. */
+        post: operations["logs_images_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/logs/{id}/images/{image_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Remove one photo from the entry, under the same edit rule. */
+        delete: operations["logs_images_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/memberships/": {
         parameters: {
             query?: never;
@@ -1072,6 +1106,40 @@ export interface paths {
         patch: operations["reimbursements_partial_update"];
         trace?: never;
     };
+    "/api/reimbursements/{id}/receipts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Attach one receipt image. Proof is content, so it freezes at the decision too. */
+        post: operations["reimbursements_receipts_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reimbursements/{id}/receipts/{receipt_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Remove one receipt, under the same rule as adding one. */
+        delete: operations["reimbursements_receipts_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reimbursements/{id}/review/": {
         parameters: {
             query?: never;
@@ -1517,6 +1585,7 @@ export interface components {
              */
             hours?: number;
             readonly attendees: components["schemas"]["User"][];
+            readonly images: components["schemas"]["LogImage"][];
             readonly author: components["schemas"]["User"];
             status?: components["schemas"]["DailyLogStatusEnum"];
             /** Format: date-time */
@@ -1558,6 +1627,19 @@ export interface components {
         GoogleLoginRequest: {
             /** @description The ID token issued by Google Identity Services. */
             credential: string;
+        };
+        ImageUploadRequest: {
+            /** Format: binary */
+            image: string;
+        };
+        /** @description Subclass with a ``Meta`` naming the model. */
+        LogImage: {
+            readonly id: number;
+            readonly original_name: string;
+            readonly content_type: string;
+            readonly size_bytes: number;
+            readonly url: string;
+            readonly thumbnail_url: string;
         };
         Membership: {
             readonly id: number;
@@ -1789,6 +1871,8 @@ export interface components {
              *     compose box.
              */
             readonly my_role: string | null;
+            /** @description False until Drive is configured, so the SPA can leave the picker out. */
+            readonly image_uploads_enabled: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -1823,6 +1907,7 @@ export interface components {
             amount: string;
             /** @description What the money was spent on, and why. */
             description: string;
+            readonly receipts: components["schemas"]["ReimbursementReceipt"][];
             readonly status: components["schemas"]["ReimbursementStatusEnum"];
             readonly submitted_by: components["schemas"]["User"];
             readonly reviewed_by: components["schemas"]["User"] | null;
@@ -1834,6 +1919,15 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+        };
+        /** @description Subclass with a ``Meta`` naming the model. */
+        ReimbursementReceipt: {
+            readonly id: number;
+            readonly original_name: string;
+            readonly content_type: string;
+            readonly size_bytes: number;
+            readonly url: string;
+            readonly thumbnail_url: string;
         };
         /**
          * @description One claim, as it is read and as the submitter writes it.
@@ -2383,6 +2477,54 @@ export interface operations {
             };
         };
     };
+    logs_images_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this daily log. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ImageUploadRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogImage"];
+                };
+            };
+        };
+    };
+    logs_images_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this daily log. */
+                id: number;
+                image_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     memberships_list: {
         parameters: {
             query?: {
@@ -2900,6 +3042,54 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Reimbursement"];
                 };
+            };
+        };
+    };
+    reimbursements_receipts_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this reimbursement. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ImageUploadRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReimbursementReceipt"];
+                };
+            };
+        };
+    };
+    reimbursements_receipts_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this reimbursement. */
+                id: number;
+                receipt_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -5,6 +5,7 @@ from rest_framework import serializers
 from apps.accounts.domain import is_allowed_email
 from apps.accounts.models import User
 from apps.accounts.serializers import UserSerializer
+from apps.drive.storage import get_storage
 
 from .models import Membership, Project, Semester
 
@@ -40,6 +41,7 @@ class SemesterSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     my_role = serializers.SerializerMethodField()
     member_count = serializers.IntegerField(read_only=True)
+    image_uploads_enabled = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -51,10 +53,15 @@ class ProjectSerializer(serializers.ModelSerializer):
             "is_active",
             "member_count",
             "my_role",
+            "image_uploads_enabled",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "slug", "created_at", "updated_at"]
+
+    def get_image_uploads_enabled(self, obj: Project) -> bool:
+        """False until Drive is configured, so the SPA can leave the picker out."""
+        return get_storage().available
 
     def get_my_role(self, obj: Project) -> str | None:
         """The requesting user's role here **this semester**, or ``EXEC``.

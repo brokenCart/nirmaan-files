@@ -32,6 +32,7 @@ import {
 } from '@/features/projects/queries'
 import { SemesterSwitcher } from '@/features/semesters/SemesterSwitcher'
 import { ALL_TERMS, isArchivedTerm } from '@/features/semesters/terms'
+import { PhotoGallery } from '@/features/photos/PhotoAttachments'
 import { cn, dateParts } from '@/lib/utils'
 
 import { CopyLogButton } from './CopyLogButton'
@@ -339,6 +340,8 @@ export function ProjectTimelinePage() {
                             <p className="mt-3 max-w-[70ch] text-[0.95rem] leading-relaxed whitespace-pre-wrap text-ink-soft">
                               {log.body}
                             </p>
+
+                            <PhotoGallery images={log.images} title={log.title} />
 
                             {log.attendees.length > 0 && (
                               // The names are content, not chrome — visit and

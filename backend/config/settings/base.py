@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     # local
     "apps.accounts",
     "apps.projects",
+    "apps.drive",
     "apps.logs",
     "apps.resources",
     "apps.knowledge",
@@ -126,6 +127,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 ALLOWED_EMAIL_DOMAIN = "pilani.bits-pilani.ac.in"
 
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", "")
+
+# Uploaded images. Optional until someone has Drive access: with these empty the
+# app runs normally and the SPA hides image upload. See docs/log-images.md.
+DRIVE_STORAGE_BACKEND = "apps.drive.storage.GoogleDriveStorage"
+DRIVE_ROOT_FOLDER_ID = env("DRIVE_ROOT_FOLDER_ID", "")
+DRIVE_CREDENTIALS_JSON = env("DRIVE_CREDENTIALS_JSON", "")
 
 # The refresh token rides in an httpOnly cookie; the access token is returned in
 # the response body and held in memory by the SPA.

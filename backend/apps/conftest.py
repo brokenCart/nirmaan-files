@@ -9,6 +9,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
+from apps.drive.storage import get_storage
 from apps.knowledge.models import Article, ArticleCategory
 from apps.logs.models import DailyLog, LogKind, LogStatus
 from apps.projects.models import Membership, Project, Role, Semester
@@ -150,6 +151,15 @@ class ReimbursementFactory(factory.django.DjangoModelFactory):
     # to carry the same figure.
     amount = factory.Sequence(lambda n: Decimal(f"{100 + n}.50"))
     description = factory.Faker("sentence")
+
+
+@pytest.fixture(autouse=True)
+def isolated_storage(settings, tmp_path):
+    """Every test stores files in its own temporary directory."""
+    settings.DRIVE_LOCAL_ROOT = tmp_path / "drive"
+    get_storage.cache_clear()
+    yield settings.DRIVE_LOCAL_ROOT
+    get_storage.cache_clear()
 
 
 @pytest.fixture

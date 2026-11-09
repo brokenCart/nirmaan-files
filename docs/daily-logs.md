@@ -41,6 +41,8 @@ search reads the same scope as the list it replaces. Attendees match through a p
 subquery, not a join, so an entry with two matching attendees is counted once and pagination
 stays correct. Drafts and deleted entries stay out because the filter runs on `visible_to`.
 
+Entries can carry photos, under the same edit rule — see [*Photos*](log-images.md).
+
 ### Attendance
 
 `apps/logs/stats.py` turns `DailyLog.attendees` into per-member counts, served by

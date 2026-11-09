@@ -1,19 +1,42 @@
 from decimal import Decimal
 
 from django.db.models import Count, Q, Sum
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_GET
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from rest_framework import status as http_status
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.drive.images import (
+    MAX_IMAGES_PER_OWNER,
+    ImageUploadSerializer,
+    attach_image,
+    serve_image,
+)
 from apps.projects.models import Project, Semester
 from apps.projects.permissions import IsProjectMember, current_semester, role_in_project
 
-from .models import QUEUE_ROLES, REVIEWER_ROLES, Reimbursement, ReimbursementStatus
+from .models import (
+    QUEUE_ROLES,
+    REVIEWER_ROLES,
+    Reimbursement,
+    ReimbursementReceipt,
+    ReimbursementStatus,
+)
 from .pagination import ReimbursementPagination
-from .serializers import ReimbursementReviewSerializer, ReimbursementSerializer
+from .serializers import (
+    ReimbursementReceiptSerializer,
+    ReimbursementReviewSerializer,
+    ReimbursementSerializer,
+)
+
+#: Kept apart from the term folders that hold photos, which people may share.
+RECEIPTS_SECTION = "Receipts"
 
 QUEUE_PARAMS = [
     OpenApiParameter(name="project", description="Project slug.", required=False, type=str),
@@ -145,7 +168,8 @@ class ReimbursementViewSet(viewsets.ModelViewSet):
         return qs.filter(semester=current) if current else qs.none()
 
     def get_queryset(self):
-        qs = self._scoped_queryset()
+        # Here rather than in `_scoped_queryset`: the summary only aggregates.
+        qs = self._scoped_queryset().prefetch_related("receipts")
         if self.action != "list":
             return qs
         if status := self.request.query_params.get("status"):
@@ -307,6 +331,45 @@ class ReimbursementViewSet(viewsets.ModelViewSet):
         return Response(ReimbursementSerializer(instance).data)
 
     @extend_schema(
+        request={"multipart/form-data": ImageUploadSerializer},
+        responses={201: ReimbursementReceiptSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="receipts", parser_classes=[MultiPartParser])
+    def add_receipt(self, request, pk=None):
+        """Attach one receipt image. Proof is content, so it freezes at the decision too."""
+        instance = self.get_object()
+        self._assert_can_edit(instance)
+        receipt = attach_image(
+            ReimbursementReceipt,
+            request.data,
+            existing=len(instance.live_receipts),
+            limit_message=f"A request can hold {MAX_IMAGES_PER_OWNER} receipts.",
+            project=instance.project,
+            semester=instance.semester,
+            label=f"{instance.created_at.date()} {instance.title[:60]}",
+            owner={"reimbursement": instance},
+            section=RECEIPTS_SECTION,
+        )
+        return Response(
+            ReimbursementReceiptSerializer(receipt).data, status=http_status.HTTP_201_CREATED
+        )
+
+    @extend_schema(
+        request=None,
+        responses={204: None},
+        parameters=[OpenApiParameter("receipt_id", int, OpenApiParameter.PATH)],
+    )
+    @action(detail=True, methods=["delete"], url_path=r"receipts/(?P<receipt_id>\d+)")
+    def remove_receipt(self, request, pk=None, receipt_id=None):
+        """Remove one receipt, under the same rule as adding one."""
+        instance = self.get_object()
+        self._assert_can_edit(instance)
+        receipt = get_object_or_404(instance.receipts.all(), pk=receipt_id, is_deleted=False)
+        receipt.is_deleted = True
+        receipt.save(update_fields=["is_deleted"])
+        return Response(status=http_status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
         parameters=QUEUE_PARAMS,
         responses={
             200: {
@@ -368,3 +431,12 @@ class ReimbursementViewSet(viewsets.ModelViewSet):
                 for status in ReimbursementStatus
             }
         )
+
+
+@require_GET
+def receipt_content(request, pk: int):
+    return serve_image(
+        request,
+        pk,
+        ReimbursementReceipt.objects.filter(is_deleted=False, reimbursement__is_deleted=False),
+    )

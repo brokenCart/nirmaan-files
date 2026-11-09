@@ -1,9 +1,16 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { LogComposer } from '@/features/logs/LogComposer'
-import { makeLog, makeMembership, makeProject, makeSemester, makeUser } from '@/test/factories'
+import {
+  makeLog,
+  makeLogImage,
+  makeMembership,
+  makeProject,
+  makeSemester,
+  makeUser,
+} from '@/test/factories'
 import { renderApp, stubApi } from '@/test/render'
 
 const project = makeProject({ id: 100 })
@@ -209,5 +216,108 @@ describe('LogComposer submission', () => {
 
     expect(onDone).toHaveBeenCalledOnce()
     expect(calls).toHaveLength(0)
+  })
+})
+
+describe('LogComposer photos', () => {
+  const photo = (name = 'visit.jpg', size = 10) => {
+    const file = new File(['x'], name, { type: 'image/jpeg' })
+    Object.defineProperty(file, 'size', { value: size })
+    return file
+  }
+  const picker = () => screen.getByLabelText<HTMLInputElement>(/^photos/i)
+  const saved = makeLog({ id: 77 })
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      'URL',
+      Object.assign(URL, { createObjectURL: () => 'blob:preview', revokeObjectURL: () => {} }),
+    )
+  })
+
+  it('uploads each photo after the entry saves', async () => {
+    const calls = stubApi({
+      'POST /api/logs/': { status: 201, body: saved },
+      'POST /api/logs/77/images/': { status: 201, body: makeLogImage() },
+    })
+    const { onDone } = renderComposer()
+    const user = await fillRequiredFields()
+
+    await user.upload(picker(), [photo('a.jpg'), photo('b.jpg')])
+    await user.click(screen.getByRole('button', { name: /save entry/i }))
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled())
+    const uploads = calls.filter((call) => call.path === '/api/logs/77/images/')
+    expect(uploads.map((call) => (call.body as FormData).get('image') as File)).toHaveLength(2)
+    expect(uploads[0]?.headers['Content-Type']).toBeUndefined()
+  })
+
+  it('retries only the failed photos, without filing the entry twice', async () => {
+    const calls = stubApi({
+      'POST /api/logs/': { status: 201, body: saved },
+      'PATCH /api/logs/77/': { body: saved },
+      'POST /api/logs/77/images/': [
+        { status: 201, body: makeLogImage() },
+        { status: 503, body: { detail: 'Google Drive could not be reached. Try again.' } },
+        { status: 201, body: makeLogImage() },
+      ],
+    })
+    const { onDone } = renderComposer()
+    const user = await fillRequiredFields()
+
+    await user.upload(picker(), [photo('a.jpg'), photo('b.jpg')])
+    await user.click(screen.getByRole('button', { name: /save entry/i }))
+
+    expect(await screen.findByText(/1 of your photos didn't upload/i)).toBeInTheDocument()
+    expect(onDone).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled())
+    expect(calls.filter((call) => call.method === 'POST' && call.path === '/api/logs/')).toHaveLength(1)
+    const names = calls
+      .filter((call) => call.path === '/api/logs/77/images/')
+      .map((call) => ((call.body as FormData).get('image') as File).name)
+    expect(names).toEqual(['a.jpg', 'b.jpg', 'b.jpg'])
+  })
+
+  it('refuses a photo over the size limit before anything is sent', async () => {
+    stubApi({})
+    renderComposer()
+    const user = userEvent.setup()
+
+    await user.upload(picker(), photo('huge.jpg', 11 * 1024 * 1024))
+
+    expect(screen.getByText(/up to 10 mb each/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /remove huge.jpg/i })).not.toBeInTheDocument()
+  })
+
+  it('removes an existing photo when an edit is saved', async () => {
+    const log = makeLog({ id: 77, images: [makeLogImage({ id: 5, original_name: 'old.jpg' })] })
+    const calls = stubApi({
+      'PATCH /api/logs/77/': { body: log },
+      'DELETE /api/logs/77/images/5/': { status: 204 },
+    })
+    const { onDone } = renderComposer(log)
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: /remove old.jpg/i }))
+    expect(calls).toHaveLength(0)
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled())
+    expect(calls.some((call) => call.method === 'DELETE')).toBe(true)
+  })
+
+  it('leaves the picker out until storage is set up', () => {
+    stubApi({})
+    renderApp(
+      <LogComposer
+        project={makeProject({ image_uploads_enabled: false })}
+        members={members}
+        onDone={vi.fn()}
+      />,
+    )
+    expect(screen.queryByLabelText(/^photos/i)).not.toBeInTheDocument()
   })
 })

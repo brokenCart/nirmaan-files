@@ -20,8 +20,8 @@ throughout the codebase — never a software project.
 
 Five modules are tracked per project, all shipped:
 
-1. **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting), with per-semester
-   counting and a project archive (`apps/logs`)
+1. **Daily logs** — MOVs (Moments of Visit) and MOMs (Minutes of Meeting), with optional photos,
+   per-semester counting and a project archive (`apps/logs`, with storage in `apps/drive`)
 2. **Knowledge base** — collaborative Markdown pages with complete revision history
    (`apps/knowledge`)
 3. **Volunteer visit tracking** — per-member attendance counts and hours. **There is no
@@ -31,8 +31,7 @@ Five modules are tracked per project, all shipped:
 4. **Resource links** — Drive URLs and similar (`apps/resources`). The Drive folder is a resource
    like any other; there is no separate field for it.
 5. **Reimbursements** — volunteers claim money back, the project finance lead approves or rejects
-   (`apps/reimbursements`). Text-only for now; receipt images are deferred for the same Drive
-   reason media is everywhere else.
+   (`apps/reimbursements`), with optional receipt images.
 
 The table under [*Where the rest of it is*](#where-the-rest-of-it-is) says which file to read for
 each.
@@ -88,7 +87,8 @@ skipping it means rediscovering a decision by breaking it.
 | The resource shelf | [`docs/resources.md`](docs/resources.md) | Carries no semester; DRF silently drops the model's URL validator |
 | Knowledge base pages and revisions | [`docs/knowledge-base.md`](docs/knowledge-base.md) | Any current member edits any page; every save snapshots |
 | Reimbursement requests and review | [`docs/reimbursements.md`](docs/reimbursements.md) | A volunteer sees only their own rows; `FINANCE_LEAD` ≠ `LEAD` here |
-| Anything wanting file upload | [`docs/deferred-media.md`](docs/deferred-media.md) | Blocked on a Drive quota question, not on effort |
+| Photos, receipts, Drive storage | [`docs/log-images.md`](docs/log-images.md) | Bytes pass through our server on purpose, so drafts and claims stay private |
+| Video | [`docs/deferred-media.md`](docs/deferred-media.md) | Would not fit the image path, which proxies through our server |
 | Whether something is settled | [`docs/open-questions.md`](docs/open-questions.md) | Several gaps are deliberate rather than unfinished |
 
 Adding a module means adding a file here and a row above, not another section in this file.

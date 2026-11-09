@@ -1,7 +1,7 @@
 """Local development settings."""
 
 from .base import *  # noqa: F403
-from .base import env_bool
+from .base import BASE_DIR, DRIVE_ROOT_FOLDER_ID, env_bool
 
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
@@ -14,3 +14,9 @@ REFRESH_TOKEN_COOKIE_SECURE = False
 # posted credential is treated as a pre-verified claims dict. Never enable
 # outside local work.
 AUTH_FAKE_GOOGLE_TOKENS = env_bool("AUTH_FAKE_GOOGLE_TOKENS", False)
+
+# Images go to local disk until real Drive details are in .env. Defined here and
+# in test.py only, so this cannot be switched on in production.
+if not DRIVE_ROOT_FOLDER_ID:
+    DRIVE_STORAGE_BACKEND = "apps.drive.storage.LocalStorage"
+    DRIVE_LOCAL_ROOT = BASE_DIR / "media" / "drive"

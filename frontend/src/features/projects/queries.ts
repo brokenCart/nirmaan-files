@@ -13,6 +13,7 @@ import type {
   DailyLog,
   DailyLogInput,
   DailyLogPatch,
+  LogImage,
   Membership,
   MembershipInput,
   Paginated,
@@ -20,6 +21,7 @@ import type {
   Reimbursement,
   ReimbursementInput,
   ReimbursementPatch,
+  ReimbursementReceipt,
   ReimbursementReview,
   ReimbursementSummary,
   Resource,
@@ -321,6 +323,31 @@ export function useDeleteLog() {
   })
 }
 
+export function useAddLogImage() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ logId, file }: { logId: number; file: File }) => {
+      const form = new FormData()
+      form.append('image', file)
+      return api.post<LogImage>(`/api/logs/${logId}/images/`, form)
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['logs'] })
+    },
+  })
+}
+
+export function useRemoveLogImage() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ logId, imageId }: { logId: number; imageId: number }) =>
+      api.delete<void>(`/api/logs/${logId}/images/${imageId}/`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['logs'] })
+    },
+  })
+}
+
 /**
  * A project's shelf of links.
  *
@@ -548,6 +575,35 @@ export function useReviewReimbursement(projectSlug: string) {
       // A decision moves the row between status tabs, so the tab it left, the
       // tab it arrived on and the counts are all stale. The prefix clears them
       // together rather than guessing which cached filters were affected.
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.reimbursementsForProject(projectSlug),
+      })
+    },
+  })
+}
+
+export function useAddReceipt(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, file }: { id: number; file: File }) => {
+      const form = new FormData()
+      form.append('image', file)
+      return api.post<ReimbursementReceipt>(`/api/reimbursements/${id}/receipts/`, form)
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.reimbursementsForProject(projectSlug),
+      })
+    },
+  })
+}
+
+export function useRemoveReceipt(projectSlug: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, receiptId }: { id: number; receiptId: number }) =>
+      api.delete<void>(`/api/reimbursements/${id}/receipts/${receiptId}/`),
+    onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.reimbursementsForProject(projectSlug),
       })

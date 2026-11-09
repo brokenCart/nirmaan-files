@@ -9,6 +9,7 @@ import type {
   ArticleRevision,
   AttendanceRow,
   DailyLog,
+  LogImage,
   Membership,
   Project,
   Reimbursement,
@@ -54,6 +55,7 @@ export function makeProject(overrides: Partial<Project> = {}): Project {
     is_active: true,
     member_count: 3,
     my_role: 'VOLUNTEER',
+    image_uploads_enabled: true,
     created_at: TIMESTAMP,
     updated_at: TIMESTAMP,
     ...overrides,
@@ -87,10 +89,23 @@ export function makeLog(overrides: Partial<DailyLog> = {}): DailyLog {
     occurred_on: '2026-08-01',
     hours: 1,
     attendees: [],
+    images: [],
     author: makeUser(),
     status: 'PUBLISHED',
     created_at: TIMESTAMP,
     updated_at: TIMESTAMP,
+    ...overrides,
+  }
+}
+
+export function makeLogImage(overrides: Partial<LogImage> = {}): LogImage {
+  return {
+    id: 350,
+    original_name: 'visit.jpg',
+    content_type: 'image/jpeg',
+    size_bytes: 1024,
+    url: '/api/log-images/350/content/?exp=1&sig=a',
+    thumbnail_url: '/api/log-images/350/content/?exp=1&sig=a&variant=thumbnail',
     ...overrides,
   }
 }
@@ -121,6 +136,7 @@ export function makeReimbursement(overrides: Partial<Reimbursement> = {}): Reimb
     title: 'Bus fare',
     amount: '480.50',
     description: 'Return tickets.',
+    receipts: [],
     status: 'PENDING',
     submitted_by: makeUser(),
     reviewed_by: null,

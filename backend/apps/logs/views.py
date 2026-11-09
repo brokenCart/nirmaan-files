@@ -1,15 +1,26 @@
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_GET
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
+from apps.drive.images import (
+    MAX_IMAGES_PER_OWNER,
+    ImageUploadSerializer,
+    attach_image,
+    serve_image,
+)
 from apps.projects.models import Project, Role, Semester
 from apps.projects.permissions import IsProjectMember, current_semester, role_in_project
 
-from .models import DailyLog
+from .models import DailyLog, LogImage
 from .pagination import DailyLogPagination
-from .serializers import DailyLogSerializer
+from .serializers import DailyLogSerializer, LogImageSerializer
 
 FEED_PARAMS = [
     OpenApiParameter(name="project", description="Project slug.", required=False, type=str),
@@ -81,7 +92,7 @@ class DailyLogViewSet(viewsets.ModelViewSet):
         qs = (
             DailyLog.objects.visible_to(self.request)
             .select_related("project", "author", "semester")
-            .prefetch_related("attendees")
+            .prefetch_related("attendees", "images")
         )
         params = self.request.query_params
         if project_slug := params.get("project"):
@@ -207,3 +218,47 @@ class DailyLogViewSet(viewsets.ModelViewSet):
         # Soft delete: the timeline is the project's institutional memory.
         instance.is_deleted = True
         instance.save(update_fields=["is_deleted"])
+
+    @extend_schema(
+        request={"multipart/form-data": ImageUploadSerializer},
+        responses={201: LogImageSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="images", parser_classes=[MultiPartParser])
+    def add_image(self, request, pk=None):
+        """Attach one photo. Adding to an entry is editing it, so the edit rule applies."""
+        log = self.get_object()
+        self._assert_can_edit(log)
+
+        image = attach_image(
+            LogImage,
+            request.data,
+            existing=len(log.live_images),
+            limit_message=f"An entry can hold {MAX_IMAGES_PER_OWNER} images.",
+            project=log.project,
+            semester=log.semester,
+            label=f"{log.occurred_on} {log.kind} {log.title[:60]}",
+            owner={"log": log},
+        )
+        return Response(LogImageSerializer(image).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        request=None,
+        responses={204: None},
+        parameters=[OpenApiParameter("image_id", int, OpenApiParameter.PATH)],
+    )
+    @action(detail=True, methods=["delete"], url_path=r"images/(?P<image_id>\d+)")
+    def remove_image(self, request, pk=None, image_id=None):
+        """Remove one photo from the entry, under the same edit rule."""
+        log = self.get_object()
+        self._assert_can_edit(log)
+        image = get_object_or_404(log.images.all(), pk=image_id, is_deleted=False)
+        image.is_deleted = True
+        image.save(update_fields=["is_deleted"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@require_GET
+def log_image_content(request, pk: int):
+    return serve_image(
+        request, pk, LogImage.objects.filter(is_deleted=False, log__is_deleted=False)
+    )

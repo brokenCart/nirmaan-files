@@ -44,7 +44,7 @@ export function stubApi(routes: Record<string, Route_>): ApiCall[] {
         method,
         path: url.pathname,
         query: url.searchParams,
-        body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined,
+        body: typeof init.body === 'string' ? JSON.parse(init.body) : (init.body ?? undefined),
         headers: (init.headers ?? {}) as Record<string, string>,
       }
       calls.push(call)
