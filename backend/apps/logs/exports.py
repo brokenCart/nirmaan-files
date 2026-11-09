@@ -8,7 +8,7 @@ from openpyxl.utils import get_column_letter
 
 from apps.projects.models import Role
 
-HEADERS = ["Member", "Email", "Role", "Visits", "Meetings", "Total"]
+HEADERS = ["Member", "Email", "Role", "Visits", "Meetings", "Total", "Hours"]
 
 
 def attendance_workbook(project, semester, rows) -> bytes:
@@ -50,6 +50,7 @@ def attendance_workbook(project, semester, rows) -> bytes:
                 membership.visits,
                 membership.meetings,
                 membership.visits + membership.meetings,
+                membership.hours,
             ]
         )
 

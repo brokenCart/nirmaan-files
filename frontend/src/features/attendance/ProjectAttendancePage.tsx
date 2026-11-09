@@ -80,7 +80,7 @@ export function ProjectAttendancePage() {
       <div className="space-y-6">
         <SectionIntro
           title={termName ? `Attendance in ${termName}` : 'Attendance'}
-          description="Visits and meetings each member attended this semester. Drafts aren’t counted."
+          description="Visits, meetings and volunteer hours for each member this semester. Drafts aren’t counted."
           actions={
             <Button
               variant="secondary"
@@ -138,7 +138,7 @@ export function ProjectAttendancePage() {
             <Card className="overflow-x-auto p-0 sm:p-0">
               <table className="w-full text-sm">
                 <caption className="sr-only">
-                  Visits, meetings and total entries attended by each member of {project.data.name}
+                  Visits, meetings, total entries and hours for each member of {project.data.name}
                 </caption>
                 <thead>
                   <tr className="border-b border-line bg-paper/60 text-left text-sm text-ink-soft">

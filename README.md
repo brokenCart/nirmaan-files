@@ -120,15 +120,18 @@ been moved onto the shelf for you.
 ## Attendance
 
 Each project has an attendance view at `/projects/<slug>/attendance` — per-member visit and meeting
-counts as a table and a bar chart, with an **Export to Excel** button that downloads a `.xlsx`.
+counts and volunteer hours as a table and a bar chart, with an **Export to Excel** button that
+downloads a `.xlsx`.
+
+Each entry records how long it lasted, 1 hour unless the author says otherwise, in half-hour steps.
+Everyone marked present is credited those hours.
 
 Only published entries count. Drafts are private to their author, and counting them would leak
 their existence through a total; removed entries stop counting for the same reason they leave the
 timeline.
 
-Counts are **headcounts, not hours** — a half-hour call and a full-day site visit each count once —
-and they are per project, so someone active in two verticals has no combined total. A visit also
-only counts if a MOV was actually filed for it. All three are deliberate for now;
+Counts and hours are per project, so someone active in two verticals has no combined total. A visit
+also only counts if a MOV was actually filed for it. Both are deliberate for now;
 [`docs/open-questions.md`](docs/open-questions.md) records why.
 
 Behind it, `GET /api/projects/<slug>/attendance/` returns the rows and

@@ -19,6 +19,7 @@ import {
   SectionIntro,
   Spinner,
 } from '@/components/ui'
+import { formatHours } from '@/features/attendance/measures'
 import { ProjectMembersPanel } from '@/features/projects/ProjectMembersPanel'
 import {
   LOGS_PAGE_SIZE,
@@ -345,7 +346,8 @@ export function ProjectTimelinePage() {
                               // it is the part of an entry people check.
                               <p className="mt-3 text-sm leading-relaxed text-ink-soft">
                                 <span className="text-ink-mute">
-                                  {log.attendees.length} present:{' '}
+                                  {log.attendees.length} present for{' '}
+                                  {formatHours(log.hours ?? 1)}:{' '}
                                 </span>
                                 {log.attendees.map((a) => a.full_name || a.email).join(', ')}
                               </p>

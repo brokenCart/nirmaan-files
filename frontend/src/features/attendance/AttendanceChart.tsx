@@ -1,12 +1,12 @@
 import type { AttendanceRow } from '@/api/types'
 
 import type { Measure } from './measures'
-import { MEASURE_LABELS, valueOf } from './measures'
+import { formatHours, MEASURE_LABELS, valueOf } from './measures'
 
 /**
  * Horizontal bars, one per member, for a single measure at a time.
  *
- * Deliberately not a library: this is one series of small integers, and the
+ * Deliberately not a library: this is one series of small numbers, and the
  * exact figures sit in the table directly below — so the chart only has to
  * carry the ranking and the relative gaps.
  *
@@ -51,7 +51,7 @@ export function AttendanceChart({ rows, measure }: { rows: AttendanceRow[]; meas
                 className="pointer-events-none absolute -top-1 left-2 z-10 hidden -translate-y-full rounded-md bg-ink px-2.5 py-1.5 text-sm whitespace-nowrap text-white/80 group-hover:block"
               >
                 <span className="font-semibold text-white">{name}</span> · {row.visits} visits ·{' '}
-                {row.meetings} meetings
+                {row.meetings} meetings · {formatHours(row.hours)}
               </div>
             </div>
 

@@ -35,6 +35,7 @@ class DailyLogSerializer(serializers.ModelSerializer):
             "title",
             "body",
             "occurred_on",
+            "hours",
             "attendees",
             "attendee_ids",
             "author",
@@ -50,6 +51,8 @@ class DailyLogSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+        # A JSON number, not DRF's default string, so the API type is `number`.
+        extra_kwargs = {"hours": {"coerce_to_string": False}}
 
     def validate_project(self, value):
         # Write permission is decided against the project the entry already
@@ -91,6 +94,9 @@ class AttendanceRowSerializer(serializers.Serializer):
     visits = serializers.IntegerField(read_only=True)
     meetings = serializers.IntegerField(read_only=True)
     total = serializers.SerializerMethodField()
+    hours = serializers.DecimalField(
+        max_digits=7, decimal_places=1, coerce_to_string=False, read_only=True
+    )
 
     def get_total(self, membership) -> int:
         return membership.visits + membership.meetings

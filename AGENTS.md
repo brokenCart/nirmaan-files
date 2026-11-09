@@ -24,9 +24,10 @@ Five modules are tracked per project, all shipped:
    counting and a project archive (`apps/logs`)
 2. **Knowledge base** — collaborative Markdown pages with complete revision history
    (`apps/knowledge`)
-3. **Volunteer visit tracking** — per-member attendance counts. **There is no `apps/visits`**:
-   counting derives from `DailyLog.attendees` and lives in `apps/logs/stats.py`, and it stops at
-   counts by decision rather than for want of finishing.
+3. **Volunteer visit tracking** — per-member attendance counts and hours. **There is no
+   `apps/visits`**: both derive from `DailyLog.attendees` and `DailyLog.hours` and live in
+   `apps/logs/stats.py`, and they stop at per-project totals by decision rather than for want of
+   finishing.
 4. **Resource links** — Drive URLs and similar (`apps/resources`). The Drive folder is a resource
    like any other; there is no separate field for it.
 5. **Reimbursements** — volunteers claim money back, the project finance lead approves or rejects

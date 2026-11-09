@@ -21,6 +21,11 @@ const schema = z.object({
   title: z.string().min(3, 'Give the entry a title.').max(200),
   body: z.string().min(1, 'Write what happened.'),
   occurred_on: z.string().min(1, 'Pick a date.'),
+  // A string, because that is what a number `input` yields; converted on submit.
+  hours: z.string().refine((value) => {
+    const hours = Number(value)
+    return hours >= 0.5 && hours <= 24 && Number.isInteger(hours * 2)
+  }, 'Enter hours in half-hour steps, from 0.5 to 24.'),
   // Strings, because that is what a checkbox `value` yields; converted to ids
   // on submit.
   attendee_ids: z.array(z.string()).optional(),
@@ -66,6 +71,7 @@ export function LogComposer({
           kind: log.kind,
           status: log.status ?? 'PUBLISHED',
           occurred_on: log.occurred_on,
+          hours: String(log.hours ?? 1),
           title: log.title,
           body: log.body,
           attendee_ids: log.attendees.map((attendee) => String(attendee.id)),
@@ -74,6 +80,7 @@ export function LogComposer({
           kind: 'MOV',
           status: 'PUBLISHED',
           occurred_on: new Date().toISOString().slice(0, 10),
+          hours: '1',
           title: '',
           body: '',
           attendee_ids: [],
@@ -95,6 +102,7 @@ export function LogComposer({
       title: values.title,
       body: values.body,
       occurred_on: values.occurred_on,
+      hours: Number(values.hours),
       status: values.status,
       // Always sent, so clearing the selection actually clears the attendees.
       attendee_ids: values.attendee_ids?.map(Number) ?? [],
@@ -138,6 +146,21 @@ export function LogComposer({
           min={semester?.starts_on}
           max={semester?.ends_on}
           {...register('occurred_on')}
+        />
+      </Field>
+
+      <Field
+        label="Hours"
+        error={errors.hours?.message}
+        hint="How long it lasted. Everyone marked present below gets these hours."
+      >
+        <Input
+          type="number"
+          inputMode="decimal"
+          min={0.5}
+          max={24}
+          step={0.5}
+          {...register('hours')}
         />
       </Field>
 

@@ -54,5 +54,15 @@ held *in that term* and a member with no attendance still appears — a zero is 
 table. Drafts and soft-deleted entries are excluded, which is a privacy rule rather than tidiness:
 a total that counted drafts would leak their existence.
 
-Counts are headcounts. There is no duration field and no per-person rollup across projects, both
-deliberate — see [*Open questions*](open-questions.md).
+Each entry carries `hours`, defaulting to 1, and a member's total is the sum across the entries
+they attended, visits and meetings alike. It goes in **half-hour steps from 0.5 to 24**: whole
+numbers would misstate a 30-minute call, and anything finer is precision nobody records. It is
+stored as a `Decimal` so totals stay exact.
+
+Hours belong to the entry, not the person, so everyone marked present is credited the same amount;
+someone who left early has no way of recording less. They follow the entry's edit rule, so only the
+author can change them, and only in the open term. Entries from before the field existed read as 1
+hour, and those in closed terms cannot be corrected because the archive is frozen.
+
+There is no per-person rollup across projects, which is deliberate — see
+[*Open questions*](open-questions.md).

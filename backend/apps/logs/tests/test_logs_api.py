@@ -147,6 +147,47 @@ class TestLogWrites:
         assert DailyLog.objects.get(pk=response.data["id"]).author_id == volunteer.pk
 
 
+class TestLogHours:
+    def create(self, client, project, **overrides):
+        return client.post(reverse("log-list"), log_payload(project, **overrides), format="json")
+
+    def test_hours_default_to_one(self, auth_client, volunteer, project):
+        response = self.create(auth_client(volunteer), project)
+        assert response.status_code == 201
+        # A JSON number, not DRF's default decimal string.
+        assert response.json()["hours"] == 1
+
+    @pytest.mark.parametrize("hours", [0.5, 1.5, 2, 24])
+    def test_half_hour_steps_are_accepted(self, auth_client, volunteer, project, hours):
+        response = self.create(auth_client(volunteer), project, hours=hours)
+        assert response.status_code == 201
+        assert response.json()["hours"] == hours
+
+    @pytest.mark.parametrize("hours", [0, -1, 0.7, 1.25, 24.5, "soon"])
+    def test_other_values_are_refused(self, auth_client, volunteer, project, hours):
+        response = self.create(auth_client(volunteer), project, hours=hours)
+        assert response.status_code == 400
+        assert "hours" in response.data
+
+    def test_the_author_can_correct_the_hours(self, auth_client, volunteer, project):
+        log = DailyLogFactory(project=project, author=volunteer)
+        response = auth_client(volunteer).patch(
+            reverse("log-detail", args=[log.pk]), {"hours": 2.5}, format="json"
+        )
+        assert response.status_code == 200
+        log.refresh_from_db()
+        assert str(log.hours) == "2.5"
+
+    def test_an_edit_that_omits_hours_leaves_them_alone(self, auth_client, volunteer, project):
+        log = DailyLogFactory(project=project, author=volunteer, hours="3.0")
+        response = auth_client(volunteer).patch(
+            reverse("log-detail", args=[log.pk]), {"title": "Reworded title"}, format="json"
+        )
+        assert response.status_code == 200
+        log.refresh_from_db()
+        assert str(log.hours) == "3.0"
+
+
 class TestEditingIsAuthorOnly:
     """An entry is one person's account, so only they may reword it.
 

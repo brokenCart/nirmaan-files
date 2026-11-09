@@ -1484,6 +1484,8 @@ export interface components {
             readonly visits: number;
             readonly meetings: number;
             readonly total: number;
+            /** Format: double */
+            readonly hours: number;
         };
         /**
          * @description * `CONTEXT` - Background
@@ -1509,6 +1511,11 @@ export interface components {
              * @description The day the visit or meeting happened.
              */
             occurred_on: string;
+            /**
+             * Format: double
+             * @description How long the visit or meeting lasted, in half-hour steps.
+             */
+            hours?: number;
             readonly attendees: components["schemas"]["User"][];
             readonly author: components["schemas"]["User"];
             status?: components["schemas"]["DailyLogStatusEnum"];
@@ -1534,6 +1541,11 @@ export interface components {
              * @description The day the visit or meeting happened.
              */
             occurred_on: string;
+            /**
+             * Format: double
+             * @description How long the visit or meeting lasted, in half-hour steps.
+             */
+            hours?: number;
             attendee_ids?: number[];
             status?: components["schemas"]["DailyLogStatusEnum"];
         };
@@ -1701,6 +1713,11 @@ export interface components {
              * @description The day the visit or meeting happened.
              */
             occurred_on?: string;
+            /**
+             * Format: double
+             * @description How long the visit or meeting lasted, in half-hour steps.
+             */
+            hours?: number;
             attendee_ids?: number[];
             status?: components["schemas"]["DailyLogStatusEnum"];
         };

@@ -24,8 +24,8 @@ hand.
 raw API call — which is what makes the question above sharp rather than theoretical. Roster editing
 *does* have a screen now (see [*Managing a roster*](roster.md)); semester creation is the one that does not.
 
-**Attendance stops at counts, by decision.** No hours (a short call and a full-day visit weigh the
-same), no per-person view across projects, and no visit record independent of a filed MOV — so a
-trip nobody writes up did not happen as far as the table is concerned. Each was considered and left
-out; revisit only if someone asks for volunteer-hour certificates, which is the use case that would
-need all three.
+**Attendance stops at per-project, per-entry totals, by decision.** Hours are tracked per entry
+(see [*Attendance*](daily-logs.md)), but there is no per-person view across projects and no visit
+record independent of a filed MOV — so a trip nobody writes up did not happen as far as the table
+is concerned. Both were considered and left out; revisit only if someone asks for volunteer-hour
+certificates, which is the use case that would need them.

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from django.urls import reverse
 
@@ -97,6 +99,62 @@ class TestAttendanceCounts:
             client.get(attendance_url(project))
 
 
+class TestAttendanceHours:
+    def test_sums_hours_across_visits_and_meetings(self, auth_client, lead, volunteer, project):
+        attended(project, [volunteer], kind=LogKind.MOV, hours=Decimal("2.5"))
+        attended(project, [volunteer], kind=LogKind.MOV, hours=Decimal("3.0"))
+        attended(project, [volunteer], kind=LogKind.MOM, hours=Decimal("0.5"))
+
+        response = auth_client(lead).get(attendance_url(project))
+        row = next(row for row in response.json() if row["user"]["id"] == volunteer.pk)
+        assert row["hours"] == 6.0
+        assert (row["visits"], row["meetings"], row["total"]) == (2, 1, 3)
+
+    def test_an_entry_with_no_stated_hours_counts_as_one(
+        self, auth_client, lead, volunteer, project
+    ):
+        attended(project, [volunteer], kind=LogKind.MOV)
+        response = auth_client(lead).get(attendance_url(project))
+        assert row_for(response, volunteer)["hours"] == 1
+
+    def test_every_attendee_is_credited_the_entrys_hours(
+        self, auth_client, lead, volunteer, project
+    ):
+        attended(project, [lead, volunteer], kind=LogKind.MOV, hours=Decimal("1.5"))
+        response = auth_client(lead).get(attendance_url(project))
+        assert row_for(response, lead)["hours"] == Decimal("1.5")
+        assert row_for(response, volunteer)["hours"] == Decimal("1.5")
+
+    def test_no_attendance_is_zero_hours(self, auth_client, lead, volunteer, project):
+        response = auth_client(lead).get(attendance_url(project))
+        assert row_for(response, volunteer)["hours"] == 0
+
+    def test_drafts_and_deleted_entries_add_no_hours(self, auth_client, lead, volunteer, project):
+        attended(project, [volunteer], status=LogStatus.DRAFT, hours=Decimal("4.0"))
+        removed = attended(project, [volunteer], hours=Decimal("4.0"))
+        removed.is_deleted = True
+        removed.save(update_fields=["is_deleted"])
+
+        response = auth_client(lead).get(attendance_url(project))
+        assert row_for(response, volunteer)["hours"] == 0
+
+    def test_hours_stop_at_the_project_boundary(
+        self, auth_client, lead, volunteer, project, other_project
+    ):
+        MembershipFactory(user=volunteer, project=other_project)
+        attended(other_project, [volunteer], hours=Decimal("4.0"))
+
+        response = auth_client(lead).get(attendance_url(project))
+        assert row_for(response, volunteer)["hours"] == 0
+
+    def test_hours_restart_each_semester(
+        self, auth_client, lead, volunteer, project, past_semester
+    ):
+        attended(project, [volunteer], occurred_on=past_semester.starts_on, hours=Decimal("4.0"))
+        response = auth_client(lead).get(attendance_url(project))
+        assert row_for(response, volunteer)["hours"] == 0
+
+
 class TestAttendanceAccess:
     @pytest.mark.parametrize("actor", ["lead", "finance_lead", "volunteer", "exec_user"])
     def test_any_member_may_read_the_table(self, request, auth_client, project, actor):
@@ -140,6 +198,19 @@ class TestAttendanceExport:
 
         rows = [tuple(row) for row in sheet.iter_rows(values_only=True)]
         assert any(row[1] == volunteer.email and row[3:6] == (1, 1, 2) for row in rows)
+
+    def test_workbook_carries_the_hours(self, auth_client, lead, volunteer, project):
+        import io
+
+        from openpyxl import load_workbook
+
+        attended(project, [volunteer], kind=LogKind.MOV, hours=Decimal("2.5"))
+
+        response = auth_client(lead).get(export_url(project))
+        sheet = load_workbook(io.BytesIO(response.content)).active
+
+        rows = [tuple(row) for row in sheet.iter_rows(values_only=True)]
+        assert any(row[1] == volunteer.email and row[6] == 2.5 for row in rows)
 
     def test_outsider_cannot_download_it(self, auth_client, outsider, project):
         assert auth_client(outsider).get(export_url(project)).status_code == 404

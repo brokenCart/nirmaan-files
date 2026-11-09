@@ -1,5 +1,15 @@
+from decimal import Decimal
+
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+
+def validate_half_hour_step(value: Decimal) -> None:
+    """Half-hour steps: a 30-minute call is real, a 1.3-hour one is false precision."""
+    if value % Decimal("0.5") != 0:
+        raise ValidationError("Hours must be in half-hour steps, such as 1, 1.5 or 2.")
 
 
 class LogKind(models.TextChoices):
@@ -66,6 +76,19 @@ class DailyLog(models.Model):
     title = models.CharField(max_length=200)
     body = models.TextField(help_text="Markdown.")
     occurred_on = models.DateField(help_text="The day the visit or meeting happened.")
+    # Decimal rather than float so a member's total is exact. Set per entry, so
+    # every attendee is credited the same hours for it.
+    hours = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        default=Decimal("1.0"),
+        validators=[
+            MinValueValidator(Decimal("0.5")),
+            MaxValueValidator(Decimal("24.0")),
+            validate_half_hour_step,
+        ],
+        help_text="How long the visit or meeting lasted, in half-hour steps.",
+    )
 
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
